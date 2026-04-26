@@ -1,11 +1,11 @@
 import type { PaymentRow } from "@/services/payments";
 import { fmtDayLabel, fmtTime } from "@/lib/utils/dates";
 
-const METHOD_STYLES: Record<PaymentRow["method"], string> = {
-  cash:     "bg-emerald-50 text-emerald-700 border-emerald-200",
-  card:     "bg-blue-50    text-blue-700    border-blue-200",
-  transfer: "bg-violet-50  text-violet-700  border-violet-200",
-  other:    "bg-neutral-100 text-neutral-700 border-neutral-200",
+const METHOD_DOT: Record<PaymentRow["method"], string> = {
+  cash:     "bg-emerald-500",
+  card:     "bg-blue-500",
+  transfer: "bg-violet-500",
+  other:    "bg-neutral-400",
 };
 
 export function PaymentList({
@@ -33,9 +33,9 @@ export function PaymentList({
     : "grid-cols-[0.8fr_1fr_1.6fr_0.9fr_1.4fr]";
 
   return (
-    <div className="border border-neutral-200 rounded-lg bg-white overflow-hidden">
+    <div className="card overflow-hidden">
       <div
-        className={`grid ${cols} gap-3 px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 bg-neutral-50 border-b border-neutral-200`}
+        className={`grid ${cols} gap-3 px-6 py-3 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400`}
       >
         {showClientName && <div>Client</div>}
         <div>Amount</div>
@@ -44,11 +44,11 @@ export function PaymentList({
         <div>Method</div>
         <div>Notes</div>
       </div>
-      <ul className="divide-y divide-neutral-200">
+      <ul>
         {payments.map((p) => (
           <li
             key={p.id}
-            className={`grid ${cols} gap-3 px-5 py-3.5 text-sm items-center hover:bg-neutral-50 transition-colors`}
+            className={`grid ${cols} gap-3 px-6 py-4 text-sm items-center hover:bg-neutral-50/70 transition-colors`}
           >
             {showClientName && (
               <div className="font-semibold text-neutral-900">
@@ -73,9 +73,9 @@ export function PaymentList({
               )}
             </div>
             <div>
-              <MethodPill method={p.method} />
+              <MethodTag method={p.method} />
             </div>
-            <div className="text-neutral-600 truncate">{p.notes ?? <Dash />}</div>
+            <div className="text-neutral-500 truncate">{p.notes ?? <Dash />}</div>
           </li>
         ))}
       </ul>
@@ -84,24 +84,23 @@ export function PaymentList({
 }
 
 function Dash() {
-  return <span className="text-neutral-400">—</span>;
+  return <span className="text-neutral-300">—</span>;
 }
 
-function MethodPill({ method }: { method: PaymentRow["method"] }) {
+function MethodTag({ method }: { method: PaymentRow["method"] }) {
   return (
-    <span
-      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${METHOD_STYLES[method]}`}
-    >
-      {method}
+    <span className="inline-flex items-center gap-2 text-xs capitalize">
+      <span className={`inline-block w-1.5 h-1.5 rounded-full ${METHOD_DOT[method]}`} />
+      <span className="text-neutral-700">{method}</span>
     </span>
   );
 }
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="border border-dashed border-neutral-300 rounded-lg bg-white p-10 text-center">
-      <p className="text-sm font-semibold text-neutral-800">{title}</p>
-      <p className="text-xs text-neutral-500 mt-1">{body}</p>
+    <div className="card p-12 text-center">
+      <p className="text-base font-semibold text-neutral-800">{title}</p>
+      <p className="text-sm text-neutral-500 mt-1.5">{body}</p>
     </div>
   );
 }

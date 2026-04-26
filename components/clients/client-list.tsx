@@ -19,8 +19,8 @@ export function ClientList({ clients }: { clients: ClientWithUpcomingCount[] }) 
   }
 
   return (
-    <div className="border border-neutral-200 rounded-lg bg-white overflow-hidden">
-      <div className="grid grid-cols-[2fr_1.2fr_1.6fr_1fr_0.9fr_1fr] gap-3 px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 bg-neutral-50 border-b border-neutral-200">
+    <div className="card overflow-hidden">
+      <div className="grid grid-cols-[2fr_1.2fr_1.6fr_1fr_0.9fr_1fr] gap-3 px-6 py-3 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
         <div>Name</div>
         <div>Phone</div>
         <div>Email</div>
@@ -28,12 +28,12 @@ export function ClientList({ clients }: { clients: ClientWithUpcomingCount[] }) 
         <div>Status</div>
         <div>Upcoming</div>
       </div>
-      <ul className="divide-y divide-neutral-200">
+      <ul>
         {clients.map((c) => (
           <li key={c.id}>
             <Link
               href={`/dashboard/clients/${c.id}`}
-              className="grid grid-cols-[2fr_1.2fr_1.6fr_1fr_0.9fr_1fr] gap-3 px-5 py-3.5 text-sm hover:bg-neutral-50 transition-colors items-center"
+              className="grid grid-cols-[2fr_1.2fr_1.6fr_1fr_0.9fr_1fr] gap-3 px-6 py-4 text-sm hover:bg-neutral-50/70 transition-colors items-center"
             >
               <div className="font-semibold text-neutral-900">{c.full_name}</div>
               <div className="text-neutral-700">{c.phone ?? <Dash />}</div>
@@ -46,7 +46,7 @@ export function ClientList({ clients }: { clients: ClientWithUpcomingCount[] }) 
               </div>
               <div className="text-neutral-700 tabular-nums">
                 {c.upcoming_count}{" "}
-                <span className="text-neutral-500">
+                <span className="text-neutral-400">
                   {c.upcoming_count === 1 ? "lesson" : "lessons"}
                 </span>
               </div>
@@ -59,33 +59,29 @@ export function ClientList({ clients }: { clients: ClientWithUpcomingCount[] }) 
 }
 
 function Dash() {
-  return <span className="text-neutral-400">—</span>;
+  return <span className="text-neutral-300">—</span>;
 }
 
 function StatusPill({ active }: { active: boolean }) {
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
-        active
-          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-          : "bg-neutral-100 text-neutral-600 border border-neutral-200"
-      }`}
-    >
+    <span className="inline-flex items-center gap-2 text-xs">
       <span
         className={`inline-block w-1.5 h-1.5 rounded-full ${
-          active ? "bg-emerald-500" : "bg-neutral-400"
+          active ? "bg-emerald-500" : "bg-neutral-300"
         }`}
       />
-      {active ? "Active" : "Inactive"}
+      <span className={active ? "text-neutral-700" : "text-neutral-400"}>
+        {active ? "Active" : "Inactive"}
+      </span>
     </span>
   );
 }
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
-    <div className="border border-dashed border-neutral-300 rounded-lg bg-white p-10 text-center">
-      <p className="text-sm font-semibold text-neutral-800">{title}</p>
-      <p className="text-xs text-neutral-500 mt-1">{body}</p>
+    <div className="card p-12 text-center">
+      <p className="text-base font-semibold text-neutral-800">{title}</p>
+      <p className="text-sm text-neutral-500 mt-1.5">{body}</p>
     </div>
   );
 }

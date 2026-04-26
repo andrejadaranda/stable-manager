@@ -15,7 +15,7 @@ export default async function ExpensesPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Expenses</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Expenses</h1>
         <CreateExpensePanel horses={horses ?? []} />
       </div>
       <ExpenseList expenses={expenses} />

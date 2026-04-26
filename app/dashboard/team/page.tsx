@@ -19,7 +19,7 @@ export default async function TeamPage() {
     <div className="flex flex-col gap-6 max-w-4xl">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Team</h1>
           <p className="text-sm text-neutral-500 mt-1">
             Invite employees to manage operations or grant clients portal access.
           </p>

@@ -6,30 +6,11 @@ import { addDays, fmtDayLabel, fmtISODate, fmtTime } from "@/lib/utils/dates";
 import type { CalendarLesson } from "@/services/lessons";
 import { EditLessonDialog } from "@/components/calendar/edit-lesson-dialog";
 
-const STATUS_STYLES: Record<
-  CalendarLesson["status"],
-  { card: string; dot: string; label: string }
-> = {
-  scheduled: {
-    card:  "bg-blue-50/70 border-blue-200 hover:bg-blue-50",
-    dot:   "bg-blue-500",
-    label: "text-blue-900",
-  },
-  completed: {
-    card:  "bg-emerald-50/70 border-emerald-200 hover:bg-emerald-50",
-    dot:   "bg-emerald-500",
-    label: "text-emerald-900",
-  },
-  cancelled: {
-    card:  "bg-neutral-100 border-neutral-200 hover:bg-neutral-100/80 opacity-60",
-    dot:   "bg-neutral-400",
-    label: "text-neutral-600 line-through",
-  },
-  no_show: {
-    card:  "bg-red-50/70 border-red-200 hover:bg-red-50",
-    dot:   "bg-red-500",
-    label: "text-red-900",
-  },
+const STATUS_DOT: Record<CalendarLesson["status"], string> = {
+  scheduled: "bg-blue-500",
+  completed: "bg-emerald-500",
+  cancelled: "bg-neutral-400",
+  no_show:   "bg-rose-500",
 };
 
 const STATUS_LABEL: Record<CalendarLesson["status"], string> = {
@@ -66,19 +47,19 @@ export function WeekView({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-1.5">
-          <NavButton href={`${basePath}?date=${prev}`} label="← Prev" />
+          <NavButton href={`${basePath}?date=${prev}`} label="←" ariaLabel="Previous week" />
           <NavButton href={`${basePath}?date=${today}`} label="Today" />
-          <NavButton href={`${basePath}?date=${next}`} label="Next →" />
+          <NavButton href={`${basePath}?date=${next}`} label="→" ariaLabel="Next week" />
         </div>
-        <span className="text-sm text-neutral-600 font-medium">
+        <span className="text-sm text-neutral-500 font-medium tabular-nums">
           {fmtDayLabel(weekStart)} – {fmtDayLabel(addDays(weekStart, 6))}
         </span>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {days.map((day) => {
           const key = fmtISODate(day);
           const isToday = key === today;
@@ -86,28 +67,28 @@ export function WeekView({
           return (
             <div
               key={key}
-              className={`min-h-[160px] border rounded-lg bg-white overflow-hidden ${
-                isToday ? "border-neutral-900 ring-1 ring-neutral-900" : "border-neutral-200"
+              className={`min-h-[180px] rounded-2xl bg-white overflow-hidden transition-shadow ${
+                isToday
+                  ? "ring-2 ring-neutral-900 shadow-[0_8px_24px_-8px_rgba(15,15,20,0.18)]"
+                  : "shadow-[0_1px_2px_rgba(15,15,20,0.04),0_8px_24px_-8px_rgba(15,15,20,0.06)]"
               }`}
             >
-              <div
-                className={`px-3 py-2 border-b ${
-                  isToday
-                    ? "bg-neutral-900 text-white border-neutral-900"
-                    : "bg-neutral-50 border-neutral-200 text-neutral-700"
-                }`}
-              >
-                <div className="text-[10px] uppercase tracking-wider opacity-70">
+              <div className="px-4 pt-3 pb-2 flex items-baseline justify-between">
+                <span className={`text-[10px] uppercase tracking-[0.12em] ${
+                  isToday ? "text-neutral-900 font-semibold" : "text-neutral-400"
+                }`}>
                   {day.toLocaleDateString(undefined, { weekday: "short" })}
-                </div>
-                <div className="text-lg font-semibold leading-tight">
+                </span>
+                <span className={`text-2xl font-semibold tabular-nums leading-none ${
+                  isToday ? "text-neutral-900" : "text-neutral-700"
+                }`}>
                   {day.getDate()}
-                </div>
+                </span>
               </div>
-              <div className="p-1.5 flex flex-col gap-1.5">
+              <div className="p-2 flex flex-col gap-1.5">
                 {items.length === 0 ? (
-                  <p className="text-[11px] text-neutral-400 px-1.5 py-1.5">
-                    No lessons
+                  <p className="text-[11px] text-neutral-300 px-2 py-1.5 italic">
+                    Free
                   </p>
                 ) : (
                   items.map((l) =>
@@ -143,36 +124,53 @@ export function WeekView({
 }
 
 function LessonCard({ lesson }: { lesson: CalendarLesson }) {
-  const s = STATUS_STYLES[lesson.status];
+  const dot = STATUS_DOT[lesson.status];
+  const muted = lesson.status === "cancelled";
   return (
     <div
-      className={`text-xs rounded-md border px-2.5 py-2 leading-tight transition-colors ${s.card}`}
+      className={`text-xs rounded-xl px-3 py-2.5 leading-tight transition-colors ${
+        muted
+          ? "bg-neutral-50 text-neutral-400"
+          : "bg-neutral-50/70 hover:bg-neutral-100/80 text-neutral-800"
+      }`}
     >
-      <div className={`flex items-center gap-1.5 font-semibold ${s.label}`}>
-        <span className={`inline-block w-1.5 h-1.5 rounded-full ${s.dot}`} />
-        {fmtTime(lesson.starts_at)}–{fmtTime(lesson.ends_at)}
+      <div className="flex items-center gap-2">
+        <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${dot}`} />
+        <span className="font-semibold tabular-nums">
+          {fmtTime(lesson.starts_at)}
+        </span>
+        <span className="text-neutral-400">→</span>
+        <span className="text-neutral-500 tabular-nums">
+          {fmtTime(lesson.ends_at)}
+        </span>
       </div>
-      <div className={`mt-1 font-medium ${s.label}`}>
+      <div className={`mt-1.5 font-medium ${muted ? "line-through" : ""}`}>
         {lesson.client?.full_name ?? "—"}
       </div>
-      <div className="mt-0.5 text-neutral-600">
-        {lesson.horse?.name ?? "—"}
+      <div className="mt-0.5 text-[11px] text-neutral-500">
+        {lesson.horse?.name ?? "—"} · {lesson.trainer?.full_name ?? "—"}
       </div>
-      <div className="text-neutral-500">
-        {lesson.trainer?.full_name ?? "—"}
-      </div>
-      <div className="text-[10px] uppercase tracking-wider text-neutral-500 mt-1">
+      <div className="text-[10px] uppercase tracking-[0.12em] text-neutral-400 mt-1.5">
         {STATUS_LABEL[lesson.status]}
       </div>
     </div>
   );
 }
 
-function NavButton({ href, label }: { href: string; label: string }) {
+function NavButton({
+  href,
+  label,
+  ariaLabel,
+}: {
+  href: string;
+  label: string;
+  ariaLabel?: string;
+}) {
   return (
     <Link
       href={href}
-      className="px-3 py-1.5 rounded-md border border-neutral-300 text-sm text-neutral-700 hover:bg-neutral-100 transition-colors"
+      aria-label={ariaLabel}
+      className="px-3 py-1.5 rounded-xl bg-white text-sm text-neutral-700 hover:text-neutral-900 hover:bg-white shadow-[0_1px_2px_rgba(15,15,20,0.04),0_4px_12px_-6px_rgba(15,15,20,0.06)] transition-all hover:shadow-[0_1px_2px_rgba(15,15,20,0.06),0_8px_18px_-6px_rgba(15,15,20,0.10)]"
     >
       {label}
     </Link>

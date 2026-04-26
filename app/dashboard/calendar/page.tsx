@@ -29,7 +29,7 @@ export default async function CalendarPage({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Calendar</h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Calendar</h1>
         <CreateLessonPanel
           clients={clients ?? []}
           horses={horses ?? []}
