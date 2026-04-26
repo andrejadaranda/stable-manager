@@ -17,9 +17,11 @@ export default async function DashboardLayout({
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
-    <div className="min-h-screen flex bg-neutral-50">
+    <div className="min-h-screen md:flex bg-neutral-50">
       <Sidebar role={session.role} email={user?.email ?? ""} />
-      <main className="flex-1 px-8 py-8 max-w-[1400px]">{children}</main>
+      <main className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-[1400px]">
+        {children}
+      </main>
     </div>
   );
 }
