@@ -13,7 +13,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 export const stripeServerClient = new Stripe(
   process.env.STRIPE_SECRET_KEY ?? "sk_test_dummy",
-  { apiVersion: "2024-09-30.acacia" },
+  { apiVersion: "2026-04-22.dahlia" },
 );
 
 export type Plan = "starter" | "pro" | "premium";

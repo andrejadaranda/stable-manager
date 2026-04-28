@@ -89,8 +89,8 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
         className={`
           fixed md:sticky md:top-0 inset-y-0 left-0 z-40
           w-72 md:w-64 h-screen
-          bg-surface/85 backdrop-blur-md md:bg-transparent
-          border-r border-ink-200/50
+          bg-surface/90 backdrop-blur-md md:bg-transparent
+          border-r border-navy-100/40
           flex flex-col
           transform transition-transform duration-200 ease-out
           ${open ? "translate-x-0" : "-translate-x-full"}
@@ -138,13 +138,13 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
                 href={item.href}
                 className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                   isActive
-                    ? "bg-brand-600 text-white font-medium shadow-sm"
-                    : "text-ink-700 hover:bg-white/70 hover:text-ink-900"
+                    ? "bg-navy-700 text-white font-medium shadow-sm"
+                    : "text-ink-700 hover:bg-white/70 hover:text-navy-700"
                 }`}
               >
                 <span
                   className={`shrink-0 transition-colors ${
-                    isActive ? "text-white" : "text-ink-400 group-hover:text-ink-700"
+                    isActive ? "text-brand-300" : "text-ink-400 group-hover:text-navy-600"
                   }`}
                 >
                   {item.icon}
@@ -185,19 +185,19 @@ function Brand({ small }: { small?: boolean }) {
     <div className="flex items-center gap-2">
       <span
         aria-hidden
-        className={`${small ? "w-6 h-6" : "w-8 h-8"} rounded-lg bg-brand-600 inline-flex items-center justify-center shadow-sm`}
+        className={`${small ? "w-6 h-6" : "w-8 h-8"} rounded-lg bg-navy-700 inline-flex items-center justify-center shadow-sm`}
       >
         <svg width={small ? 14 : 18} height={small ? 14 : 18} viewBox="0 0 24 24" fill="none">
           <path
             d="M5 18V8.5l5-3.5 5 3.5V18M9 18v-4h2v4"
-            stroke="white"
+            stroke="#F4663D"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         </svg>
       </span>
-      <span className={`font-semibold text-ink-900 tracking-tightest ${small ? "text-sm" : "text-base"}`}>
+      <span className={`font-semibold text-navy-900 tracking-tightest ${small ? "text-sm" : "text-base"}`}>
         Stable OS
       </span>
     </div>
@@ -209,7 +209,7 @@ function Avatar({ initial, small }: { initial: string; small?: boolean }) {
   return (
     <span
       aria-hidden
-      className={`${size} shrink-0 inline-flex items-center justify-center rounded-full bg-ink-900 text-white font-semibold`}
+      className={`${size} shrink-0 inline-flex items-center justify-center rounded-full bg-brand-500 text-white font-semibold`}
     >
       {initial}
     </span>
