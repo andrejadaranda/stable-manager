@@ -38,7 +38,7 @@ export default async function ChatPage({
     <div className="flex flex-col gap-6 h-[calc(100vh-7rem)] md:h-[calc(100vh-5rem)]">
       <PageHeader
         title="Chat"
-        subtitle="Pokalbiai tavo stable'ai. Bendras kanalas + tiesioginės žinutės."
+        subtitle="Chat with your stable. Shared channel plus direct messages."
       />
       <ChatLayout
         threads={threads}

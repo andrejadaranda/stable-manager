@@ -4,8 +4,10 @@ import { requirePageRole } from "@/lib/auth/redirects";
 import { getClient, type SkillLevel } from "@/services/clients";
 import { getClientLessons, type ClientLessonRow } from "@/services/lessons";
 import { getClientBalance } from "@/services/payments";
+import { listClientPackages } from "@/services/packages";
 import { fmtDayLabel, fmtTime } from "@/lib/utils/dates";
 import { EditClientButton } from "@/components/clients/edit-client-dialog";
+import { PackagePanel } from "@/components/clients/package-panel";
 
 const SKILL_LABEL: Record<SkillLevel, string> = {
   beginner: "Beginner",
@@ -25,9 +27,10 @@ export default async function ClientDetailPage({
   const client = await getClient(params.id);
   if (!client) notFound();
 
-  const [upcoming, recent] = await Promise.all([
+  const [upcoming, recent, packages] = await Promise.all([
     getClientLessons(params.id, { direction: "upcoming", limit: 10 }),
     getClientLessons(params.id, { direction: "recent",   limit: 10 }),
+    listClientPackages(params.id),
   ]);
 
   // Owner-only: payment balance. Service throws FORBIDDEN for employees,
@@ -75,6 +78,12 @@ export default async function ClientDetailPage({
           <BalanceLine balance={balance} />
         </section>
       )}
+
+      <PackagePanel
+        clientId={client.id}
+        packages={packages}
+        isOwner={session.role === "owner"}
+      />
 
       {client.notes && (
         <section className="border border-neutral-200 rounded-md bg-white p-4">

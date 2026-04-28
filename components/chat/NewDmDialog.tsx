@@ -64,7 +64,7 @@ export function NewDmButton({ onCreated }: { onCreated: (threadId: string) => vo
       <button
         type="button"
         onClick={openPanel}
-        aria-label="Naujas pokalbis"
+        aria-label="New conversation"
         className="
           h-8 w-8 inline-flex items-center justify-center rounded-lg
           text-ink-600 hover:bg-ink-100/60 hover:text-ink-900 transition-colors
@@ -84,17 +84,17 @@ export function NewDmButton({ onCreated }: { onCreated: (threadId: string) => vo
           "
         >
           <div className="px-3 py-2.5 border-b border-ink-100">
-            <p className="text-xs font-semibold text-ink-900">Naujas pokalbis</p>
-            <p className="text-[11px] text-ink-500 mt-0.5">Pasirink, kam rašyti.</p>
+            <p className="text-xs font-semibold text-ink-900">New conversation</p>
+            <p className="text-[11px] text-ink-500 mt-0.5">Pick someone to message.</p>
           </div>
 
           <div className="flex-1 overflow-y-auto">
             {loading && (
-              <p className="px-3 py-4 text-xs text-ink-500">Kraunama…</p>
+              <p className="px-3 py-4 text-xs text-ink-500">Loading…</p>
             )}
             {!loading && contacts && contacts.length === 0 && (
               <p className="px-3 py-4 text-xs text-ink-500">
-                Nėra galimų adresatų. (Klientai mato tik treneriu, su kuriais turi pamokų.)
+                No contacts available. (Clients can only message trainers they've had lessons with.)
               </p>
             )}
             {!loading && contacts && contacts.length > 0 && (
@@ -115,7 +115,7 @@ export function NewDmButton({ onCreated }: { onCreated: (threadId: string) => vo
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm text-ink-900 truncate">
-                          {c.full_name ?? "Be vardo"}
+                          {c.full_name ?? "(no name)"}
                         </span>
                         <span className="block text-[10.5px] uppercase tracking-[0.12em] text-ink-500">
                           {c.role}

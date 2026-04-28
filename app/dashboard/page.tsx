@@ -79,13 +79,13 @@ export default async function DashboardHome() {
       <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div className="min-w-0">
           <h1 className="font-display text-3xl md:text-4xl text-navy-700 leading-none">
-            Labas{greetingName ? `, ${greetingName}` : ""}
+            Hi{greetingName ? `, ${greetingName}` : ""}
           </h1>
           <p className="text-sm text-ink-500 mt-2 capitalize">{today}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <LinkButton href="/dashboard/calendar" variant="primary" size="md">
-            + Naujas lessons
+            + New lesson
           </LinkButton>
           <LinkButton href="/dashboard/sessions" variant="secondary" size="md">
             Log a session
@@ -100,21 +100,21 @@ export default async function DashboardHome() {
           {/* Today timeline card */}
           <section className="card-elevated p-5 md:p-6">
             <div className="flex items-baseline justify-between mb-4">
-              <h2 className="text-sm font-semibold text-navy-900">Šiandienos pamokos</h2>
+              <h2 className="text-sm font-semibold text-navy-900">Today's lessons</h2>
               <span className="text-[11.5px] text-ink-500">
                 {s.todayLessons.length === 0
-                  ? "Nieko nesuplanuota"
-                  : `${s.todayLessons.length} numatyta · ${s.todayLessons.filter(l => l.status === "completed").length} baigta`}
+                  ? "Nothing scheduled"
+                  : `${s.todayLessons.length} scheduled · ${s.todayLessons.filter(l => l.status === "completed").length} completed`}
               </span>
             </div>
 
             {s.todayLessons.length === 0 ? (
               <p className="text-sm text-ink-500">
-                Šiandien nėra lessons. Atidaryk{" "}
+                No lessons today. Open the{" "}
                 <Link href="/dashboard/calendar" className="text-brand-700 font-medium hover:text-brand-800">
-                  kalendorių
+                  calendar
                 </Link>
-                {" "}kad pridėti.
+                {" "}to add one.
               </p>
             ) : (
               <ul className="flex flex-col gap-2">
@@ -140,8 +140,8 @@ export default async function DashboardHome() {
             <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <QuickAction
                 href="/dashboard/horses"
-                title="Arkliai"
-                body="Workload, dienos limitai, statusas."
+                title="Horses"
+                body="Workload, daily limits, status."
                 icon={
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 19c0-3 2-5 5-5h4l3-3 2 1-1 3-2 1v3"/>
@@ -152,8 +152,8 @@ export default async function DashboardHome() {
               />
               <QuickAction
                 href="/dashboard/clients"
-                title="Klientai"
-                body="Sąrašas, balansai, kontaktai."
+                title="Clients"
+                body="Roster, balances, contacts."
                 icon={
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="9" cy="8" r="3"/>
@@ -165,8 +165,8 @@ export default async function DashboardHome() {
               />
               <QuickAction
                 href="/dashboard/payments"
-                title="Mokėjimai"
-                body="Įvesti cash, kortele, ar pavedimu."
+                title="Payments"
+                body="Log cash, card, or transfer payments."
                 icon={
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="6" width="18" height="12" rx="2"/>
@@ -182,7 +182,7 @@ export default async function DashboardHome() {
         {/* RIGHT — KPI rings panel */}
         <aside className="card-elevated p-5 md:p-6 flex flex-col gap-5 lg:sticky lg:top-4 self-start">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold text-navy-900">Šios savaitės metrikos</h2>
+            <h2 className="text-sm font-semibold text-navy-900">This week's metrics</h2>
             <span className="text-[11px] text-ink-500">{s.monthLabel}</span>
           </div>
 
@@ -191,23 +191,23 @@ export default async function DashboardHome() {
           ) : (
             <>
               <KpiRing
-                label="Užimtumas"
+                label="Utilization"
                 value={`${utilizationPct}%`}
-                sub={`${s.weekLessonsCount} lessons${completedRatio > 0 ? ` · ${completedRatio}% baigta` : ""}`}
+                sub={`${s.weekLessonsCount} lessons${completedRatio > 0 ? ` · ${completedRatio}% completed` : ""}`}
                 pct={utilizationPct}
                 color="#E04E25"
               />
               <KpiRing
-                label="Mokėjimai"
+                label="Payments"
                 value={`${collectionPct}%`}
-                sub={`${fmtEUR(s.monthlyRevenue)} surinkta`}
+                sub={`${fmtEUR(s.monthlyRevenue)} collected`}
                 pct={collectionPct}
                 color="#1E2A47"
               />
               <KpiRing
-                label="Klientų skola"
+                label="Client balance"
                 value={fmtEUR(s.outstandingBalance)}
-                sub={s.outstandingBalance > 0 ? "Negrąžinta" : "Visi sumokėjo"}
+                sub={s.outstandingBalance > 0 ? "Outstanding" : "All paid up"}
                 pct={s.outstandingBalance > 0 ? Math.min(100, Math.round((s.outstandingBalance / Math.max(1, s.monthlyRevenue + s.outstandingBalance)) * 100)) : 0}
                 color="#B23838"
                 inverted
@@ -229,7 +229,7 @@ function ActiveHorsesCard({ count }: { count: number }) {
       className="card-elevated is-interactive p-5 md:p-6 group flex flex-col gap-3"
     >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] tracking-[0.04em] uppercase text-ink-500">Aktyvūs arkliai</span>
+        <span className="text-[11px] tracking-[0.04em] uppercase text-ink-500">Active horses</span>
         <span className="w-7 h-7 rounded-lg bg-brand-50 inline-flex items-center justify-center text-brand-700">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 19c0-3 2-5 5-5h4l3-3 2 1-1 3-2 1v3"/>
@@ -238,9 +238,9 @@ function ActiveHorsesCard({ count }: { count: number }) {
         </span>
       </div>
       <div className="font-display text-3xl text-navy-900">{count}</div>
-      <p className="text-[12px] text-ink-500">Šiuo metu rotacijoje</p>
+      <p className="text-[12px] text-ink-500">Currently in rotation</p>
       <span className="text-[12px] text-brand-700 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-        Žiūrėti →
+        View →
       </span>
     </Link>
   );
@@ -259,12 +259,12 @@ function RevenueCard({
     <div className="card-navy p-5 md:p-6 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <span className="text-[11px] tracking-[0.04em] uppercase text-navy-100/80">
-          Mėnesio pajamos
+          Monthly revenue
         </span>
         <span className="text-[11px] text-navy-100/70">{monthLabel}</span>
       </div>
       <div className="font-display text-3xl text-white">{fmtEUR(monthlyRevenue)}</div>
-      <p className="text-[12px] text-navy-100/70">Surinkti mokėjimai šį mėnesį</p>
+      <p className="text-[12px] text-navy-100/70">Collected payments this month</p>
       {/* Mini bars decoration */}
       <div className="mt-2 h-7 flex items-end gap-1.5">
         {[30, 50, 40, 65, 55, 75, 90].map((h, i) => (
@@ -347,15 +347,15 @@ function EmptyMetrics() {
           <path d="M14 7h7v7" />
         </svg>
       </span>
-      <p className="text-[13px] font-medium text-navy-900">Metrikos paaiškės naudojant</p>
+      <p className="text-[13px] font-medium text-navy-900">Metrics will appear as you use the app</p>
       <p className="text-[11.5px] text-ink-500 mt-1.5 leading-relaxed">
-        Pridėk pirmą lessons ir užloginsi savo pirmą sesiją — užimtumas, mokėjimai ir skolos atsiras realiu laiku.
+        Add your first lesson and log your first session — utilization, payments, and outstanding balances will start filling in immediately.
       </p>
       <Link
         href="/dashboard/calendar"
         className="mt-3 text-[12px] font-medium text-brand-700 hover:text-brand-800"
       >
-        + Naujas lessons →
+        + New lesson →
       </Link>
     </div>
   );

@@ -80,7 +80,7 @@ export function ChatLayout({
         <ul className="flex-1 overflow-y-auto py-1">
           {threads.length === 0 && (
             <li className="px-4 py-6 text-sm text-ink-500">
-              Pokalbių dar nėra.
+              No conversations yet.
             </li>
           )}
           {threads.map((t) => {
@@ -114,7 +114,7 @@ export function ChatLayout({
                         {label}
                       </span>
                       {unread && !isActive && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand-600 shrink-0" aria-label="naujos žinutės" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-600 shrink-0" aria-label="new messages" />
                       )}
                     </div>
                     {subtitle && (
@@ -142,7 +142,7 @@ export function ChatLayout({
                 type="button"
                 onClick={() => setMobilePanel("list")}
                 className="md:hidden p-1 -ml-1 rounded-lg text-ink-700 hover:bg-ink-100/60"
-                aria-label="Atgal į pokalbių sąrašą"
+                aria-label="Back to conversation list"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M15 18l-6-6 6-6" />
@@ -170,10 +170,10 @@ export function ChatLayout({
         ) : (
           <div className="flex-1 flex items-center justify-center px-6 py-12 text-center">
             <div>
-              <p className="text-sm font-semibold text-ink-900">Pasirink pokalbį</p>
+              <p className="text-sm font-semibold text-ink-900">Pick a conversation</p>
               <p className="text-sm text-ink-500 mt-1.5 max-w-xs mx-auto">
-                Bendras stable'os kanalas yra viršuje. Naują tiesioginį
-                pokalbį pradėk mygtuku „Naujas pokalbis".
+                The shared stable channel is at the top. Start a new direct
+                message with the "New conversation" button.
               </p>
             </div>
           </div>

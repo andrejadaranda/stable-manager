@@ -1,5 +1,5 @@
 /**
- * Maps known internal error codes / Postgres SQLSTATE to LT user-facing
+ * Maps known internal error codes / Postgres SQLSTATE to user-facing
  * messages. Service layer throws short canonical strings (e.g. "FORBIDDEN",
  * "HORSE_DOUBLE_BOOKED"); this module translates them to friendly copy
  * before they reach the UI.
@@ -10,29 +10,39 @@
 
 const MAP: Record<string, string> = {
   // Service-layer canonical errors
-  UNAUTHENTICATED:           "Reikia prisijungti iš naujo.",
-  FORBIDDEN:                 "Jūsų rolė neleidžia atlikti šio veiksmo.",
-  USER_HAS_NO_STABLE:        "Jūsų paskyra dar nėra susieta su jokia arklide.",
-  CLIENT_NOT_LINKED:         "Šios paskyros klientas dar nesusietas su portalu.",
-  HORSE_DOUBLE_BOOKED:       "Šis arklys tuo pačiu metu turi kitą pamoką.",
-  HORSE_OR_TRAINER_DOUBLE_BOOKED: "Arklys arba treneris jau užimti šiuo laiku.",
-  INVALID_TIME_RANGE:        "Pamokos pabaiga turi būti vėliau nei pradžia.",
-  INVALID_AMOUNT:            "Suma turi būti didesnė už nulį.",
-  STABLE_NAME_TOO_SHORT:     "Arklidės pavadinimas per trumpas (min. 2 simboliai).",
-  STABLE_NAME_TOO_LONG:      "Arklidės pavadinimas per ilgas (maks. 80 simbolių).",
-  FULL_NAME_REQUIRED:        "Vardas privalomas.",
-  FULL_NAME_TOO_LONG:        "Vardas per ilgas (maks. 80 simbolių).",
+  UNAUTHENTICATED:           "Please sign in again.",
+  FORBIDDEN:                 "Your role doesn't allow this action.",
+  USER_HAS_NO_STABLE:        "Your account isn't linked to a stable yet.",
+  CLIENT_NOT_LINKED:         "This account's client record isn't linked to the portal yet.",
+  HORSE_DOUBLE_BOOKED:       "This horse already has another lesson at that time.",
+  HORSE_OR_TRAINER_DOUBLE_BOOKED: "The horse or trainer is already booked at that time.",
+  INVALID_TIME_RANGE:        "Lesson end must be after the start.",
+  INVALID_AMOUNT:            "Amount must be greater than zero.",
+  INVALID_PACKAGE_SIZE:      "A package must include at least one lesson.",
+  INVALID_EXPIRY:            "Expiry date must be after the purchase date.",
+  PACKAGE_NOT_FOUND:         "That package no longer exists.",
+  PACKAGE_WRONG_CLIENT:      "That package belongs to a different client.",
+  PACKAGE_EXPIRED:           "That package has expired.",
+  PACKAGE_EXHAUSTED:         "That package has no remaining lessons.",
+  SERVICE_NAME_REQUIRED:     "Service name is required.",
+  SERVICE_NAME_TOO_LONG:     "Service name is too long (max. 80 characters).",
+  SERVICE_NAME_DUPLICATE:    "A service with that name already exists.",
+  INVALID_DURATION:          "Duration must be between 5 and 600 minutes.",
+  STABLE_NAME_TOO_SHORT:     "Stable name is too short (min. 2 characters).",
+  STABLE_NAME_TOO_LONG:      "Stable name is too long (max. 80 characters).",
+  FULL_NAME_REQUIRED:        "Name is required.",
+  FULL_NAME_TOO_LONG:        "Name is too long (max. 80 characters).",
 
   // Postgres SQLSTATE
-  "23505": "Toks įrašas jau egzistuoja.",                         // unique_violation
-  "23503": "Susijęs įrašas neegzistuoja arba jau ištrintas.",     // fk_violation
-  "23514": "Įvestos reikšmės netinka — patikrinkite formą.",      // check_violation
-  "23P01": "Arklys arba treneris jau užimti šiuo laiku.",         // exclusion_violation
-  "42501": "Jūsų rolė neleidžia atlikti šio veiksmo.",            // insufficient_privilege
-  PGRST116: "Įrašas nerastas arba jis priklauso kitai arklidei.", // PostgREST not found
+  "23505": "That record already exists.",                                  // unique_violation
+  "23503": "A related record doesn't exist or was deleted.",               // fk_violation
+  "23514": "The values don't pass validation — please check the form.",    // check_violation
+  "23P01": "The horse or trainer is already booked at that time.",         // exclusion_violation
+  "42501": "Your role doesn't allow this action.",                         // insufficient_privilege
+  PGRST116: "Record not found, or it belongs to a different stable.",      // PostgREST not found
 };
 
-const GENERIC = "Įvyko nelaukta klaida. Bandykite dar kartą po akimirkos.";
+const GENERIC = "Something went wrong. Please try again in a moment.";
 
 export type FriendlyError = {
   message: string;

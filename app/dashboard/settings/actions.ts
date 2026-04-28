@@ -32,7 +32,7 @@ export async function updateStableNameAction(formData: FormData): Promise<void> 
     bounce("/dashboard/settings/stable", { err: toFriendlyError(err).message });
   }
   revalidatePath("/dashboard/settings/stable");
-  bounce("/dashboard/settings/stable", { ok: "Arklidės informacija atnaujinta." });
+  bounce("/dashboard/settings/stable", { ok: "Stable info updated." });
 }
 
 export async function updateProfileNameAction(formData: FormData): Promise<void> {

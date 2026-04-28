@@ -127,7 +127,7 @@ export function MessagePanel({
       <div ref={scrollerRef} className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-4">
         {messages.length === 0 && (
           <div className="h-full flex items-center justify-center text-sm text-ink-500">
-            Dar nėra žinučių. Parašyk pirmą.
+            No messages yet. Send the first one.
           </div>
         )}
         <ul className="flex flex-col gap-3">
@@ -150,7 +150,7 @@ export function MessagePanel({
                   {m.body}
                 </div>
                 <div className="text-[10.5px] uppercase tracking-[0.12em] text-ink-400 mt-1 px-1">
-                  {!mine && (m.sender?.full_name ?? "Narys")}
+                  {!mine && (m.sender?.full_name ?? "Member")}
                   {!mine && " · "}
                   {formatTime(m.created_at)}
                 </div>
@@ -233,7 +233,7 @@ function MessageInput({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={onKeyDown}
           rows={1}
-          placeholder="Parašyk žinutę…  (Enter = siųsti, Shift+Enter = nauja eilutė)"
+          placeholder="Write a message…  (Enter to send, Shift+Enter for new line)"
           maxLength={4000}
           className="
             flex-1 resize-none rounded-xl border border-ink-200
@@ -248,7 +248,7 @@ function MessageInput({
           loading={isPending}
           disabled={!value.trim()}
         >
-          Siųsti
+          Send
         </Button>
       </div>
     </div>

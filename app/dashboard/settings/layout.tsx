@@ -3,6 +3,7 @@ import { requirePageRole } from "@/lib/auth/redirects";
 
 const TABS = [
   { href: "/dashboard/settings/stable",   label: "Stable",   ownerOnly: true  },
+  { href: "/dashboard/settings/services", label: "Services", ownerOnly: true  },
   { href: "/dashboard/settings/profile",  label: "Profile",  ownerOnly: false },
   { href: "/dashboard/settings/security", label: "Security", ownerOnly: false },
   { href: "/dashboard/settings/billing",  label: "Billing",  ownerOnly: true  },

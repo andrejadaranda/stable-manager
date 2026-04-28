@@ -8,21 +8,21 @@ export default function LoginPage() {
         className="text-2xl text-navy-900 font-display mb-1"
         style={{ letterSpacing: "-0.015em" }}
       >
-        Sveiki sugrįžę
+        Welcome back
       </h1>
       <p className="text-[13px] text-ink-500 mb-6">
-        Prisijunk prie savo arklidės.
+        Sign in to your stable.
       </p>
 
       <LoginForm />
 
       <p className="text-sm text-ink-600 mt-6 pt-5 border-t border-ink-100">
-        Naujas yard'as?{" "}
+        New yard?{" "}
         <Link
           href="/signup"
           className="font-medium text-brand-700 hover:text-brand-800"
         >
-          Sukurti paskyrą →
+          Create an account →
         </Link>
       </p>
     </>

@@ -13,6 +13,12 @@ export type CreateLessonInput = {
   endsAt: string;      // ISO timestamp
   price?: number;
   notes?: string;
+  /** Optional package this lesson is drawn from. When set, price is
+   *  typically 0 because the package payment was made up front. */
+  packageId?: string | null;
+  /** Optional service from the stable's price list. Just a label
+   *  link — the price still lives on the lesson row. */
+  serviceId?: string | null;
 };
 
 // Owner + employee can create lessons.
@@ -35,6 +41,22 @@ export async function createLesson(input: CreateLessonInput) {
   });
   if (free === false) throw new Error("HORSE_DOUBLE_BOOKED");
 
+  // If a package is supplied, validate it belongs to the same client
+  // and still has remaining capacity. The DB trigger will catch
+  // cross-client / cross-stable misuse, but we want a friendly error.
+  if (input.packageId) {
+    const { data: pkg } = await supabase
+      .from("lesson_package_summary")
+      .select("client_id, lessons_remaining, is_expired")
+      .eq("id", input.packageId)
+      .maybeSingle();
+    if (!pkg) throw new Error("PACKAGE_NOT_FOUND");
+    const p = pkg as { client_id: string; lessons_remaining: number; is_expired: boolean };
+    if (p.client_id !== input.clientId) throw new Error("PACKAGE_WRONG_CLIENT");
+    if (p.is_expired)                   throw new Error("PACKAGE_EXPIRED");
+    if (p.lessons_remaining <= 0)       throw new Error("PACKAGE_EXHAUSTED");
+  }
+
   const { data, error } = await supabase
     .from("lessons")
     .insert({
@@ -46,6 +68,8 @@ export async function createLesson(input: CreateLessonInput) {
       ends_at: input.endsAt,
       price: input.price ?? 0,
       notes: input.notes ?? null,
+      package_id: input.packageId ?? null,
+      service_id: input.serviceId ?? null,
     })
     .select()
     .single();
@@ -86,6 +110,10 @@ export type UpdateLessonInput = {
   endsAt?: string;
   price?: number;
   notes?: string | null;
+  /** Pass `null` to detach a previously assigned package. */
+  packageId?: string | null;
+  /** Pass `null` to clear the service link. */
+  serviceId?: string | null;
 };
 
 export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
@@ -121,12 +149,39 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
     }
   }
 
+  // Validate package change before issuing the UPDATE so we can
+  // return a friendly error instead of a trigger raise.
+  if (input.packageId !== undefined && input.packageId !== null) {
+    const { data: existing } = await supabase
+      .from("lessons")
+      .select("client_id")
+      .eq("id", lessonId)
+      .maybeSingle();
+    if (existing) {
+      const lessonClientId = (existing as { client_id: string }).client_id;
+      const { data: pkg } = await supabase
+        .from("lesson_package_summary")
+        .select("client_id, lessons_remaining, is_expired")
+        .eq("id", input.packageId)
+        .maybeSingle();
+      if (!pkg) throw new Error("PACKAGE_NOT_FOUND");
+      const p = pkg as { client_id: string; lessons_remaining: number; is_expired: boolean };
+      if (p.client_id !== lessonClientId) throw new Error("PACKAGE_WRONG_CLIENT");
+      if (p.is_expired)                   throw new Error("PACKAGE_EXPIRED");
+      // Don't reject on remaining<=0 here because changing FROM null TO
+      // an exhausted package would block, but moving WITHIN a package
+      // (status flip) shouldn't. Keep it loose at update time.
+    }
+  }
+
   const update: Record<string, unknown> = {};
   if (input.status    !== undefined) update.status    = input.status;
   if (input.startsAt  !== undefined) update.starts_at = input.startsAt;
   if (input.endsAt    !== undefined) update.ends_at   = input.endsAt;
   if (input.price     !== undefined) update.price     = input.price;
   if (input.notes     !== undefined) update.notes     = input.notes;
+  if (input.packageId !== undefined) update.package_id = input.packageId;
+  if (input.serviceId !== undefined) update.service_id = input.serviceId;
 
   const { data, error } = await supabase
     .from("lessons")
@@ -144,6 +199,8 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
 
 // Lesson row with names joined in for display. Loose typing because
 // `Database` is currently a stub; tighten once `supabase gen types` is run.
+export type LessonPaymentStatus = "paid" | "partial" | "unpaid" | "package";
+
 export type CalendarLesson = {
   id: string;
   starts_at: string;
@@ -151,14 +208,31 @@ export type CalendarLesson = {
   status: "scheduled" | "completed" | "cancelled" | "no_show";
   price: number;
   notes: string | null;
+  package_id: string | null;
+  service_id: string | null;
   horse:   { id: string; name: string } | null;
   client:  { id: string; full_name: string } | null;
   trainer: { id: string; full_name: string | null } | null;
+  service: { id: string; name: string } | null;
+  /** Computed in TS from the joined payments rows. */
+  payment_status: LessonPaymentStatus;
+  /** Sum of payments tagged with this lesson_id. */
+  paid_amount: number;
 };
 
 // All authenticated stable members can read the calendar.
 // RLS narrows the result: staff see every lesson; clients see only
 // their own (and the horse/trainer rows linked through those lessons).
+//
+// The 2026-04-28 refresh adds a per-lesson `payment_status` field
+// computed in JS from the joined payments rows:
+//   * "package" — lesson.package_id is set (covered up front).
+//   * "paid"    — sum(payments.amount where lesson_id = lesson.id) >= price.
+//   * "partial" — > 0 but < price.
+//   * "unpaid"  — 0 paid (and not on a package).
+// Employees can't read payments per RLS; for them, paid_amount/status
+// will report unpaid/0. The owner-facing UI is the only place this
+// status is rendered (employees don't see the badge).
 export async function getCalendar(from: string, to: string): Promise<CalendarLesson[]> {
   await getSession(); // assert auth + stable membership; throws otherwise
   const supabase = createSupabaseServerClient();
@@ -166,17 +240,47 @@ export async function getCalendar(from: string, to: string): Promise<CalendarLes
     .from("lessons")
     .select(
       `
-      id, starts_at, ends_at, status, price, notes,
+      id, starts_at, ends_at, status, price, notes, package_id, service_id,
       horse:horses(id, name),
       client:clients(id, full_name),
-      trainer:profiles(id, full_name)
+      trainer:profiles(id, full_name),
+      service:services(id, name),
+      payments(amount)
       `,
     )
     .gte("starts_at", from)
     .lt("starts_at", to)
     .order("starts_at", { ascending: true });
   if (error) throw error;
-  return (data ?? []) as unknown as CalendarLesson[];
+
+  const rows = (data ?? []) as unknown as Array<
+    Omit<CalendarLesson, "payment_status" | "paid_amount"> & {
+      payments?: { amount: number }[] | null;
+    }
+  >;
+
+  return rows.map((r) => {
+    const paid = (r.payments ?? []).reduce(
+      (acc, p) => acc + Number(p.amount ?? 0),
+      0,
+    );
+    let payment_status: LessonPaymentStatus;
+    if (r.package_id) payment_status = "package";
+    else if (paid >= Number(r.price) && Number(r.price) > 0) payment_status = "paid";
+    else if (paid >= Number(r.price)) payment_status = "paid";       // price=0 + paid=0 still reads "paid"
+    else if (paid > 0) payment_status = "partial";
+    else payment_status = "unpaid";
+
+    // Strip the joined payments array from the public shape so the
+    // CalendarLesson type stays clean for downstream callers.
+    const { payments: _, ...rest } = r as { payments?: unknown };
+    void _;
+    return {
+      ...(rest as Omit<CalendarLesson, "payment_status" | "paid_amount">),
+      paid_amount: paid,
+      payment_status,
+    };
+  });
 }
 
 // Workload summary for a horse over a window.

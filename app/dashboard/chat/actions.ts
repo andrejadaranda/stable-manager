@@ -31,10 +31,10 @@ export async function sendMessageAction(
     return { ok: true, message };
   } catch (err: any) {
     const code = err?.message ?? "";
-    if (code === "INVALID_BODY")    return { ok: false, error: "Žinutė tuščia arba per ilga." };
-    if (code === "FORBIDDEN")       return { ok: false, error: "Negali rašyti į šį pokalbį." };
-    if (code === "UNAUTHENTICATED") return { ok: false, error: "Sesija pasibaigė. Prisijunk iš naujo." };
-    return { ok: false, error: "Nepavyko išsiųsti žinutės." };
+    if (code === "INVALID_BODY")    return { ok: false, error: "Message is empty or too long." };
+    if (code === "FORBIDDEN")       return { ok: false, error: "You can't post in this conversation." };
+    if (code === "UNAUTHENTICATED") return { ok: false, error: "Your session expired. Sign in again." };
+    return { ok: false, error: "Couldn't send the message." };
   }
 }
 
@@ -51,10 +51,10 @@ export async function startDirectChatAction(
     return { ok: true, threadId };
   } catch (err: any) {
     const code = err?.message ?? "";
-    if (code === "FORBIDDEN")        return { ok: false, error: "Negali pradėti šio pokalbio." };
-    if (code === "INVALID_TARGET")   return { ok: false, error: "Pasirink, kam rašyti." };
-    if (code === "UNAUTHENTICATED")  return { ok: false, error: "Sesija pasibaigė. Prisijunk iš naujo." };
-    return { ok: false, error: "Nepavyko pradėti pokalbio." };
+    if (code === "FORBIDDEN")        return { ok: false, error: "You can't start this conversation." };
+    if (code === "INVALID_TARGET")   return { ok: false, error: "Pick someone to message." };
+    if (code === "UNAUTHENTICATED")  return { ok: false, error: "Your session expired. Sign in again." };
+    return { ok: false, error: "Couldn't start the conversation." };
   }
 }
 

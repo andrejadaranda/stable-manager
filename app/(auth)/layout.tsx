@@ -33,7 +33,7 @@ export default function AuthLayout({
       <div className="w-full max-w-sm card-elevated p-7 md:p-8">{children}</div>
 
       <p className="text-[12px] text-ink-500">
-        Modernus arklidžių valdymas. Lietuvai · Lenkijai · Baltijos šalims.
+        Modern stable management. Built for the Baltics and beyond.
       </p>
     </main>
   );
