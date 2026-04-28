@@ -1,44 +1,23 @@
 // Horse health & care service — staff CRUD on horse_health_records.
 // RLS handles tenant isolation; service layer adds role gates and
 // shapes the data for the Health tab UI.
+//
+// Types + the HEALTH_RECORD_KINDS constant live in
+// services/horseHealth.types.ts so client components (Add form) can
+// import them without pulling next/headers into the client bundle.
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
 
-export type HealthRecordKind = "vaccination" | "farrier" | "vet" | "injury";
+export {
+  HEALTH_RECORD_KINDS,
+  type HealthRecordKind,
+  type HealthRecord,
+  type HealthSummaryStatus,
+  type HealthSummary,
+} from "./horseHealth.types";
 
-export const HEALTH_RECORD_KINDS: HealthRecordKind[] = [
-  "vaccination",
-  "farrier",
-  "vet",
-  "injury",
-];
-
-export type HealthRecord = {
-  id: string;
-  stable_id: string;
-  horse_id: string;
-  kind: HealthRecordKind;
-  occurred_on: string;        // YYYY-MM-DD
-  next_due_on: string | null;
-  resolved_on: string | null;
-  title: string;
-  notes: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type HealthSummaryStatus = "ok" | "due_soon" | "overdue" | "none";
-
-export type HealthSummary = {
-  /** "ok" / "due_soon" / "overdue" status per recurring kind. */
-  vaccination: { status: HealthSummaryStatus; next_due_on: string | null; last_occurred_on: string | null };
-  farrier:     { status: HealthSummaryStatus; next_due_on: string | null; last_occurred_on: string | null };
-  vet:         { status: HealthSummaryStatus; next_due_on: string | null; last_occurred_on: string | null };
-  /** Currently-open injury, if any. */
-  active_injury: { occurred_on: string; title: string } | null;
-};
+import type { HealthRecordKind, HealthRecord, HealthSummary, HealthSummaryStatus } from "./horseHealth.types";
 
 const DUE_SOON_DAYS = 30;
 

@@ -7,7 +7,7 @@ import {
   createSessionAction,
   type CreateSessionState,
 } from "@/app/dashboard/sessions/actions";
-import { SESSION_TYPES } from "@/services/sessions";
+import { SESSION_TYPES } from "@/services/sessions.types";
 
 type HorseOpt  = { id: string; name: string };
 type ClientOpt = { id: string; full_name: string };

@@ -10,7 +10,7 @@ import {
   createHealthRecordAction,
   type CreateHealthState,
 } from "@/app/dashboard/horses/[id]/health-actions";
-import { HEALTH_RECORD_KINDS } from "@/services/horseHealth";
+import { HEALTH_RECORD_KINDS } from "@/services/horseHealth.types";
 
 const initial: CreateHealthState = { error: null, success: false };
 

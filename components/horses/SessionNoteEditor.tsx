@@ -7,7 +7,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateSessionAction } from "@/app/dashboard/sessions/actions";
-import { SESSION_TYPES, type SessionType } from "@/services/sessions";
+import { type SessionType } from "@/services/sessions.types";
 
 export function SessionNoteEditor({
   sessionId,

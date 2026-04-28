@@ -1,51 +1,22 @@
 // Sessions service — the "horse activity" core.
 // Staff (owner/employee) log + read all sessions in their stable.
 // Clients read only sessions where they were the rider.
+//
+// Types + the SESSION_TYPES constant live in services/sessions.types.ts
+// so client components can import them without pulling next/headers
+// into the client bundle.
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
 
-export type SessionType =
-  | "flat"
-  | "jumping"
-  | "lunging"
-  | "groundwork"
-  | "hack"
-  | "other";
+export {
+  SESSION_TYPES,
+  type SessionType,
+  type SessionRow,
+  type SessionWithLabels,
+} from "./sessions.types";
 
-export const SESSION_TYPES: SessionType[] = [
-  "flat",
-  "jumping",
-  "lunging",
-  "groundwork",
-  "hack",
-  "other",
-];
-
-export type SessionRow = {
-  id: string;
-  stable_id: string;
-  horse_id: string;
-  rider_client_id: string | null;
-  rider_profile_id: string | null;
-  rider_name_freeform: string | null;
-  trainer_id: string;
-  lesson_id: string | null;
-  started_at: string;
-  duration_minutes: number;
-  type: SessionType;
-  notes: string | null;
-  rating: number | null;
-  created_at: string;
-  updated_at: string;
-};
-
-// Row + nested labels for the list page. Joins are tiny (id+name only).
-export type SessionWithLabels = SessionRow & {
-  horse:        { id: string; name: string } | null;
-  rider_client: { id: string; full_name: string } | null;
-  trainer:      { id: string; full_name: string | null } | null;
-};
+import type { SessionType, SessionWithLabels } from "./sessions.types";
 
 const SELECT_WITH_LABELS = `
   *,

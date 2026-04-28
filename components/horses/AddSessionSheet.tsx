@@ -13,7 +13,7 @@ import {
   createSessionAction,
   type CreateSessionState,
 } from "@/app/dashboard/sessions/actions";
-import { SESSION_TYPES, type SessionType } from "@/services/sessions";
+import { SESSION_TYPES, type SessionType } from "@/services/sessions.types";
 
 const initialState: CreateSessionState = { error: null, success: false };
 
