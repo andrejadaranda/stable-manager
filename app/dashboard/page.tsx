@@ -15,6 +15,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getDashboardSummary, type DashboardLesson } from "@/services/dashboard";
+import { getOwnProfile } from "@/services/account";
 import {
   PageHeader,
   Badge,
@@ -32,7 +33,12 @@ export default async function DashboardHome() {
   if (!session) redirect("/login");
   if (session.role === "client") redirect("/dashboard/my-lessons");
 
-  const s = await getDashboardSummary();
+  const [s, profile] = await Promise.all([
+    getDashboardSummary(),
+    getOwnProfile().catch(() => null),
+  ]);
+
+  const firstName = (profile?.full_name ?? "").split(" ")[0] ?? "";
 
   const fmtEUR = (n: number) =>
     new Intl.NumberFormat(undefined, {
@@ -60,7 +66,7 @@ export default async function DashboardHome() {
         )
       : 100;
 
-  const greetingName = session.userId ? "" : "";   // TODO: pull full_name when available
+  const greetingName = firstName;
   const today = new Date().toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
@@ -136,16 +142,38 @@ export default async function DashboardHome() {
                 href="/dashboard/horses"
                 title="Arkliai"
                 body="Workload, dienos limitai, statusas."
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 19c0-3 2-5 5-5h4l3-3 2 1-1 3-2 1v3"/>
+                    <path d="M5 19h13"/>
+                    <path d="M9 8l-2-2 2-2 2 2"/>
+                  </svg>
+                }
               />
               <QuickAction
                 href="/dashboard/clients"
                 title="Klientai"
                 body="Sąrašas, balansai, kontaktai."
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="8" r="3"/>
+                    <path d="M3 20c0-3 3-5 6-5s6 2 6 5"/>
+                    <circle cx="17" cy="9" r="2.5"/>
+                    <path d="M21 19c0-2-1.5-4-4-4"/>
+                  </svg>
+                }
               />
               <QuickAction
                 href="/dashboard/payments"
                 title="Mokėjimai"
                 body="Įvesti cash, kortele, ar pavedimu."
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="6" width="18" height="12" rx="2"/>
+                    <circle cx="12" cy="12" r="2.5"/>
+                    <path d="M7 10v.01M17 14v.01"/>
+                  </svg>
+                }
               />
             </section>
           )}
@@ -158,28 +186,34 @@ export default async function DashboardHome() {
             <span className="text-[11px] text-ink-500">{s.monthLabel}</span>
           </div>
 
-          <KpiRing
-            label="Užimtumas"
-            value={`${utilizationPct}%`}
-            sub={`${s.weekLessonsCount} lessons${completedRatio > 0 ? ` · ${completedRatio}% baigta` : ""}`}
-            pct={utilizationPct}
-            color="#E04E25"
-          />
-          <KpiRing
-            label="Mokėjimai"
-            value={`${collectionPct}%`}
-            sub={`${fmtEUR(s.monthlyRevenue)} surinkta`}
-            pct={collectionPct}
-            color="#1E2A47"
-          />
-          <KpiRing
-            label="Klientų skola"
-            value={fmtEUR(s.outstandingBalance)}
-            sub={s.outstandingBalance > 0 ? "Negrąžinta" : "Visi sumokėjo"}
-            pct={s.outstandingBalance > 0 ? Math.min(100, Math.round((s.outstandingBalance / Math.max(1, s.monthlyRevenue + s.outstandingBalance)) * 100)) : 0}
-            color="#B23838"
-            inverted
-          />
+          {s.weekLessonsCount === 0 && s.monthlyRevenue === 0 && s.outstandingBalance === 0 ? (
+            <EmptyMetrics />
+          ) : (
+            <>
+              <KpiRing
+                label="Užimtumas"
+                value={`${utilizationPct}%`}
+                sub={`${s.weekLessonsCount} lessons${completedRatio > 0 ? ` · ${completedRatio}% baigta` : ""}`}
+                pct={utilizationPct}
+                color="#E04E25"
+              />
+              <KpiRing
+                label="Mokėjimai"
+                value={`${collectionPct}%`}
+                sub={`${fmtEUR(s.monthlyRevenue)} surinkta`}
+                pct={collectionPct}
+                color="#1E2A47"
+              />
+              <KpiRing
+                label="Klientų skola"
+                value={fmtEUR(s.outstandingBalance)}
+                sub={s.outstandingBalance > 0 ? "Negrąžinta" : "Visi sumokėjo"}
+                pct={s.outstandingBalance > 0 ? Math.min(100, Math.round((s.outstandingBalance / Math.max(1, s.monthlyRevenue + s.outstandingBalance)) * 100)) : 0}
+                color="#B23838"
+                inverted
+              />
+            </>
+          )}
         </aside>
       </div>
     </div>
@@ -301,6 +335,32 @@ function KpiRing({
   );
 }
 
+function EmptyMetrics() {
+  return (
+    <div className="flex flex-col items-center text-center py-4 px-2">
+      <span
+        className="w-12 h-12 rounded-2xl bg-brand-50 inline-flex items-center justify-center mb-3"
+        aria-hidden
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E04E25" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 17l6-6 4 4 8-8" />
+          <path d="M14 7h7v7" />
+        </svg>
+      </span>
+      <p className="text-[13px] font-medium text-navy-900">Metrikos paaiškės naudojant</p>
+      <p className="text-[11.5px] text-ink-500 mt-1.5 leading-relaxed">
+        Pridėk pirmą lessons ir užloginsi savo pirmą sesiją — užimtumas, mokėjimai ir skolos atsiras realiu laiku.
+      </p>
+      <Link
+        href="/dashboard/calendar"
+        className="mt-3 text-[12px] font-medium text-brand-700 hover:text-brand-800"
+      >
+        + Naujas lessons →
+      </Link>
+    </div>
+  );
+}
+
 function TimelineRow({ lesson }: { lesson: DashboardLesson }) {
   const start = new Date(lesson.starts_at);
   const end = new Date(lesson.ends_at);
@@ -342,20 +402,29 @@ function QuickAction({
   href,
   title,
   body,
+  icon,
 }: {
   href: string;
   title: string;
   body: string;
+  icon?: React.ReactNode;
 }) {
   return (
-    <Link href={href} className="card-elevated is-interactive p-4 group">
-      <p className="text-sm font-semibold text-navy-900 group-hover:text-brand-700 transition-colors">
-        {title}
-      </p>
-      <p className="text-[12px] text-ink-500 mt-1 leading-relaxed">{body}</p>
-      <p className="text-[11.5px] text-brand-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        Atidaryti →
-      </p>
+    <Link href={href} className="card-elevated is-interactive p-4 group flex items-start gap-3">
+      {icon && (
+        <span className="w-9 h-9 shrink-0 rounded-xl bg-brand-50 text-brand-700 inline-flex items-center justify-center group-hover:bg-brand-100 transition-colors">
+          {icon}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-navy-900 group-hover:text-brand-700 transition-colors">
+          {title}
+        </p>
+        <p className="text-[12px] text-ink-500 mt-0.5 leading-relaxed">{body}</p>
+      </div>
+      <span className="shrink-0 text-ink-300 group-hover:text-brand-700 transition-colors mt-0.5" aria-hidden>
+        →
+      </span>
     </Link>
   );
 }

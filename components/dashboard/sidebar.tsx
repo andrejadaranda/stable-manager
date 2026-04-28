@@ -103,7 +103,7 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
 
         <Link
           href="/dashboard/settings/profile"
-          className="mx-3 mt-4 md:mt-2 mb-3 px-3 py-3 rounded-xl bg-white shadow-soft hover:shadow-lift transition-shadow flex items-center gap-3 group"
+          className="mx-3 mt-4 md:mt-2 mb-2 px-3 py-3 rounded-xl bg-white shadow-soft hover:shadow-lift transition-shadow flex items-center gap-3 group"
         >
           <Avatar initial={initial} />
           <div className="min-w-0 flex-1">
@@ -125,6 +125,8 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
         >
           ✕
         </button>
+
+        <div className="mx-5 my-2 h-px bg-navy-100/50" aria-hidden />
 
         <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5 overflow-y-auto">
           {NAV[role].map((item) => {
@@ -182,7 +184,7 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
 
 function Brand({ small }: { small?: boolean }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2.5">
       <span
         aria-hidden
         className={`${small ? "w-6 h-6" : "w-8 h-8"} rounded-lg bg-navy-700 inline-flex items-center justify-center shadow-sm`}
@@ -197,8 +199,11 @@ function Brand({ small }: { small?: boolean }) {
           />
         </svg>
       </span>
-      <span className={`font-semibold text-navy-900 tracking-tightest ${small ? "text-sm" : "text-base"}`}>
-        Stable OS
+      <span
+        className={`text-navy-900 leading-none ${small ? "text-base" : "text-[19px]"} font-display`}
+        style={{ letterSpacing: "-0.015em" }}
+      >
+        Stable<span className="text-brand-600">.</span>OS
       </span>
     </div>
   );
