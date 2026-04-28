@@ -8,6 +8,7 @@ type Tab = { key: string; label: string };
 const TABS: Tab[] = [
   { key: "overview", label: "Overview" },
   { key: "sessions", label: "Sessions" },
+  { key: "boarding", label: "Boarding" },
   { key: "health",   label: "Health" },
   { key: "goals",    label: "Goals" },
   { key: "media",    label: "Media" },

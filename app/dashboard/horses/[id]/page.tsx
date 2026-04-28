@@ -27,14 +27,17 @@ import { HorseProfileTabs } from "@/components/horses/HorseProfileTabs";
 import { OverviewTab } from "@/components/horses/OverviewTab";
 import { SessionsTab } from "@/components/horses/SessionsTab";
 import { HealthTab } from "@/components/horses/HealthTab";
+import { BoardingTab } from "@/components/horses/BoardingTab";
 import { ScheduleRail } from "@/components/horses/ScheduleRail";
 import { ComingSoonTab } from "@/components/horses/ComingSoonTab";
+import { listChargesForHorse } from "@/services/boarding";
+import { getClient } from "@/services/clients";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = { tab?: string };
 
-const VALID_TABS = ["overview", "sessions", "health", "goals", "media"] as const;
+const VALID_TABS = ["overview", "sessions", "boarding", "health", "goals", "media"] as const;
 type Tab = (typeof VALID_TABS)[number];
 
 export default async function HorseDetailPage({
@@ -44,7 +47,7 @@ export default async function HorseDetailPage({
   params: { id: string };
   searchParams: SearchParams;
 }) {
-  await requirePageRole("owner", "employee");
+  const session = await requirePageRole("owner", "employee");
 
   const horse = await getHorseProfileSummary(params.id);
   if (!horse) notFound();
@@ -83,6 +86,21 @@ export default async function HorseDetailPage({
         sessions={sessions}
         horseId={params.id}
         clients={clients.map((c) => ({ id: c.id, full_name: c.full_name }))}
+      />
+    );
+  } else if (tab === "boarding") {
+    const [charges, ownerClient] = await Promise.all([
+      listChargesForHorse(params.id),
+      horse.owner_client_id ? getClient(horse.owner_client_id) : Promise.resolve(null),
+    ]);
+    tabContent = (
+      <BoardingTab
+        horseId={params.id}
+        horseName={horse.name}
+        ownerClient={ownerClient ? { id: ownerClient.id, full_name: ownerClient.full_name } : null}
+        monthlyFee={horse.monthly_boarding_fee != null ? Number(horse.monthly_boarding_fee) : null}
+        charges={charges}
+        isOwner={session.role === "owner"}
       />
     );
   } else if (tab === "health") {

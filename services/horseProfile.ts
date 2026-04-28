@@ -31,6 +31,9 @@ export type HorseProfileSummary = {
   weekly_lesson_limit: number;
   owner_client_id: string | null;
   owner_client_name: string | null;
+  /** Default boarding fee used to pre-fill new charges. Null if unset
+   *  or if the stable owns the horse. */
+  monthly_boarding_fee: number | null;
 
   // KPIs over the current ISO week (Mon 00:00 → next Mon 00:00, server time).
   week: {
@@ -111,7 +114,7 @@ export async function getHorseProfileSummary(
       .from("horses")
       .select(
         `id, stable_id, name, breed, date_of_birth, active, notes, photo_url,
-         daily_lesson_limit, weekly_lesson_limit, owner_client_id,
+         daily_lesson_limit, weekly_lesson_limit, owner_client_id, monthly_boarding_fee,
          owner_client:clients!horses_owner_client_id_fkey(id, full_name)`,
       )
       .eq("id", horseId)
@@ -175,6 +178,8 @@ export async function getHorseProfileSummary(
     weekly_lesson_limit: horse.weekly_lesson_limit,
     owner_client_id: horse.owner_client_id,
     owner_client_name: horse.owner_client?.full_name ?? null,
+    monthly_boarding_fee:
+      horse.monthly_boarding_fee != null ? Number(horse.monthly_boarding_fee) : null,
     week: {
       lesson_count: lessons.length,
       session_count: sessions.length,
