@@ -5,10 +5,13 @@ export default function LoginPage() {
   return (
     <>
       <LoginForm />
-      <p className="text-sm text-neutral-600 mt-5">
+      <p className="text-sm text-ink-600 mt-6 pt-5 border-t border-ink-100">
         New stable?{" "}
-        <Link href="/signup" className="underline underline-offset-4">
-          Create one
+        <Link
+          href="/signup"
+          className="font-medium text-brand-700 hover:text-brand-800"
+        >
+          Create one →
         </Link>
       </p>
     </>

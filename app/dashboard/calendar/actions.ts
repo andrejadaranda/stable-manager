@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createLesson, updateLesson } from "@/services/lessons";
+import { createSessionFromLesson } from "@/services/sessions";
 
 export type CreateLessonState = {
   error: string | null;
@@ -134,6 +135,14 @@ export async function updateLessonAction(
       price,
       notes:    notesRaw.trim() === "" ? null : notesRaw.trim(),
     });
+
+    // Auto-log a session when a lesson is marked completed. Best-effort:
+    // failures here (e.g. session already exists) must not roll back the
+    // lesson update. The trainer can also log additional sessions manually.
+    if (status === "completed") {
+      await createSessionFromLesson(lessonId).catch(() => {});
+      revalidatePath("/dashboard/sessions");
+    }
   } catch (err: any) {
     const message = err?.message ?? "";
     switch (message) {

@@ -4,6 +4,7 @@ import { listClients } from "@/services/clients";
 import { getCalendar } from "@/services/lessons";
 import { PaymentList } from "@/components/payments/payment-list";
 import { CreatePaymentPanel } from "@/components/payments/create-payment-form";
+import { PageHeader } from "@/components/ui";
 
 export default async function PaymentsPage() {
   await requirePageRole("owner");
@@ -22,13 +23,16 @@ export default async function PaymentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Payments</h1>
-        <CreatePaymentPanel
-          clients={clients ?? []}
-          lessons={lessons ?? []}
-        />
-      </div>
+      <PageHeader
+        title="Payments"
+        subtitle="Cash, card, and transfers received from clients."
+        actions={
+          <CreatePaymentPanel
+            clients={clients ?? []}
+            lessons={lessons ?? []}
+          />
+        }
+      />
       <PaymentList payments={payments} showClientName />
     </div>
   );

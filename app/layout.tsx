@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Stable Manager",
-  description: "Equestrian stable management",
+  title: "Stable OS — modern stable management",
+  description:
+    "Schedule lessons, track payments, and protect your horses. Built for European riding stables.",
+  applicationName: "Stable OS",
+  themeColor: "#FAF8F5",
 };
 
 export default function RootLayout({
@@ -13,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="min-h-screen">{children}</body>
     </html>
   );
 }

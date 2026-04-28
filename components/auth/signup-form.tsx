@@ -2,36 +2,84 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import { signupOwnerAction, type ActionState } from "@/lib/auth/actions";
+import { Field, Input, Button } from "@/components/ui";
 
 const initial: ActionState = { error: null };
 
 export function SignupOwnerForm() {
   const [state, formAction] = useFormState(signupOwnerAction, initial);
   return (
-    <form action={formAction} className="flex flex-col gap-3">
-      <h1 className="text-xl font-semibold mb-1">Create your stable</h1>
-      <p className="text-xs text-neutral-500 -mt-1 mb-2">
-        First-owner signup. Provisions the stable and your account in one step.
-      </p>
+    <form action={formAction} className="flex flex-col gap-4">
+      <div className="mb-1">
+        <h1 className="text-xl font-semibold tracking-tightest text-ink-900">
+          Create your stable
+        </h1>
+        <p className="text-sm text-ink-500 mt-1">
+          First-owner signup — your stable and account in one step.
+        </p>
+      </div>
 
-      <Field label="Your name"    name="full_name"   type="text"   autoComplete="name" />
-      <Field label="Stable name"  name="stable_name" type="text" />
+      <Field label="Your name" required>
+        <Input
+          name="full_name"
+          type="text"
+          autoComplete="name"
+          required
+          placeholder="Jonas Petraitis"
+        />
+      </Field>
+
+      <Field label="Stable name" required>
+        <Input
+          name="stable_name"
+          type="text"
+          required
+          placeholder="Pajurio Žirgynas"
+          maxLength={80}
+        />
+      </Field>
+
       <Field
-        label="Stable slug"
-        name="stable_slug"
-        type="text"
-        autoCapitalize="none"
-        spellCheck={false}
-        pattern="[a-z0-9-]{2,40}"
-        title="2-40 lowercase letters, digits, or hyphens"
-      />
+        label="Stable handle"
+        hint="Lowercase letters, digits, hyphens. 2–40 characters."
+        required
+      >
+        <Input
+          name="stable_slug"
+          type="text"
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+          pattern="[a-z0-9-]{2,40}"
+          title="2-40 lowercase letters, digits, or hyphens"
+          placeholder="pajurio-zirgynas"
+        />
+      </Field>
 
-      <Field label="Email"        name="email"       type="email"    autoComplete="email" />
-      <Field label="Password"     name="password"    type="password" autoComplete="new-password" minLength={8} />
+      <Field label="Email" required>
+        <Input
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          placeholder="you@stable.com"
+        />
+      </Field>
+
+      <Field label="Password" hint="Minimum 8 characters." required>
+        <Input
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+        />
+      </Field>
 
       <Submit label="Create stable" />
+
       {state.error && (
-        <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+        <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3.5 py-2.5">
           {state.error}
         </p>
       )}
@@ -39,31 +87,11 @@ export function SignupOwnerForm() {
   );
 }
 
-function Field(
-  props: React.InputHTMLAttributes<HTMLInputElement> & { label: string },
-) {
-  const { label, ...rest } = props;
-  return (
-    <label className="flex flex-col gap-1.5 text-sm">
-      <span className="text-neutral-700 font-medium">{label}</span>
-      <input
-        required
-        className="border border-neutral-300 rounded-md px-3 py-2 text-sm placeholder:text-neutral-400"
-        {...rest}
-      />
-    </label>
-  );
-}
-
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="mt-2 rounded-md bg-neutral-900 text-white py-2.5 text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
+    <Button type="submit" loading={pending} variant="primary" size="lg" className="mt-1 w-full">
       {pending ? "Creating…" : label}
-    </button>
+    </Button>
   );
 }

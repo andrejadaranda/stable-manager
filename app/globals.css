@@ -2,50 +2,137 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =============================================================
+   Stable OS — global design layer.
+   See tailwind.config.ts for token definitions.
+   ============================================================= */
+
+:root {
+  --color-brand:        #B25430;
+  --color-brand-soft:   #FBF1EA;
+  --color-surface:      #FAF8F5;
+  --color-surface-muted:#F3F0EB;
+  --color-ink-900:      #1C1A17;
+  --color-ink-700:      #3F3934;
+  --color-ink-500:      #7B7167;
+  --color-ink-300:      #C4B9AC;
+
+  --radius-card: 20px;
+  --radius-input: 10px;
+
+  --shadow-soft: 0 1px 2px rgba(28,26,23,0.04), 0 8px 24px -8px rgba(28,26,23,0.08);
+  --shadow-lift: 0 1px 2px rgba(28,26,23,0.05), 0 14px 32px -10px rgba(28,26,23,0.14);
+}
+
 html, body {
   height: 100%;
 }
 
 body {
-  @apply text-neutral-900 antialiased;
+  @apply text-ink-900 antialiased font-sans;
   background:
-    radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,0.9), transparent 50%),
-    radial-gradient(120% 80% at 100% 0%, rgba(244,244,247,0.9), transparent 50%),
-    linear-gradient(180deg, #f7f7f9 0%, #eeeef2 100%);
+    radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,0.55), transparent 55%),
+    radial-gradient(120% 80% at 100% 0%, rgba(251,241,234,0.45), transparent 55%),
+    linear-gradient(180deg, #FAF8F5 0%, #F1ECE4 100%);
   background-attachment: fixed;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.011em;
 }
 
-/* Soft elevation — used by cards. Replaces harsh border + drop-shadow combos. */
+/* -------------------------------------------------------------
+   Card surfaces. `.card` kept for backwards compat with existing
+   markup; `.card-elevated` is the new soft-shadow variant used by
+   StatCards, settings panels, calendar lesson dialog etc.
+   ------------------------------------------------------------- */
 .card {
   @apply bg-white rounded-2xl;
-  box-shadow:
-    0 1px 2px rgba(15, 15, 20, 0.04),
-    0 8px 24px -8px rgba(15, 15, 20, 0.08);
+  box-shadow: var(--shadow-soft);
 }
 
-.card-hover {
-  transition: box-shadow .2s ease, transform .2s ease;
-}
-.card-hover:hover {
-  box-shadow:
-    0 1px 2px rgba(15, 15, 20, 0.05),
-    0 12px 32px -10px rgba(15, 15, 20, 0.12);
+.card-elevated {
+  @apply bg-white rounded-2xl;
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow .25s cubic-bezier(0.22, 1, 0.36, 1),
+              transform   .25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Consistent focus ring on inputs/buttons */
+.card-hover:hover,
+.card-elevated.is-interactive:hover {
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-1px);
+}
+
+/* -------------------------------------------------------------
+   Focus rings — warm brand glow.
+   ------------------------------------------------------------- */
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible,
-button:focus-visible {
-  @apply outline-none ring-2 ring-neutral-900 ring-offset-1 ring-offset-white;
+textarea:focus-visible {
+  @apply outline-none;
+  box-shadow: var(--shadow-focus, 0 0 0 3px rgba(178,84,48,0.20));
+  border-color: var(--color-brand);
 }
 
-/* Smoother transitions for interactive surfaces */
+button:focus-visible,
+a:focus-visible {
+  @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-surface;
+}
+
+/* -------------------------------------------------------------
+   Smooth transitions on interactive elements.
+   ------------------------------------------------------------- */
 button,
 a,
 input,
 select,
 textarea {
   @apply transition-colors;
+}
+
+/* -------------------------------------------------------------
+   Headings — tighter tracking on display sizes.
+   ------------------------------------------------------------- */
+h1, h2, h3 {
+  letter-spacing: -0.018em;
+}
+
+/* -------------------------------------------------------------
+   Form field reset — replaces ad-hoc styling across components.
+   Consumers use the <Input /> primitive but we still want raw
+   <input> elements (e.g. inside legacy forms) to read clean.
+   ------------------------------------------------------------- */
+.field-input {
+  @apply w-full bg-white text-ink-900 placeholder:text-ink-400
+         rounded-lg border border-ink-200 px-3.5 py-2.5 text-sm
+         transition-shadow;
+}
+.field-input:hover { @apply border-ink-300; }
+
+/* -------------------------------------------------------------
+   Status pill primitive (used by Calendar + Lessons).
+   ------------------------------------------------------------- */
+.status-dot {
+  @apply inline-block w-1.5 h-1.5 rounded-full shrink-0;
+}
+
+/* -------------------------------------------------------------
+   Toast / flash animation.
+   ------------------------------------------------------------- */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+.toast-enter {
+  animation: toast-in .25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* -------------------------------------------------------------
+   Scrollbar — subtle on macOS-like surfaces.
+   ------------------------------------------------------------- */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(28,26,23,0.10);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(28,26,23,0.18);
 }

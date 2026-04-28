@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ClientWithUpcomingCount, SkillLevel } from "@/services/clients";
+import { EmptyState, Badge } from "@/components/ui";
 
 const SKILL_LABEL: Record<SkillLevel, string> = {
   beginner: "Beginner",
@@ -12,8 +13,9 @@ export function ClientList({ clients }: { clients: ClientWithUpcomingCount[] }) 
   if (clients.length === 0) {
     return (
       <EmptyState
-        title="No clients yet"
-        body='Add your first client with "+ New client" to start scheduling lessons for them.'
+        title="No clients on your roster yet"
+        body="Add a client to start booking lessons and tracking balances. You can invite them to the client portal later."
+        primary={{ label: "Add your first client", href: "/dashboard/clients?new=1" }}
       />
     );
   }
@@ -63,25 +65,9 @@ function Dash() {
 }
 
 function StatusPill({ active }: { active: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-2 text-xs">
-      <span
-        className={`inline-block w-1.5 h-1.5 rounded-full ${
-          active ? "bg-emerald-500" : "bg-neutral-300"
-        }`}
-      />
-      <span className={active ? "text-neutral-700" : "text-neutral-400"}>
-        {active ? "Active" : "Inactive"}
-      </span>
-    </span>
-  );
-}
-
-function EmptyState({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="card p-12 text-center">
-      <p className="text-base font-semibold text-neutral-800">{title}</p>
-      <p className="text-sm text-neutral-500 mt-1.5">{body}</p>
-    </div>
+  return active ? (
+    <Badge tone="success" dot>Active</Badge>
+  ) : (
+    <Badge tone="muted" dot>Inactive</Badge>
   );
 }

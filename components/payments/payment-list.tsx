@@ -1,11 +1,12 @@
 import type { PaymentRow } from "@/services/payments";
 import { fmtDayLabel, fmtTime } from "@/lib/utils/dates";
+import { EmptyState, Badge } from "@/components/ui";
 
-const METHOD_DOT: Record<PaymentRow["method"], string> = {
-  cash:     "bg-emerald-500",
-  card:     "bg-blue-500",
-  transfer: "bg-violet-500",
-  other:    "bg-neutral-400",
+const METHOD_TONE: Record<PaymentRow["method"], "success" | "info" | "brand" | "muted"> = {
+  cash:     "success",
+  card:     "info",
+  transfer: "brand",
+  other:    "muted",
 };
 
 export function PaymentList({
@@ -18,11 +19,16 @@ export function PaymentList({
   if (payments.length === 0) {
     return (
       <EmptyState
-        title="No payments recorded yet"
+        title="No payments yet"
         body={
           showClientName
-            ? 'Use "+ New payment" to record one.'
-            : "Once your stable owner records a payment for you, it will appear here."
+            ? "Record a payment to start tracking client balances. Cash, card, and transfer all supported."
+            : "Once your stable records a payment for you, it will appear here automatically."
+        }
+        primary={
+          showClientName
+            ? { label: "Record a payment", href: "/dashboard/payments?new=1" }
+            : undefined
         }
       />
     );
@@ -89,18 +95,8 @@ function Dash() {
 
 function MethodTag({ method }: { method: PaymentRow["method"] }) {
   return (
-    <span className="inline-flex items-center gap-2 text-xs capitalize">
-      <span className={`inline-block w-1.5 h-1.5 rounded-full ${METHOD_DOT[method]}`} />
-      <span className="text-neutral-700">{method}</span>
-    </span>
-  );
-}
-
-function EmptyState({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="card p-12 text-center">
-      <p className="text-base font-semibold text-neutral-800">{title}</p>
-      <p className="text-sm text-neutral-500 mt-1.5">{body}</p>
-    </div>
+    <Badge tone={METHOD_TONE[method]} dot className="capitalize">
+      {method}
+    </Badge>
   );
 }

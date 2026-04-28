@@ -6,18 +6,51 @@ import { addDays, fmtDayLabel, fmtISODate, fmtTime } from "@/lib/utils/dates";
 import type { CalendarLesson } from "@/services/lessons";
 import { EditLessonDialog } from "@/components/calendar/edit-lesson-dialog";
 
-const STATUS_DOT: Record<CalendarLesson["status"], string> = {
-  scheduled: "bg-blue-500",
-  completed: "bg-emerald-500",
-  cancelled: "bg-neutral-400",
-  no_show:   "bg-rose-500",
+// Status-driven lesson card style. One stripe color per status —
+// stays accessible in monochrome printouts and at small sizes.
+const STATUS_STYLE: Record<
+  CalendarLesson["status"],
+  { stripe: string; bg: string; ink: string; meta: string; pill: string; pillInk: string }
+> = {
+  scheduled: {
+    stripe:  "bg-sky-400",
+    bg:      "bg-white hover:bg-sky-50/40",
+    ink:     "text-ink-900",
+    meta:    "text-ink-500",
+    pill:    "bg-sky-100",
+    pillInk: "text-sky-700",
+  },
+  completed: {
+    stripe:  "bg-emerald-500",
+    bg:      "bg-white hover:bg-emerald-50/40",
+    ink:     "text-ink-900",
+    meta:    "text-ink-500",
+    pill:    "bg-emerald-100",
+    pillInk: "text-emerald-700",
+  },
+  cancelled: {
+    stripe:  "bg-ink-300",
+    bg:      "bg-ink-100/40 hover:bg-ink-100/60",
+    ink:     "text-ink-400 line-through",
+    meta:    "text-ink-300",
+    pill:    "bg-ink-100",
+    pillInk: "text-ink-500",
+  },
+  no_show: {
+    stripe:  "bg-rose-500",
+    bg:      "bg-white hover:bg-rose-50/40",
+    ink:     "text-ink-900",
+    meta:    "text-ink-500",
+    pill:    "bg-rose-100",
+    pillInk: "text-rose-700",
+  },
 };
 
 const STATUS_LABEL: Record<CalendarLesson["status"], string> = {
   scheduled: "Scheduled",
   completed: "Completed",
   cancelled: "Cancelled",
-  no_show:   "No show",
+  no_show:   "No-show",
 };
 
 export function WeekView({
@@ -67,28 +100,26 @@ export function WeekView({
           return (
             <div
               key={key}
-              className={`min-h-[180px] rounded-2xl bg-white overflow-hidden transition-shadow ${
-                isToday
-                  ? "ring-2 ring-neutral-900 shadow-[0_8px_24px_-8px_rgba(15,15,20,0.18)]"
-                  : "shadow-[0_1px_2px_rgba(15,15,20,0.04),0_8px_24px_-8px_rgba(15,15,20,0.06)]"
+              className={`min-h-[200px] rounded-2xl bg-white overflow-hidden transition-shadow card-elevated ${
+                isToday ? "ring-2 ring-brand-500/70" : ""
               }`}
             >
-              <div className="px-4 pt-3 pb-2 flex items-baseline justify-between">
-                <span className={`text-[10px] uppercase tracking-[0.12em] ${
-                  isToday ? "text-neutral-900 font-semibold" : "text-neutral-400"
+              <div className="px-4 pt-3.5 pb-2 flex items-baseline justify-between">
+                <span className={`text-[10px] uppercase tracking-[0.14em] font-medium ${
+                  isToday ? "text-brand-700" : "text-ink-500"
                 }`}>
                   {day.toLocaleDateString(undefined, { weekday: "short" })}
                 </span>
-                <span className={`text-2xl font-semibold tabular-nums leading-none ${
-                  isToday ? "text-neutral-900" : "text-neutral-700"
+                <span className={`text-2xl font-semibold tabular-nums leading-none tracking-tightest ${
+                  isToday ? "text-brand-700" : "text-ink-900"
                 }`}>
                   {day.getDate()}
                 </span>
               </div>
               <div className="p-2 flex flex-col gap-1.5">
                 {items.length === 0 ? (
-                  <p className="text-[11px] text-neutral-300 px-2 py-1.5 italic">
-                    Free
+                  <p className="text-[11px] text-ink-300 px-2 py-1.5">
+                    No lessons
                   </p>
                 ) : (
                   items.map((l) =>
@@ -124,34 +155,31 @@ export function WeekView({
 }
 
 function LessonCard({ lesson }: { lesson: CalendarLesson }) {
-  const dot = STATUS_DOT[lesson.status];
-  const muted = lesson.status === "cancelled";
+  const s = STATUS_STYLE[lesson.status];
   return (
     <div
-      className={`text-xs rounded-xl px-3 py-2.5 leading-tight transition-colors ${
-        muted
-          ? "bg-neutral-50 text-neutral-400"
-          : "bg-neutral-50/70 hover:bg-neutral-100/80 text-neutral-800"
-      }`}
+      className={`relative text-xs rounded-xl pl-3.5 pr-3 py-2.5 leading-tight transition-colors overflow-hidden ${s.bg}`}
     >
-      <div className="flex items-center gap-2">
-        <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${dot}`} />
-        <span className="font-semibold tabular-nums">
+      <span className={`absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full ${s.stripe}`} />
+      <div className="flex items-center gap-1.5">
+        <span className={`font-semibold tabular-nums ${s.ink}`}>
           {fmtTime(lesson.starts_at)}
         </span>
-        <span className="text-neutral-400">→</span>
-        <span className="text-neutral-500 tabular-nums">
+        <span className={`${s.meta}`}>–</span>
+        <span className={`tabular-nums ${s.meta}`}>
           {fmtTime(lesson.ends_at)}
         </span>
       </div>
-      <div className={`mt-1.5 font-medium ${muted ? "line-through" : ""}`}>
+      <div className={`mt-1 font-medium ${s.ink}`}>
         {lesson.client?.full_name ?? "—"}
       </div>
-      <div className="mt-0.5 text-[11px] text-neutral-500">
+      <div className={`mt-0.5 text-[11px] ${s.meta}`}>
         {lesson.horse?.name ?? "—"} · {lesson.trainer?.full_name ?? "—"}
       </div>
-      <div className="text-[10px] uppercase tracking-[0.12em] text-neutral-400 mt-1.5">
-        {STATUS_LABEL[lesson.status]}
+      <div className="mt-1.5">
+        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium ${s.pill} ${s.pillInk}`}>
+          {STATUS_LABEL[lesson.status]}
+        </span>
       </div>
     </div>
   );
@@ -170,7 +198,7 @@ function NavButton({
     <Link
       href={href}
       aria-label={ariaLabel}
-      className="px-3 py-1.5 rounded-xl bg-white text-sm text-neutral-700 hover:text-neutral-900 hover:bg-white shadow-[0_1px_2px_rgba(15,15,20,0.04),0_4px_12px_-6px_rgba(15,15,20,0.06)] transition-all hover:shadow-[0_1px_2px_rgba(15,15,20,0.06),0_8px_18px_-6px_rgba(15,15,20,0.10)]"
+      className="px-3 h-9 inline-flex items-center rounded-xl bg-white text-sm text-ink-700 hover:text-ink-900 shadow-soft hover:shadow-lift transition-shadow"
     >
       {label}
     </Link>

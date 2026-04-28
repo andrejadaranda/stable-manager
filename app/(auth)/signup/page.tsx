@@ -5,10 +5,13 @@ export default function SignupPage() {
   return (
     <>
       <SignupOwnerForm />
-      <p className="text-sm text-neutral-600 mt-5">
+      <p className="text-sm text-ink-600 mt-6 pt-5 border-t border-ink-100">
         Already have an account?{" "}
-        <Link href="/login" className="underline underline-offset-4">
-          Sign in
+        <Link
+          href="/login"
+          className="font-medium text-brand-700 hover:text-brand-800"
+        >
+          Sign in →
         </Link>
       </p>
     </>

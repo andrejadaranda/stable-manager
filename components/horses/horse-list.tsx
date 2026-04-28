@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { HorseWithWeeklyWorkload } from "@/services/horses";
+import { EmptyState, Badge } from "@/components/ui";
 
 export function HorseList({ horses }: { horses: HorseWithWeeklyWorkload[] }) {
   if (horses.length === 0) {
     return (
       <EmptyState
-        title="No horses yet"
-        body='Add your first horse with "+ New horse" to start tracking workload.'
+        title="No horses on the roster yet"
+        body="Add your first horse to start scheduling lessons and tracking weekly workload. You can adjust limits and notes any time."
+        primary={{ label: "Add your first horse", href: "/dashboard/horses?new=1" }}
       />
     );
   }
@@ -51,25 +53,9 @@ export function HorseList({ horses }: { horses: HorseWithWeeklyWorkload[] }) {
 }
 
 function StatusPill({ active }: { active: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-2 text-xs">
-      <span
-        className={`inline-block w-1.5 h-1.5 rounded-full ${
-          active ? "bg-emerald-500" : "bg-neutral-300"
-        }`}
-      />
-      <span className={active ? "text-neutral-700" : "text-neutral-400"}>
-        {active ? "Active" : "Inactive"}
-      </span>
-    </span>
-  );
-}
-
-function EmptyState({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="card p-12 text-center">
-      <p className="text-base font-semibold text-neutral-800">{title}</p>
-      <p className="text-sm text-neutral-500 mt-1.5">{body}</p>
-    </div>
+  return active ? (
+    <Badge tone="success" dot>Active</Badge>
+  ) : (
+    <Badge tone="muted" dot>Inactive</Badge>
   );
 }

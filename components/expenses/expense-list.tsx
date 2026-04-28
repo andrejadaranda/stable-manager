@@ -1,5 +1,6 @@
 import type { ExpenseRow, ExpenseCategory } from "@/services/expenses";
 import { fmtDayLabel } from "@/lib/utils/dates";
+import { EmptyState, Badge } from "@/components/ui";
 
 const CATEGORY_LABEL: Record<ExpenseCategory, string> = {
   feed:        "Feed",
@@ -10,13 +11,13 @@ const CATEGORY_LABEL: Record<ExpenseCategory, string> = {
   other:       "Other",
 };
 
-const CATEGORY_DOT: Record<ExpenseCategory, string> = {
-  feed:        "bg-amber-500",
-  vet:         "bg-rose-500",
-  farrier:     "bg-blue-500",
-  maintenance: "bg-slate-500",
-  staff:       "bg-violet-500",
-  other:       "bg-neutral-400",
+const CATEGORY_TONE: Record<ExpenseCategory, "warning" | "danger" | "info" | "neutral" | "brand" | "muted"> = {
+  feed:        "warning",
+  vet:         "danger",
+  farrier:     "info",
+  maintenance: "neutral",
+  staff:       "brand",
+  other:       "muted",
 };
 
 export function ExpenseList({ expenses }: { expenses: ExpenseRow[] }) {
@@ -24,7 +25,8 @@ export function ExpenseList({ expenses }: { expenses: ExpenseRow[] }) {
     return (
       <EmptyState
         title="No expenses recorded yet"
-        body='Use "+ New expense" to record one.'
+        body="Track feed, vet, farrier, maintenance, and staff costs to see your real monthly margin."
+        primary={{ label: "Add an expense", href: "/dashboard/expenses?new=1" }}
       />
     );
   }
@@ -65,9 +67,10 @@ export function ExpenseList({ expenses }: { expenses: ExpenseRow[] }) {
               key={e.id}
               className="grid grid-cols-[1fr_0.8fr_1fr_1.2fr_1.6fr] gap-3 px-6 py-4 text-sm items-center hover:bg-neutral-50/70 transition-colors"
             >
-              <div className="inline-flex items-center gap-2">
-                <span className={`inline-block w-1.5 h-1.5 rounded-full ${CATEGORY_DOT[e.category]}`} />
-                <span className="text-neutral-700">{CATEGORY_LABEL[e.category]}</span>
+              <div>
+                <Badge tone={CATEGORY_TONE[e.category]} dot>
+                  {CATEGORY_LABEL[e.category]}
+                </Badge>
               </div>
               <div className="font-semibold text-neutral-900 tabular-nums">
                 {Number(e.amount).toFixed(2)}
@@ -89,11 +92,3 @@ export function ExpenseList({ expenses }: { expenses: ExpenseRow[] }) {
   );
 }
 
-function EmptyState({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="card p-12 text-center">
-      <p className="text-base font-semibold text-neutral-800">{title}</p>
-      <p className="text-sm text-neutral-500 mt-1.5">{body}</p>
-    </div>
-  );
-}

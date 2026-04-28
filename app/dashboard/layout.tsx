@@ -1,15 +1,16 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { getSession } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { FlashToast } from "@/components/ui";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Auth + stable membership check. The middleware also gates /dashboard
-  // by auth, but we re-check here so role-aware code below has a session.
+  // Auth + stable membership check. Middleware also gates /dashboard.
   const session = await getSession().catch(() => null);
   if (!session) redirect("/login");
 
@@ -17,11 +18,16 @@ export default async function DashboardLayout({
   const { data: { user } } = await supabase.auth.getUser();
 
   return (
-    <div className="min-h-screen md:flex bg-neutral-50">
+    <div className="min-h-screen md:flex">
       <Sidebar role={session.role} email={user?.email ?? ""} />
-      <main className="flex-1 px-4 md:px-8 py-6 md:py-8 max-w-[1400px]">
+      <main className="flex-1 px-4 md:px-10 py-6 md:py-10 max-w-[1400px] mx-auto w-full">
         {children}
       </main>
+      {/* FlashToast reads ?ok / ?err from URL — wrap in Suspense
+          because useSearchParams suspends during streaming. */}
+      <Suspense fallback={null}>
+        <FlashToast />
+      </Suspense>
     </div>
   );
 }

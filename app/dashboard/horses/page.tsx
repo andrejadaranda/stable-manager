@@ -3,6 +3,7 @@ import { listHorsesWithWeeklyWorkload } from "@/services/horses";
 import { startOfWeek, addDays } from "@/lib/utils/dates";
 import { HorseList } from "@/components/horses/horse-list";
 import { CreateHorsePanel } from "@/components/horses/create-horse-form";
+import { PageHeader } from "@/components/ui";
 
 export default async function HorsesPage() {
   await requirePageRole("owner", "employee");
@@ -16,10 +17,11 @@ export default async function HorsesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Horses</h1>
-        <CreateHorsePanel />
-      </div>
+      <PageHeader
+        title="Horses"
+        subtitle="Roster, weekly workload, and lesson limits."
+        actions={<CreateHorsePanel />}
+      />
       <HorseList horses={horses} />
     </div>
   );

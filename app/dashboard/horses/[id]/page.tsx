@@ -1,110 +1,131 @@
+// /dashboard/horses/[id] — premium Horse Profile screen.
+//
+// Phase 1 scope:
+//   - Sticky hero (photo, name, breed/age, status pill, owner badge,
+//     KPI strip, primary action)
+//   - Tabs: Overview / Sessions / Health / Goals / Media
+//     (Health, Goals, Media render Coming-soon placeholders for now)
+//   - Right rail with the 7-day schedule
+//
+// Visibility: staff only in Phase 1 (matches existing horses RLS).
+// Owner-client and rider-client lenses come in Phase 2.
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePageRole } from "@/lib/auth/redirects";
-import { getHorse } from "@/services/horses";
-import { getHorseLessons, getHorseWorkload } from "@/services/lessons";
 import {
-  startOfWeek,
-  addDays,
-  fmtDayLabel,
-  fmtTime,
-} from "@/lib/utils/dates";
-import { EditHorseButton } from "@/components/horses/edit-horse-dialog";
+  getHorseProfileSummary,
+  getHorseHeatmap,
+  getHorseTypeBreakdown,
+  getHorseUpcomingLessons,
+} from "@/services/horseProfile";
+import { listSessions } from "@/services/sessions";
+import { listClients } from "@/services/clients";
+import { getHealthSummary, listHealthRecords } from "@/services/horseHealth";
+import { HorseProfileHero } from "@/components/horses/HorseProfileHero";
+import { HorseProfileTabs } from "@/components/horses/HorseProfileTabs";
+import { OverviewTab } from "@/components/horses/OverviewTab";
+import { SessionsTab } from "@/components/horses/SessionsTab";
+import { HealthTab } from "@/components/horses/HealthTab";
+import { ScheduleRail } from "@/components/horses/ScheduleRail";
+import { ComingSoonTab } from "@/components/horses/ComingSoonTab";
+
+export const dynamic = "force-dynamic";
+
+type SearchParams = { tab?: string };
+
+const VALID_TABS = ["overview", "sessions", "health", "goals", "media"] as const;
+type Tab = (typeof VALID_TABS)[number];
 
 export default async function HorseDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: SearchParams;
 }) {
   await requirePageRole("owner", "employee");
 
-  const horse = await getHorse(params.id);
+  const horse = await getHorseProfileSummary(params.id);
   if (!horse) notFound();
 
-  const start = startOfWeek(new Date());
-  const end = addDays(start, 7);
+  const tab: Tab =
+    (VALID_TABS as readonly string[]).includes(searchParams.tab ?? "")
+      ? (searchParams.tab as Tab)
+      : "overview";
 
-  const [workload, recent] = await Promise.all([
-    getHorseWorkload(params.id, start.toISOString(), end.toISOString()),
-    getHorseLessons(params.id, { limit: 10 }),
-  ]);
+  // Fetch tab-specific data only for the active tab. Schedule rail is
+  // always loaded because it's visible on every tab on desktop.
+  const upcomingLessons = await getHorseUpcomingLessons(params.id, 14);
 
-  const overWeek = workload.total_lessons >= horse.weekly_lesson_limit;
+  let tabContent: React.ReactNode = null;
+  if (tab === "overview") {
+    const [heatmap, breakdown, recentSessions] = await Promise.all([
+      getHorseHeatmap(params.id, 84),
+      getHorseTypeBreakdown(params.id, 30),
+      listSessions({ horseId: params.id, limit: 5 }),
+    ]);
+    tabContent = (
+      <OverviewTab
+        horse={horse}
+        heatmap={heatmap}
+        breakdown={breakdown}
+        recentSessions={recentSessions}
+      />
+    );
+  } else if (tab === "sessions") {
+    const [sessions, clients] = await Promise.all([
+      listSessions({ horseId: params.id, limit: 100 }),
+      listClients({ activeOnly: true }),
+    ]);
+    tabContent = (
+      <SessionsTab
+        sessions={sessions}
+        horseId={params.id}
+        clients={clients.map((c) => ({ id: c.id, full_name: c.full_name }))}
+      />
+    );
+  } else if (tab === "health") {
+    const [summary, records] = await Promise.all([
+      getHealthSummary(params.id),
+      listHealthRecords(params.id),
+    ]);
+    tabContent = <HealthTab horseId={params.id} summary={summary} records={records} />;
+  } else if (tab === "goals") {
+    tabContent = (
+      <ComingSoonTab
+        title="Goals & progress"
+        body="Long-term goals for this horse plus a per-rider training arc."
+        availability="Phase 3"
+      />
+    );
+  } else if (tab === "media") {
+    tabContent = (
+      <ComingSoonTab
+        title="Media"
+        body="Training photos and videos. Trainers can tag specific riders."
+        availability="Phase 5"
+      />
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
+    <div className="flex flex-col gap-5">
       <Link
         href="/dashboard/horses"
-        className="text-sm text-neutral-600 hover:underline w-fit"
+        className="text-sm text-ink-500 hover:text-ink-900 w-fit inline-flex items-center gap-1"
       >
-        ← Horses
+        <span aria-hidden>←</span> Horses
       </Link>
 
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex items-baseline gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{horse.name}</h1>
-          <span
-            className={`text-sm ${
-              horse.active ? "text-emerald-700" : "text-neutral-500"
-            }`}
-          >
-            {horse.active ? "Active" : "Inactive"}
-          </span>
-        </div>
-        <EditHorseButton horse={horse} />
-      </header>
+      <HorseProfileHero horse={horse} />
 
-      <section className="border border-neutral-200 rounded-md bg-white p-4">
-        <h2 className="text-sm font-medium mb-2">This week</h2>
-        <p
-          className={`text-sm ${
-            overWeek ? "text-red-700 font-medium" : "text-neutral-700"
-          }`}
-        >
-          {workload.total_lessons} lesson
-          {workload.total_lessons === 1 ? "" : "s"} ·{" "}
-          {workload.total_minutes} min
-        </p>
-        <p className="text-xs text-neutral-500 mt-1">
-          Limit: {horse.daily_lesson_limit}/day, {horse.weekly_lesson_limit}/wk
-        </p>
-      </section>
+      <HorseProfileTabs activeTab={tab} horseId={params.id} />
 
-      {horse.notes && (
-        <section className="border border-neutral-200 rounded-md bg-white p-4">
-          <h2 className="text-sm font-medium mb-2">Notes</h2>
-          <p className="text-sm whitespace-pre-wrap text-neutral-800">
-            {horse.notes}
-          </p>
-        </section>
-      )}
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium">Recent lessons</h2>
-        {recent.length === 0 ? (
-          <p className="text-sm text-neutral-500">No lessons yet.</p>
-        ) : (
-          <div className="border border-neutral-200 rounded-md bg-white divide-y divide-neutral-200">
-            {recent.map((l) => (
-              <div
-                key={l.id}
-                className="px-4 py-2 text-sm grid grid-cols-[1.4fr_1fr_1fr_auto] gap-3 items-center"
-              >
-                <div className="text-neutral-700">
-                  {fmtDayLabel(new Date(l.starts_at))} · {fmtTime(l.starts_at)}
-                </div>
-                <div>{l.client?.full_name ?? "—"}</div>
-                <div className="text-neutral-600">
-                  {l.trainer?.full_name ?? "—"}
-                </div>
-                <div className="text-[10px] uppercase tracking-wider text-neutral-500">
-                  {l.status.replace("_", " ")}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-5">
+        <div className="min-w-0">{tabContent}</div>
+        <ScheduleRail horseId={params.id} lessons={upcomingLessons} />
+      </div>
     </div>
   );
 }
