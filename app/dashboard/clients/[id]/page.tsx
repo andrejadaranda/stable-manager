@@ -7,11 +7,13 @@ import { getClientBalance } from "@/services/payments";
 import { listClientPackages } from "@/services/packages";
 import { listChargesForClient } from "@/services/boarding";
 import { listClientAgreements } from "@/services/agreements";
+import { listClientCharges } from "@/services/clientCharges";
 import { fmtDayLabel, fmtTime } from "@/lib/utils/dates";
 import { EditClientButton } from "@/components/clients/edit-client-dialog";
 import { PackagePanel } from "@/components/clients/package-panel";
 import { ClientBoardingSection } from "@/components/clients/client-boarding-section";
 import { AgreementsPanel } from "@/components/clients/agreements-panel";
+import { ChargesPanel } from "@/components/clients/charges-panel";
 
 const SKILL_LABEL: Record<SkillLevel, string> = {
   beginner: "Beginner",
@@ -31,12 +33,13 @@ export default async function ClientDetailPage({
   const client = await getClient(params.id);
   if (!client) notFound();
 
-  const [upcoming, recent, packages, boardingCharges, agreements] = await Promise.all([
+  const [upcoming, recent, packages, boardingCharges, agreements, miscCharges] = await Promise.all([
     getClientLessons(params.id, { direction: "upcoming", limit: 10 }),
     getClientLessons(params.id, { direction: "recent",   limit: 10 }),
     listClientPackages(params.id),
     listChargesForClient(params.id),
     listClientAgreements(params.id),
+    listClientCharges(params.id),
   ]);
 
   // Owner-only: payment balance. Service throws FORBIDDEN for employees,
@@ -94,6 +97,12 @@ export default async function ClientDetailPage({
       {boardingCharges.length > 0 && (
         <ClientBoardingSection charges={boardingCharges} />
       )}
+
+      <ChargesPanel
+        clientId={client.id}
+        charges={miscCharges}
+        isOwner={session.role === "owner"}
+      />
 
       <AgreementsPanel
         clientId={client.id}

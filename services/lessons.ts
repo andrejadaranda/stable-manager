@@ -30,6 +30,56 @@ export type CreateLessonInput = {
 // in services/horses.ts. Keeps lesson-creation surface self-contained.
 export type { HorseWorkloadStatus as WorkloadStatus } from "@/services/horses";
 
+/** Recurring-series result. The first lesson is the "master"; the rest
+ *  are siblings on the same weekday + time, expanded forward. Skipped
+ *  entries record why each one didn't make it (so the UI can show a
+ *  summary like "Created 10 of 12 — 2 skipped due to conflicts"). */
+export type RecurringCreateResult = {
+  created: Array<{ id: string; startsAt: string }>;
+  skipped: Array<{ startsAt: string; reason: string }>;
+};
+
+/** Bulk-create N weekly instances of a lesson. The first instance uses
+ *  `startsAt`/`endsAt`; each subsequent instance shifts by `intervalWeeks`.
+ *  Each instance is checked individually — conflicts (double-booking or
+ *  welfare cap) skip THAT instance only and continue. Returns a per-row
+ *  summary so the UI can report "10 of 12 created". */
+export async function createRecurringLessons(
+  base: CreateLessonInput,
+  opts: {
+    /** Weekly interval. 1 = every week, 2 = every 2 weeks. */
+    intervalWeeks?: number;
+    /** Number of total lessons to create (including the first). */
+    count: number;
+  },
+): Promise<RecurringCreateResult> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  void session;
+
+  if (opts.count < 1)  throw new Error("INVALID_RECURRENCE_COUNT");
+  if (opts.count > 52) throw new Error("RECURRENCE_TOO_LONG"); // sanity cap
+  const interval = Math.max(1, opts.intervalWeeks ?? 1);
+
+  const result: RecurringCreateResult = { created: [], skipped: [] };
+
+  for (let i = 0; i < opts.count; i++) {
+    const offset = i * interval * 7 * 86_400_000;
+    const startsAt = new Date(new Date(base.startsAt).getTime() + offset).toISOString();
+    const endsAt   = new Date(new Date(base.endsAt).getTime()   + offset).toISOString();
+
+    try {
+      const created = await createLesson({ ...base, startsAt, endsAt });
+      result.created.push({ id: (created as { id: string }).id, startsAt });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "unknown error";
+      result.skipped.push({ startsAt, reason: message });
+    }
+  }
+
+  return result;
+}
+
 // Owner + employee can create lessons.
 export async function createLesson(input: CreateLessonInput) {
   const session = await getSession();

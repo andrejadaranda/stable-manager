@@ -25,6 +25,8 @@ import {
   type BoardingActionState,
 } from "@/app/dashboard/horses/[id]/boarding-actions";
 import type { BoardingChargeRow } from "@/services/boarding";
+import type { ClientChargeRow } from "@/services/clientCharges";
+import { ChargesPanel } from "@/components/clients/charges-panel";
 
 type ClientOpt = { id: string; full_name: string };
 
@@ -42,6 +44,7 @@ export function BoardingTab({
   monthlyFee,
   availableForLessons,
   charges,
+  miscCharges,
   clients,
   isOwner,
 }: {
@@ -52,6 +55,8 @@ export function BoardingTab({
   /** True if this client-owned horse is opted into the lessons dropdown. */
   availableForLessons: boolean;
   charges: BoardingChargeRow[];
+  /** Misc charges (farrier, equipment, etc) tagged to this horse. */
+  miscCharges: ClientChargeRow[];
   /** Active clients in the stable, used by the owner-picker on this tab. */
   clients: ClientOpt[];
   isOwner: boolean;
@@ -104,6 +109,27 @@ export function BoardingTab({
       {/* Monthly fee setter ---------------------------------------- */}
       {isOwner && (
         <MonthlyFeePanel horseId={horseId} initialFee={monthlyFee} />
+      )}
+
+      {/* Misc charges (farrier, equipment, etc) — shown only when
+          horse has an owner client to bill against. */}
+      {ownerClient && (
+        <section className="bg-white rounded-2xl shadow-soft p-5 flex flex-col gap-4">
+          <div>
+            <h3 className="text-sm font-semibold text-navy-900">Other charges</h3>
+            <p className="text-[11.5px] text-ink-500 mt-0.5">
+              Farrier, equipment, supplements — anything outside the
+              monthly boarding fee. Bills to {ownerClient.full_name}.
+            </p>
+          </div>
+          <ChargesPanel
+            clientId={ownerClient.id}
+            charges={miscCharges}
+            horseId={horseId}
+            isOwner={isOwner}
+            bare
+          />
+        </section>
       )}
 
       {/* Charges list ---------------------------------------------- */}

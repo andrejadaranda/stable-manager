@@ -148,6 +148,11 @@ export function CreateLessonForm({
   // for the picked client — covering by package is what owners do most
   // of the time. Unchecking falls back to per-lesson billing.
   const [usePackage, setUsePackage] = useState(true);
+  // Recurrence — when "Repeat" is on, server expands into N weekly
+  // instances starting from `startsLocal`.
+  const [repeat, setRepeat] = useState(false);
+  const [repeatCount, setRepeatCount] = useState(8);
+  const [repeatInterval, setRepeatInterval] = useState(1);
 
   const activePackage = clientId ? activePackagesByClient[clientId] ?? null : null;
   const selectedService = serviceId ? services.find((s) => s.id === serviceId) ?? null : null;
@@ -357,6 +362,23 @@ export function CreateLessonForm({
             }
           />
 
+          {/* Repeat panel — expands into a weekly series. */}
+          <RepeatPanel
+            on={repeat}
+            onToggle={setRepeat}
+            count={repeatCount}
+            setCount={setRepeatCount}
+            interval={repeatInterval}
+            setInterval={setRepeatInterval}
+            startsLocal={startsLocal}
+          />
+          {repeat && (
+            <>
+              <input type="hidden" name="repeat_count" value={String(repeatCount)} />
+              <input type="hidden" name="repeat_interval_weeks" value={String(repeatInterval)} />
+            </>
+          )}
+
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Notes (optional)</span>
             <textarea
@@ -389,6 +411,20 @@ export function CreateLessonForm({
           >
             {state.error || ""}
           </p>
+
+          {/* Recurring summary — shown after a series finishes if any
+              instances were skipped, so the user knows what to fix. */}
+          {state.summary && state.summary.skipped > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900 leading-relaxed">
+              <p className="font-semibold">
+                Created {state.summary.created} of {state.summary.created + state.summary.skipped}.
+              </p>
+              <p className="mt-0.5">
+                {state.summary.skipped} skipped — usually because of an
+                existing booking or the horse&apos;s welfare cap.
+              </p>
+            </div>
+          )}
 
           {/* Welfare override — appears only when the server rejected
               the booking for hitting the horse's daily/weekly cap. The
@@ -496,6 +532,106 @@ function Field(
       />
       {hint && <span className="text-[11px] text-ink-500 mt-0.5">{hint}</span>}
     </label>
+  );
+}
+
+// =============================================================
+// Repeat panel — turns a single booking into a weekly series.
+// =============================================================
+function RepeatPanel({
+  on,
+  onToggle,
+  count,
+  setCount,
+  interval,
+  setInterval,
+  startsLocal,
+}: {
+  on: boolean;
+  onToggle: (v: boolean) => void;
+  count: number;
+  setCount: (n: number) => void;
+  interval: number;
+  setInterval: (n: number) => void;
+  startsLocal: string;
+}) {
+  // Compute the last booking's date so the user sees what they're
+  // committing to before submitting.
+  let lastLabel: string | null = null;
+  if (on && startsLocal) {
+    const start = new Date(startsLocal);
+    if (!Number.isNaN(start.getTime()) && count > 1) {
+      const last = new Date(start);
+      last.setDate(last.getDate() + (count - 1) * interval * 7);
+      lastLabel = last.toLocaleDateString(undefined, {
+        weekday: "short",
+        month:   "short",
+        day:     "numeric",
+        year:    "numeric",
+      });
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-ink-100 bg-white px-3 py-2.5">
+      <label className="flex items-start gap-2.5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={on}
+          onChange={(e) => onToggle(e.target.checked)}
+          className="mt-0.5 w-4 h-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-navy-900">Repeat weekly</p>
+          <p className="text-[11.5px] text-ink-600 mt-0.5">
+            Books the same slot on this weekday for N weeks. Conflicts skip
+            individually so you don&apos;t lose the rest of the series.
+          </p>
+        </div>
+      </label>
+
+      {on && (
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="text-[11.5px] text-ink-600">Total occurrences</span>
+            <input
+              type="number"
+              min={2}
+              max={52}
+              value={count}
+              onChange={(e) => setCount(Math.max(2, Math.min(52, Number(e.target.value) || 2)))}
+              className="
+                rounded-lg border border-ink-200 bg-white text-sm text-ink-900
+                px-3 py-2
+                focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+              "
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="text-[11.5px] text-ink-600">Every N weeks</span>
+            <select
+              value={interval}
+              onChange={(e) => setInterval(Number(e.target.value) || 1)}
+              className="
+                rounded-lg border border-ink-200 bg-white text-sm text-ink-900
+                px-3 py-2
+                focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+              "
+            >
+              <option value={1}>Every week</option>
+              <option value={2}>Every 2 weeks</option>
+              <option value={3}>Every 3 weeks</option>
+              <option value={4}>Every 4 weeks</option>
+            </select>
+          </label>
+          {lastLabel && (
+            <p className="col-span-2 text-[11.5px] text-ink-500">
+              Last lesson: <span className="font-medium text-navy-900">{lastLabel}</span>
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

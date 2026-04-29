@@ -31,6 +31,7 @@ import { BoardingTab } from "@/components/horses/BoardingTab";
 import { ScheduleRail } from "@/components/horses/ScheduleRail";
 import { ComingSoonTab } from "@/components/horses/ComingSoonTab";
 import { listChargesForHorse } from "@/services/boarding";
+import { listChargesForHorse as listMiscChargesForHorse } from "@/services/clientCharges";
 import { getClient } from "@/services/clients";
 
 export const dynamic = "force-dynamic";
@@ -89,10 +90,11 @@ export default async function HorseDetailPage({
       />
     );
   } else if (tab === "boarding") {
-    const [charges, ownerClient, allClients] = await Promise.all([
+    const [charges, ownerClient, allClients, miscCharges] = await Promise.all([
       listChargesForHorse(params.id),
       horse.owner_client_id ? getClient(horse.owner_client_id) : Promise.resolve(null),
       listClients({ activeOnly: true }),
+      listMiscChargesForHorse(params.id),
     ]);
     tabContent = (
       <BoardingTab
@@ -102,6 +104,7 @@ export default async function HorseDetailPage({
         monthlyFee={horse.monthly_boarding_fee != null ? Number(horse.monthly_boarding_fee) : null}
         availableForLessons={horse.available_for_lessons}
         charges={charges}
+        miscCharges={miscCharges}
         clients={allClients.map((c) => ({ id: c.id, full_name: c.full_name }))}
         isOwner={session.role === "owner"}
       />

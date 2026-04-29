@@ -1,7 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createLesson, updateLesson } from "@/services/lessons";
+import {
+  createLesson,
+  createRecurringLessons,
+  updateLesson,
+} from "@/services/lessons";
 import { createSessionFromLesson } from "@/services/sessions";
 import { addPayment } from "@/services/payments";
 import { getSession, requireRole } from "@/lib/auth/session";
@@ -10,6 +14,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type CreateLessonState = {
   error: string | null;
   success: boolean;
+  /** Set when a "Repeat" booking finishes. The form surfaces a
+   *  one-line summary (e.g. "Created 10 of 12 — 2 skipped"). */
+  summary?: { created: number; skipped: number; reasons?: string[] } | null;
 };
 
 const initial: CreateLessonState = { error: null, success: false };
@@ -28,6 +35,8 @@ export async function createLessonAction(
   const packageRaw = String(formData.get("package_id") ?? "").trim();
   const serviceRaw = String(formData.get("service_id") ?? "").trim();
   const overLimitReason = String(formData.get("over_limit_reason") ?? "").trim();
+  const repeatRaw = String(formData.get("repeat_count") ?? "").trim();
+  const repeatIntervalRaw = String(formData.get("repeat_interval_weeks") ?? "1").trim();
 
   // Field-level validation -----------------------------------------------
   if (!horseId || !clientId || !trainerId || !startsAt || !endsAt) {
@@ -50,6 +59,60 @@ export async function createLessonAction(
       return { error: "Price must be a non-negative number.", success: false };
     }
     price = n;
+  }
+
+  // Recurring path: repeat_count > 1 expands into a series. The first
+  // lesson uses the supplied start/end; the rest shift by N weeks.
+  const repeatCount = Number.parseInt(repeatRaw, 10) || 1;
+  const repeatInterval = Math.max(1, Number.parseInt(repeatIntervalRaw, 10) || 1);
+
+  if (repeatCount > 1) {
+    try {
+      const r = await createRecurringLessons(
+        {
+          horseId,
+          clientId,
+          trainerId,
+          startsAt: new Date(startMs).toISOString(),
+          endsAt:   new Date(endMs).toISOString(),
+          price,
+          notes: notesRaw || undefined,
+          packageId: packageRaw || null,
+          serviceId: serviceRaw || null,
+          overLimitReason: overLimitReason || null,
+        },
+        { intervalWeeks: repeatInterval, count: repeatCount },
+      );
+
+      revalidatePath("/dashboard/calendar");
+
+      if (r.created.length === 0) {
+        return {
+          error: `Couldn't create any lessons in the series. ${r.skipped[0]?.reason ?? ""}`,
+          success: false,
+          summary: { created: 0, skipped: r.skipped.length },
+        };
+      }
+
+      return {
+        error: null,
+        success: true,
+        summary: {
+          created: r.created.length,
+          skipped: r.skipped.length,
+          reasons: r.skipped.map((s) => s.reason).slice(0, 5),
+        },
+      };
+    } catch (err: any) {
+      const code = err?.message ?? "";
+      if (code === "INVALID_RECURRENCE_COUNT") {
+        return { error: "Pick at least 1 occurrence.", success: false };
+      }
+      if (code === "RECURRENCE_TOO_LONG") {
+        return { error: "Series capped at 52 occurrences. Split it across two bookings.", success: false };
+      }
+      return { error: `Could not create series: ${code || "unknown error"}.`, success: false };
+    }
   }
 
   // Service call --------------------------------------------------------
