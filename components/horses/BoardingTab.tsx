@@ -21,6 +21,7 @@ import {
   markChargePaidAction,
   markChargeUnpaidAction,
   setOwnerAction,
+  setLessonsAvailabilityAction,
   type BoardingActionState,
 } from "@/app/dashboard/horses/[id]/boarding-actions";
 import type { BoardingChargeRow } from "@/services/boarding";
@@ -39,6 +40,7 @@ export function BoardingTab({
   horseName,
   ownerClient,
   monthlyFee,
+  availableForLessons,
   charges,
   clients,
   isOwner,
@@ -47,6 +49,8 @@ export function BoardingTab({
   horseName: string;
   ownerClient: { id: string; full_name: string } | null;
   monthlyFee: number | null;
+  /** True if this client-owned horse is opted into the lessons dropdown. */
+  availableForLessons: boolean;
   charges: BoardingChargeRow[];
   /** Active clients in the stable, used by the owner-picker on this tab. */
   clients: ClientOpt[];
@@ -85,6 +89,15 @@ export function BoardingTab({
           horseId={horseId}
           currentOwner={ownerClient}
           clients={clients}
+        />
+      )}
+
+      {/* Lessons-availability toggle — only meaningful when the horse
+          is client-owned. Stable horses are always eligible. */}
+      {isOwner && ownerClient && (
+        <LessonsAvailabilityPanel
+          horseId={horseId}
+          initialValue={availableForLessons}
         />
       )}
 
@@ -189,6 +202,72 @@ function SaveOwnerButton({ disabled }: { disabled?: boolean }) {
       disabled={pending || disabled}
       className="
         h-10 px-4 rounded-xl text-sm font-medium
+        bg-navy-900 text-white shadow-sm hover:bg-navy-800 active:bg-navy-700
+        disabled:opacity-50 disabled:cursor-not-allowed
+        transition-colors
+      "
+    >
+      {pending ? "Saving…" : "Save"}
+    </button>
+  );
+}
+
+// =============================================================
+// Lessons availability (client-owned horses only)
+// =============================================================
+function LessonsAvailabilityPanel({
+  horseId,
+  initialValue,
+}: {
+  horseId: string;
+  initialValue: boolean;
+}) {
+  const [state, action] = useFormState<BoardingActionState, FormData>(
+    setLessonsAvailabilityAction, initialState,
+  );
+  const [available, setAvailable] = useState(initialValue);
+
+  return (
+    <form
+      action={action}
+      className="bg-white rounded-2xl shadow-soft p-4 flex items-start gap-3"
+    >
+      <input type="hidden" name="horse_id" value={horseId} />
+      <input type="hidden" name="available" value={String(available)} />
+      <label className="flex items-start gap-3 cursor-pointer flex-1">
+        <input
+          type="checkbox"
+          checked={available}
+          onChange={(e) => setAvailable(e.target.checked)}
+          className="mt-0.5 w-4 h-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-navy-900">
+            Available for stable lessons
+          </p>
+          <p className="text-[11.5px] text-ink-600 mt-0.5">
+            Client-owned horses are hidden from the lessons dropdown by default.
+            Toggle on if the owner agrees to lend this horse for trainer-led
+            lessons (typically with a discount arrangement).
+          </p>
+          {state.error && (
+            <p className="text-[11px] text-rose-700 mt-1">{state.error}</p>
+          )}
+        </div>
+      </label>
+      <SaveAvailabilityButton disabled={available === initialValue} />
+    </form>
+  );
+}
+
+function SaveAvailabilityButton({ disabled }: { disabled?: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending || disabled}
+      className="
+        h-10 px-4 rounded-xl text-sm font-medium shrink-0
         bg-navy-900 text-white shadow-sm hover:bg-navy-800 active:bg-navy-700
         disabled:opacity-50 disabled:cursor-not-allowed
         transition-colors

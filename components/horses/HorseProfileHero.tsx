@@ -179,6 +179,8 @@ function horseAsHorseRow(h: HorseProfileSummary) {
     weekly_lesson_limit: h.weekly_lesson_limit,
     active: h.active,
     notes: h.notes,
+    owner_client_id: h.owner_client_id,
+    available_for_lessons: h.available_for_lessons,
     created_at: "",
     updated_at: "",
   };

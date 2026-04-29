@@ -12,7 +12,7 @@ import {
   markChargePaid,
   markChargeUnpaid,
 } from "@/services/boarding";
-import { setHorseOwner } from "@/services/horses";
+import { setHorseOwner, setHorseLessonsAvailability } from "@/services/horses";
 import { toFriendlyError } from "@/lib/errors/friendly";
 
 export type BoardingActionState = {
@@ -21,6 +21,25 @@ export type BoardingActionState = {
 };
 
 const initial: BoardingActionState = { error: null, success: false };
+
+export async function setLessonsAvailabilityAction(
+  _prev: BoardingActionState,
+  formData: FormData,
+): Promise<BoardingActionState> {
+  const horseId = String(formData.get("horse_id") ?? "");
+  const valueRaw = String(formData.get("available") ?? "false");
+  if (!horseId) return { ...initial, error: "Missing horse id." };
+
+  try {
+    await setHorseLessonsAvailability(horseId, valueRaw === "true");
+  } catch (err) {
+    return { ...initial, error: toFriendlyError(err).message };
+  }
+
+  revalidatePath(`/dashboard/horses/${horseId}`);
+  revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
 
 export async function setOwnerAction(
   _prev: BoardingActionState,

@@ -34,6 +34,9 @@ export type HorseProfileSummary = {
   /** Default boarding fee used to pre-fill new charges. Null if unset
    *  or if the stable owns the horse. */
   monthly_boarding_fee: number | null;
+  /** Owner has opted this client-owned horse into the lessons dropdown.
+   *  Stable-owned horses (owner_client_id = null) ignore this flag. */
+  available_for_lessons: boolean;
 
   // KPIs over the current ISO week (Mon 00:00 → next Mon 00:00, server time).
   week: {
@@ -115,6 +118,7 @@ export async function getHorseProfileSummary(
       .select(
         `id, stable_id, name, breed, date_of_birth, active, notes, photo_url,
          daily_lesson_limit, weekly_lesson_limit, owner_client_id, monthly_boarding_fee,
+         available_for_lessons,
          owner_client:clients!horses_owner_client_id_fkey(id, full_name)`,
       )
       .eq("id", horseId)
@@ -180,6 +184,7 @@ export async function getHorseProfileSummary(
     owner_client_name: horse.owner_client?.full_name ?? null,
     monthly_boarding_fee:
       horse.monthly_boarding_fee != null ? Number(horse.monthly_boarding_fee) : null,
+    available_for_lessons: Boolean(horse.available_for_lessons),
     week: {
       lesson_count: lessons.length,
       session_count: sessions.length,

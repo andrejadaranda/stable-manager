@@ -21,10 +21,13 @@ export default async function CalendarPage({
   const end = addDays(start, 7);
 
   // Fan out the reads in parallel — RLS does the tenant scoping.
+  // Horse list is filtered to lesson-eligible: stable-owned or
+  // client-owned-and-opted-in. Boarding-only horses are hidden so the
+  // calendar dropdown stays clean.
   const [lessons, clients, horses, trainers, activePackages, services] = await Promise.all([
     getCalendar(start.toISOString(), end.toISOString()),
     listClients({ activeOnly: true }),
-    listHorses({ activeOnly: true }),
+    listHorses({ activeOnly: true, lessonsOnly: true }),
     listTrainers(),
     listActivePackagesForStable(),
     listServices({ activeOnly: true }),

@@ -100,6 +100,7 @@ export default async function HorseDetailPage({
         horseName={horse.name}
         ownerClient={ownerClient ? { id: ownerClient.id, full_name: ownerClient.full_name } : null}
         monthlyFee={horse.monthly_boarding_fee != null ? Number(horse.monthly_boarding_fee) : null}
+        availableForLessons={horse.available_for_lessons}
         charges={charges}
         clients={allClients.map((c) => ({ id: c.id, full_name: c.full_name }))}
         isOwner={session.role === "owner"}

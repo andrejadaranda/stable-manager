@@ -14,6 +14,8 @@ export type HorseRow = {
   weekly_lesson_limit: number;
   active: boolean;
   notes: string | null;
+  owner_client_id: string | null;
+  available_for_lessons: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -26,13 +28,26 @@ export type HorseWeeklyWorkload = {
 export type HorseWithWeeklyWorkload = HorseRow & { weekly: HorseWeeklyWorkload };
 
 // ------- list -------------------------------------------------------------
-export async function listHorses(opts?: { activeOnly?: boolean }): Promise<HorseRow[]> {
+export async function listHorses(opts?: {
+  activeOnly?: boolean;
+  /** When true, include only horses eligible for lessons:
+   *   - Stable-owned (owner_client_id IS NULL) — always eligible
+   *   - Client-owned only if `available_for_lessons = TRUE`
+   *
+   * The calendar's "pick a horse" dropdown uses this. Other surfaces
+   * (Horses index, settings) leave it off and see all horses. */
+  lessonsOnly?: boolean;
+}): Promise<HorseRow[]> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
 
   const supabase = createSupabaseServerClient();
   let q = supabase.from("horses").select("*").order("name");
   if (opts?.activeOnly) q = q.eq("active", true);
+  if (opts?.lessonsOnly) {
+    // Postgres OR: stable-owned, or client-owned-and-opted-in.
+    q = q.or("owner_client_id.is.null,available_for_lessons.is.true");
+  }
   const { data, error } = await q;
   if (error) throw error;
   return (data ?? []) as HorseRow[];
@@ -170,6 +185,22 @@ export async function setHorseOwner(
   const { error } = await supabase
     .from("horses")
     .update({ owner_client_id: ownerClientId })
+    .eq("id", horseId);
+  if (error) throw error;
+}
+
+// Toggle whether a client-owned horse is eligible for stable lessons.
+// No effect on stable-owned horses (they're always eligible). Owner-only.
+export async function setHorseLessonsAvailability(
+  horseId: string,
+  available: boolean,
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("horses")
+    .update({ available_for_lessons: available })
     .eq("id", horseId);
   if (error) throw error;
 }

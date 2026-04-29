@@ -183,6 +183,166 @@ export async function listHorseActivity7d(): Promise<HorseActivity7d[]> {
   return (data ?? []) as HorseActivity7d[];
 }
 
+// ---------- stats ----------------------------------------------------------
+
+export type SessionStats = {
+  totalCount: number;
+  totalMinutes: number;
+  weekCount: number;
+  weekMinutes: number;
+  monthCount: number;
+  monthMinutes: number;
+  /** Most-ridden horse over the lookback window (90 days). */
+  topHorse: { id: string; name: string; sessions: number } | null;
+  /** Type → minutes breakdown over the lookback window (90 days). */
+  typeBreakdown: Array<{ type: SessionType; count: number; minutes: number }>;
+  /** Number of consecutive ISO weeks with at least 1 session, ending now. */
+  currentStreakWeeks: number;
+};
+
+/** Aggregated stats for the staff sessions page (whole stable).
+ *  RLS narrows to caller's stable automatically. */
+export async function getStableSessionStats(): Promise<SessionStats> {
+  const ctx = await getSession();
+  requireRole(ctx, "owner", "employee");
+  return computeStats(undefined);
+}
+
+/** Aggregated stats for one client (their own rides only). */
+export async function getMySessionStats(): Promise<SessionStats> {
+  const ctx = await getSession();
+  requireRole(ctx, "client");
+  if (!ctx.clientId) return emptyStats();
+  return computeStats(ctx.clientId);
+}
+
+async function computeStats(
+  riderClientId: string | undefined,
+): Promise<SessionStats> {
+  const supabase = createSupabaseServerClient();
+  const lookbackDays = 90;
+  const fromIso = new Date(Date.now() - lookbackDays * 86_400_000).toISOString();
+
+  let q = supabase
+    .from("sessions")
+    .select(
+      "id, started_at, duration_minutes, type, horse:horses(id, name)",
+    )
+    .gte("started_at", fromIso)
+    .order("started_at", { ascending: false });
+  if (riderClientId) q = q.eq("rider_client_id", riderClientId);
+
+  const { data, error } = await q;
+  if (error) throw error;
+
+  type Row = {
+    id: string;
+    started_at: string;
+    duration_minutes: number;
+    type: SessionType;
+    horse: { id: string; name: string } | null;
+  };
+  const rows = (data ?? []) as unknown as Row[];
+
+  const now = Date.now();
+  const weekAgo  = now - 7  * 86_400_000;
+  const monthAgo = now - 30 * 86_400_000;
+
+  let weekCount = 0,  weekMinutes  = 0;
+  let monthCount = 0, monthMinutes = 0;
+
+  const horseCounts = new Map<string, { name: string; count: number }>();
+  const typeAgg = new Map<SessionType, { count: number; minutes: number }>();
+
+  for (const r of rows) {
+    const t = new Date(r.started_at).getTime();
+    const d = Number(r.duration_minutes ?? 0);
+
+    if (t >= weekAgo)  { weekCount  += 1; weekMinutes  += d; }
+    if (t >= monthAgo) { monthCount += 1; monthMinutes += d; }
+
+    if (r.horse) {
+      const cur = horseCounts.get(r.horse.id);
+      horseCounts.set(r.horse.id, {
+        name:  r.horse.name,
+        count: (cur?.count ?? 0) + 1,
+      });
+    }
+
+    const cur = typeAgg.get(r.type) ?? { count: 0, minutes: 0 };
+    cur.count   += 1;
+    cur.minutes += d;
+    typeAgg.set(r.type, cur);
+  }
+
+  const totalCount   = rows.length;
+  const totalMinutes = rows.reduce((acc, r) => acc + Number(r.duration_minutes ?? 0), 0);
+
+  let topHorse: SessionStats["topHorse"] = null;
+  for (const [id, info] of horseCounts) {
+    if (!topHorse || info.count > topHorse.sessions) {
+      topHorse = { id, name: info.name, sessions: info.count };
+    }
+  }
+
+  const typeBreakdown: SessionStats["typeBreakdown"] = Array.from(typeAgg.entries())
+    .map(([type, v]) => ({ type, count: v.count, minutes: v.minutes }))
+    .sort((a, b) => b.minutes - a.minutes);
+
+  // Streak: walk back week-by-week from current ISO week. A week counts if
+  // at least one session falls inside it.
+  const weekKeys = new Set<string>();
+  for (const r of rows) weekKeys.add(isoWeekKey(new Date(r.started_at)));
+
+  let currentStreakWeeks = 0;
+  const cursor = new Date();
+  while (currentStreakWeeks < 53) {
+    const key = isoWeekKey(cursor);
+    if (weekKeys.has(key)) {
+      currentStreakWeeks += 1;
+      cursor.setDate(cursor.getDate() - 7);
+    } else {
+      break;
+    }
+  }
+
+  return {
+    totalCount,
+    totalMinutes,
+    weekCount,
+    weekMinutes,
+    monthCount,
+    monthMinutes,
+    topHorse,
+    typeBreakdown,
+    currentStreakWeeks,
+  };
+}
+
+function emptyStats(): SessionStats {
+  return {
+    totalCount: 0,
+    totalMinutes: 0,
+    weekCount: 0,
+    weekMinutes: 0,
+    monthCount: 0,
+    monthMinutes: 0,
+    topHorse: null,
+    typeBreakdown: [],
+    currentStreakWeeks: 0,
+  };
+}
+
+function isoWeekKey(date: Date): string {
+  // YYYY-Www. Standard ISO week.
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNum = Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+}
+
 // ---------- Lesson → Session conversion ------------------------------------
 // Called when a lesson's status flips to 'completed'. Idempotent: if a
 // session is already linked to this lesson, returns that id and inserts

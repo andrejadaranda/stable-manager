@@ -1,53 +1,52 @@
 // Sessions index — staff log + recent activity feed.
-// The page is intentionally compact: form on top, list below. The "log in
-// 15 seconds" wedge demands the form is always visible, never hidden in a
-// modal.
+//
+// Refresh notes (2026-04-29):
+//   * Premium hero with Fraunces title + KPI strip (this week / this
+//     month / top horse / streak).
+//   * Log form is collapsed behind a "+ Log session" CTA so the page
+//     leads with data, not a form. The "log in 15 seconds" wedge stays
+//     intact — one click expands the form.
+//   * List uses the same card aesthetic as the calendar lessons.
 
-import { listSessions } from "@/services/sessions";
+import { listSessions, getStableSessionStats } from "@/services/sessions";
 import { listHorses } from "@/services/horses";
 import { listClients } from "@/services/clients";
 import { getSession, requireRole } from "@/lib/auth/session";
-import { LogSessionForm } from "@/components/sessions/log-session-form";
+import { LogSessionPanel } from "@/components/sessions/log-session-panel";
 import { SessionList } from "@/components/sessions/session-list";
+import { SessionsHero } from "@/components/sessions/sessions-hero";
 
 export const dynamic = "force-dynamic";
 
 export default async function SessionsPage() {
-  // Gate at the page level. RLS would block anyway, but failing cleanly
-  // in app code yields a better error than a Postgres violation.
   const ctx = await getSession();
   requireRole(ctx, "owner", "employee");
 
-  const [horses, clients, recent] = await Promise.all([
+  const [horses, clients, recent, stats] = await Promise.all([
     listHorses({ activeOnly: true }),
     listClients({ activeOnly: true }),
     listSessions({ limit: 50 }),
+    getStableSessionStats(),
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 md:py-8 space-y-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tightest text-ink-900">
-          Sessions
-        </h1>
-        <p className="text-ink-600 text-sm md:text-base">
-          Every ride that happened, in one place. Log a session in 15 seconds.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6">
+      <SessionsHero
+        title="Sessions"
+        subtitle="Every ride that happened. Log a session in 15 seconds."
+        stats={stats}
+        scope="stable"
+        action={
+          <LogSessionPanel
+            horses={horses.map((h) => ({ id: h.id, name: h.name }))}
+            clients={clients.map((c) => ({ id: c.id, full_name: c.full_name }))}
+          />
+        }
+      />
 
-      <section
-        aria-label="Log a session"
-        className="bg-surface rounded-2xl shadow-soft p-4 md:p-6"
-      >
-        <LogSessionForm
-          horses={horses.map((h) => ({ id: h.id, name: h.name }))}
-          clients={clients.map((c) => ({ id: c.id, full_name: c.full_name }))}
-        />
-      </section>
-
-      <section aria-label="Recent sessions" className="space-y-3">
-        <h2 className="text-lg font-medium text-ink-800">Recent</h2>
-        <SessionList sessions={recent} />
+      <section aria-label="Recent sessions" className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold tracking-tight text-navy-900">Recent</h2>
+        <SessionList sessions={recent} canDelete />
       </section>
     </div>
   );
