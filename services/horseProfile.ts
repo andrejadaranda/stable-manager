@@ -37,6 +37,9 @@ export type HorseProfileSummary = {
   /** Owner has opted this client-owned horse into the lessons dropdown.
    *  Stable-owned horses (owner_client_id = null) ignore this flag. */
   available_for_lessons: boolean;
+  /** Owner-curated public bio shown to clients in the portal. NULL =
+   *  no bio surfaced (clients see only the photo + name). */
+  public_bio: string | null;
 
   // KPIs over the current ISO week (Mon 00:00 → next Mon 00:00, server time).
   week: {
@@ -118,7 +121,7 @@ export async function getHorseProfileSummary(
       .select(
         `id, stable_id, name, breed, date_of_birth, active, notes, photo_url,
          daily_lesson_limit, weekly_lesson_limit, owner_client_id, monthly_boarding_fee,
-         available_for_lessons,
+         available_for_lessons, public_bio,
          owner_client:clients!horses_owner_client_id_fkey(id, full_name)`,
       )
       .eq("id", horseId)
@@ -185,6 +188,7 @@ export async function getHorseProfileSummary(
     monthly_boarding_fee:
       horse.monthly_boarding_fee != null ? Number(horse.monthly_boarding_fee) : null,
     available_for_lessons: Boolean(horse.available_for_lessons),
+    public_bio: horse.public_bio ?? null,
     week: {
       lesson_count: lessons.length,
       session_count: sessions.length,

@@ -58,6 +58,7 @@ export async function updateHorseAction(
   const dailyRaw  = String(formData.get("daily_lesson_limit") ?? "").trim();
   const weeklyRaw = String(formData.get("weekly_lesson_limit") ?? "").trim();
   const notesRaw  = String(formData.get("notes") ?? "");
+  const publicBioRaw = String(formData.get("public_bio") ?? "");
 
   if (!id)   return { error: "Missing horse id.", success: false };
   if (!name) return { error: "Name is required.", success: false };
@@ -74,6 +75,7 @@ export async function updateHorseAction(
       dailyLessonLimit:  daily,
       weeklyLessonLimit: weekly,
       notes: notesRaw.trim() === "" ? null : notesRaw.trim(),
+      publicBio: publicBioRaw.trim() === "" ? null : publicBioRaw.trim(),
     });
   } catch (err: any) {
     const message = err?.message ?? "";

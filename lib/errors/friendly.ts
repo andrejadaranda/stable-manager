@@ -34,6 +34,8 @@ const MAP: Record<string, string> = {
   HORSE_OVER_WEEKLY_LIMIT:   "This horse has already reached its weekly lesson limit. Add a reason to override.",
   REMINDER_EMPTY:            "Reminder text cannot be empty.",
   REMINDER_TOO_LONG:         "Reminder is too long (max. 500 characters).",
+  AGREEMENT_LABEL_REQUIRED:  "Add a name for the custom document.",
+  AGREEMENT_DUPLICATE:       "This document type is already on file for this client.",
   CHARGE_NOT_FOUND:          "Boarding charge not found.",
   INVALID_PERIOD:            "Invalid period — use YYYY-MM.",
   STABLE_NAME_TOO_SHORT:     "Stable name is too short (min. 2 characters).",

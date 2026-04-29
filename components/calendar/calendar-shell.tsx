@@ -19,6 +19,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { addDays, fmtISODate } from "@/lib/utils/dates";
 import type { CalendarLesson } from "@/services/lessons";
 import type { PackageSummaryRow } from "@/services/packages";
@@ -71,10 +72,22 @@ export function CalendarShell({
   // Default selected day: today if it falls in this week, else Monday.
   const initialDayKey = weekKeys.includes(todayKey) ? todayKey : weekKeys[0];
 
+  const router = useRouter();
+
   const [view,    setView]    = useState<"week" | "day">("week");
   const [dayKey,  setDayKey]  = useState<string>(initialDayKey);
   const [slot,    setSlot]    = useState<Slot | null>(null);
   const [selected, setSelected] = useState<CalendarLesson | null>(null);
+
+  // Read-only callers (clients in /dashboard/my-lessons) get a horse
+  // preview navigation when they tap a lesson; staff get the editor.
+  function handleLessonClick(l: CalendarLesson) {
+    if (editable) {
+      setSelected(l);
+    } else if (l.horse?.id) {
+      router.push(`/dashboard/my-horses/${l.horse.id}`);
+    }
+  }
 
   const prev = fmtISODate(addDays(weekStart, -7));
   const next = fmtISODate(addDays(weekStart,  7));
@@ -144,7 +157,7 @@ export function CalendarShell({
             weekKeys={weekKeys}
             todayKey={todayKey}
             byDay={byDay}
-            onLessonClick={(l) => setSelected(l)}
+            onLessonClick={handleLessonClick}
             onSlotClick={handleCreateAt}
             onDayHeaderClick={handleExpandDay}
             editable={editable}
@@ -155,7 +168,7 @@ export function CalendarShell({
             dayKey={dayKey}
             todayKey={todayKey}
             lessons={byDay.get(dayKey) ?? []}
-            onLessonClick={(l) => setSelected(l)}
+            onLessonClick={handleLessonClick}
             onSlotClick={handleCreateAt}
             onBack={() => setView("week")}
             dayPicker={
@@ -181,7 +194,7 @@ export function CalendarShell({
           selectedKey={dayKey}
           onSelectDay={setDayKey}
           lessons={byDay.get(dayKey) ?? []}
-          onLessonClick={(l) => setSelected(l)}
+          onLessonClick={handleLessonClick}
           onCreate={() => {
             // Mobile FAB: open form prefilled to selected day at next
             // 15-min mark in the future (or 09:00 if the day is in the past).

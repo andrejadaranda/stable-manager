@@ -93,13 +93,29 @@ function EditHorseDialog({
         />
 
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-neutral-700 font-medium">Notes</span>
+          <span className="text-neutral-700 font-medium">Notes (private)</span>
           <textarea
             name="notes"
             rows={2}
             defaultValue={horse.notes ?? ""}
+            placeholder="Internal notes — only staff see this."
             className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
           />
+        </label>
+
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="text-neutral-700 font-medium">Public bio</span>
+          <textarea
+            name="public_bio"
+            rows={3}
+            maxLength={600}
+            defaultValue={horse.public_bio ?? ""}
+            placeholder="Visible to clients on their portal. e.g. 'Bella is a chestnut mare with a white blaze. She loves carrots and is great with beginners.'"
+            className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
+          />
+          <span className="text-[11px] text-neutral-500">
+            Helps young riders recognise the horse before their lesson.
+          </span>
         </label>
 
         <Submit />

@@ -225,6 +225,7 @@ function horseAsHorseRow(h: HorseProfileSummary) {
     notes: h.notes,
     owner_client_id: h.owner_client_id,
     available_for_lessons: h.available_for_lessons,
+    public_bio: h.public_bio,
     created_at: "",
     updated_at: "",
   };

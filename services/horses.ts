@@ -16,8 +16,19 @@ export type HorseRow = {
   notes: string | null;
   owner_client_id: string | null;
   available_for_lessons: boolean;
+  public_bio: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** Subset of the horse row that's safe to render in the client portal.
+ *  Excludes staff-only fields (notes, owner_client_id, limits, etc). */
+export type HorsePublicView = {
+  id: string;
+  name: string;
+  breed: string | null;
+  photo_url: string | null;
+  public_bio: string | null;
 };
 
 export type HorseWeeklyWorkload = {
@@ -138,6 +149,43 @@ export async function createHorse(input: {
   return data;
 }
 
+// ------- public view (client portal) --------------------------------------
+
+/** Fetches the public-safe view of a horse. Used by the client portal
+ *  page where a rider taps their assigned horse on a lesson card.
+ *  RLS already narrows to horses the caller can see; for clients that
+ *  means horses tied to their own lessons (07_calendar_policies.sql).
+ */
+export async function getHorsePublicView(
+  horseId: string,
+): Promise<HorsePublicView | null> {
+  await getSession();
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("horses")
+    .select("id, name, breed, photo_url, public_bio")
+    .eq("id", horseId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data ?? null) as HorsePublicView | null;
+}
+
+/** Owner-only setter for the public bio. */
+export async function setHorsePublicBio(
+  horseId: string,
+  bio: string | null,
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const trimmed = bio?.trim() ?? null;
+  const { error } = await supabase
+    .from("horses")
+    .update({ public_bio: trimmed && trimmed.length > 0 ? trimmed : null })
+    .eq("id", horseId);
+  if (error) throw error;
+}
+
 // ------- update -----------------------------------------------------------
 export type UpdateHorseInput = {
   name?: string;
@@ -147,6 +195,8 @@ export type UpdateHorseInput = {
   notes?: string | null;
   /** Pass null to clear the owner. */
   ownerClientId?: string | null;
+  /** Owner-curated description visible to clients. Pass null to clear. */
+  publicBio?: string | null;
 };
 
 export async function updateHorse(id: string, input: UpdateHorseInput) {
@@ -161,6 +211,7 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
   if (input.weeklyLessonLimit !== undefined) update.weekly_lesson_limit = input.weeklyLessonLimit;
   if (input.notes             !== undefined) update.notes               = input.notes;
   if (input.ownerClientId     !== undefined) update.owner_client_id     = input.ownerClientId;
+  if (input.publicBio         !== undefined) update.public_bio          = input.publicBio;
 
   const { data, error } = await supabase
     .from("horses")
