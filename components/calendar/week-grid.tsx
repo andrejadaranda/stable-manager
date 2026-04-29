@@ -243,6 +243,7 @@ export function DayColumn({
             }}
             aria-label={ariaLabelForLesson(p.lesson)}
             className={`absolute rounded-lg overflow-hidden text-left ${s.bg} ${s.border} ${s.dashed ? "border-dashed" : ""}
+                        ${p.lesson.over_limit_reason ? "ring-1 ring-amber-300" : ""}
                         hover:shadow-soft transition-shadow border-l-[3px] ${s.stripe}`}
             style={{
               top:    p.top,
@@ -255,6 +256,20 @@ export function DayColumn({
                 glyph + one tone so it reads at a glance even on a
                 short 22px lesson. */}
             <PaymentDot status={payment} compact={p.height < 56} />
+
+            {/* Welfare-override marker — only when this lesson runs the
+                horse over its cap. Tiny amber triangle, top-left under
+                the stripe, so it's visible but doesn't compete with
+                the payment dot. */}
+            {p.lesson.over_limit_reason && (
+              <span
+                aria-hidden
+                title="Booked over horse welfare cap"
+                className="absolute top-1 left-1.5 text-amber-600 text-[11px] leading-none select-none pointer-events-none"
+              >
+                ⚠
+              </span>
+            )}
             <div className={`h-full px-2 py-1.5 leading-tight ${fullDetail ? "" : "text-[11px]"}`}>
               <div className={`flex items-center gap-1 tabular-nums ${s.ink}`}>
                 <span className="font-semibold">{fmtTime(p.lesson.starts_at)}</span>
@@ -321,7 +336,8 @@ function ariaLabelForLesson(l: CalendarLesson): string {
     l.payment_status === "paid"     ? "paid" :
     l.payment_status === "partial"  ? "partially paid" :
                                       "unpaid";
-  return `Edit ${status} lesson, ${start} to ${end}, ${client}, ${horse}, ${payment}`;
+  const welfare = l.over_limit_reason ? ", over welfare cap" : "";
+  return `Edit ${status} lesson, ${start} to ${end}, ${client}, ${horse}, ${payment}${welfare}`;
 }
 
 // Tiny payment indicator rendered top-right on each lesson card.

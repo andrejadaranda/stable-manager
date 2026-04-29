@@ -206,9 +206,27 @@ export async function setHorseLessonsAvailability(
 }
 
 // ------- workload helpers (used by the horse detail page) ----------------
-export async function getHorseWorkloadStatus(horseId: string, on: string) {
+
+export type HorseWorkloadStatus = {
+  dailyCount: number;
+  dailyLimit: number;
+  weeklyCount: number;
+  weeklyLimit: number;
+  overDaily: boolean;
+  overWeekly: boolean;
+};
+
+/** Daily + weekly workload for one horse on a given date. Backed by the
+ *  `horse_is_overworked` SQL function (05_functions.sql). Used by the
+ *  welfare guard on lesson create/update + by the horse profile hero
+ *  status pill. */
+export async function getHorseWorkloadStatus(
+  horseId: string,
+  on: string, // YYYY-MM-DD
+): Promise<HorseWorkloadStatus> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
+  void session;
 
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase.rpc("horse_is_overworked", {
@@ -216,5 +234,17 @@ export async function getHorseWorkloadStatus(horseId: string, on: string) {
     p_on: on,
   });
   if (error) throw error;
-  return data?.[0];
+  const row = (data?.[0] ?? {}) as {
+    daily_count?: number;  daily_limit?: number;
+    weekly_count?: number; weekly_limit?: number;
+    over_daily?: boolean;  over_weekly?: boolean;
+  };
+  return {
+    dailyCount:  Number(row.daily_count  ?? 0),
+    dailyLimit:  Number(row.daily_limit  ?? 0),
+    weeklyCount: Number(row.weekly_count ?? 0),
+    weeklyLimit: Number(row.weekly_limit ?? 0),
+    overDaily:   Boolean(row.over_daily),
+    overWeekly:  Boolean(row.over_weekly),
+  };
 }

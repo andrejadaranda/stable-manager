@@ -88,6 +88,10 @@ export function HorseProfileHero({ horse }: { horse: HorseProfileSummary }) {
 
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <StatusPill active={horse.active} />
+            <WelfarePill
+              weekCount={horse.week.lesson_count}
+              weeklyLimit={horse.weekly_lesson_limit}
+            />
             {horse.owner_client_id && horse.owner_client_name && (
               <Link
                 href={`/dashboard/clients/${horse.owner_client_id}`}
@@ -148,6 +152,46 @@ function StatusPill({ active }: { active: boolean }) {
     >
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#8A8079" }} />
       Inactive
+    </span>
+  );
+}
+
+// Welfare pill — single glance read of how loaded the horse is this
+// week. Computed from the same numbers the workload-cap enforcement
+// uses on lesson create/update, so what shows here matches what
+// blocks bookings.
+function WelfarePill({
+  weekCount,
+  weeklyLimit,
+}: {
+  weekCount: number;
+  weeklyLimit: number;
+}) {
+  if (weeklyLimit <= 0) return null;
+  const ratio = weekCount / weeklyLimit;
+
+  let label: string;
+  let cls: string;
+  if (ratio >= 1) {
+    label = `Over cap · ${weekCount}/${weeklyLimit}`;
+    cls = "bg-rose-100 text-rose-800";
+  } else if (ratio >= 0.85) {
+    label = `Near cap · ${weekCount}/${weeklyLimit}`;
+    cls = "bg-amber-100 text-amber-800";
+  } else if (ratio >= 0.5) {
+    label = `Steady · ${weekCount}/${weeklyLimit}`;
+    cls = "bg-emerald-100 text-emerald-800";
+  } else {
+    label = `Light · ${weekCount}/${weeklyLimit}`;
+    cls = "bg-emerald-50 text-emerald-700";
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold tracking-[0.02em] ${cls}`}
+      title="Weekly lesson load vs cap. The cap blocks new bookings unless a welfare-override reason is supplied."
+    >
+      {label}
     </span>
   );
 }

@@ -27,6 +27,7 @@ export async function createLessonAction(
   const notesRaw  = String(formData.get("notes") ?? "").trim();
   const packageRaw = String(formData.get("package_id") ?? "").trim();
   const serviceRaw = String(formData.get("service_id") ?? "").trim();
+  const overLimitReason = String(formData.get("over_limit_reason") ?? "").trim();
 
   // Field-level validation -----------------------------------------------
   if (!horseId || !clientId || !trainerId || !startsAt || !endsAt) {
@@ -63,6 +64,7 @@ export async function createLessonAction(
       notes: notesRaw || undefined,
       packageId: packageRaw || null,
       serviceId: serviceRaw || null,
+      overLimitReason: overLimitReason || null,
     });
   } catch (err: any) {
     const message = err?.message ?? "";
@@ -71,6 +73,16 @@ export async function createLessonAction(
       case "HORSE_OR_TRAINER_DOUBLE_BOOKED":
         return {
           error: "That time slot conflicts with an existing booking for this horse or trainer.",
+          success: false,
+        };
+      case "HORSE_OVER_DAILY_LIMIT":
+        return {
+          error: "This horse has already reached its daily lesson limit. Add a welfare-override reason to proceed.",
+          success: false,
+        };
+      case "HORSE_OVER_WEEKLY_LIMIT":
+        return {
+          error: "This horse has already reached its weekly lesson limit. Add a welfare-override reason to proceed.",
           success: false,
         };
       case "INVALID_TIME_RANGE":
@@ -109,6 +121,7 @@ export async function updateLessonAction(
   const notesRaw = String(formData.get("notes") ?? "");
   const packageRaw = String(formData.get("package_id") ?? "").trim();
   const serviceRaw = String(formData.get("service_id") ?? "").trim();
+  const overLimitReason = String(formData.get("over_limit_reason") ?? "").trim();
   // "" means "leave unchanged"; "__none__" means "detach package".
   const packageId =
     packageRaw === "" ? undefined :
@@ -154,6 +167,7 @@ export async function updateLessonAction(
       notes:     notesRaw.trim() === "" ? null : notesRaw.trim(),
       packageId,
       serviceId,
+      overLimitReason: overLimitReason || null,
     });
 
     // Auto-log a session when a lesson is marked completed. Best-effort:
@@ -171,6 +185,16 @@ export async function updateLessonAction(
         return {
           error:
             "That time slot conflicts with an existing booking for this horse or trainer.",
+          success: false,
+        };
+      case "HORSE_OVER_DAILY_LIMIT":
+        return {
+          error: "Moving this lesson would push the horse over its daily limit. Add a welfare-override reason to proceed.",
+          success: false,
+        };
+      case "HORSE_OVER_WEEKLY_LIMIT":
+        return {
+          error: "Moving this lesson would push the horse over its weekly limit. Add a welfare-override reason to proceed.",
           success: false,
         };
       case "INVALID_TIME_RANGE":

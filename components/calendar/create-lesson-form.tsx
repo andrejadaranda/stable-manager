@@ -389,6 +389,34 @@ export function CreateLessonForm({
           >
             {state.error || ""}
           </p>
+
+          {/* Welfare override — appears only when the server rejected
+              the booking for hitting the horse's daily/weekly cap. The
+              trainer types a reason and re-submits; the reason is saved
+              on the lesson row for audit. */}
+          {state.error?.toLowerCase().includes("limit") && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 flex flex-col gap-2">
+              <p className="text-[12.5px] font-medium text-amber-900">
+                Welfare override
+              </p>
+              <p className="text-[11.5px] text-amber-800 leading-relaxed">
+                Booking despite the cap requires a reason. The horse&apos;s
+                workload audit will reflect this entry.
+              </p>
+              <textarea
+                name="over_limit_reason"
+                rows={2}
+                required
+                maxLength={500}
+                placeholder="e.g. Show prep — agreed with the owner to add today's session."
+                className="
+                  rounded-xl border border-amber-300 bg-white text-sm text-ink-900
+                  placeholder:text-ink-400 px-3 py-2
+                  focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500
+                "
+              />
+            </div>
+          )}
         </div>
 
         {/* Sticky footer — always visible. */}

@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hoofbeat — Brand Foundation v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,300..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paddock: #1E3A2A;
+    --saddle: #B5793E;
+    --cream: #F4ECDF;
+    --cream-soft: #FBF6EC;
+    --tack: #1B1B1B;
+    --brick: #9C3D2A;
+    --stone: #6E6760;
+    --stone-soft: #C9BFAE;
+    --serif: "Source Serif 4", Georgia, serif;
+    --sans: "Inter", -apple-system, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--cream);
+    color: var(--tack);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 64px 32px 96px; }
+  .eyebrow {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--saddle);
+  }
+  h1.display {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(56px, 8vw, 96px);
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    color: var(--paddock);
+    margin: 12px 0 16px;
+  }
+  .lede {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(20px, 2.4vw, 28px);
+    line-height: 1.35;
+    color: #3F3527;
+    max-width: 720px;
+    margin: 0 0 8px;
+  }
+  .meta { color: var(--stone); font-size: 14px; }
+
+  section { margin-top: 88px; }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 36px;
+    color: var(--paddock);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--paddock);
+    margin: 32px 0 6px;
+  }
+  p { margin: 0 0 16px; max-width: 720px; }
+  .muted { color: var(--stone); }
+
+  .rule { height: 1px; background: var(--stone-soft); margin: 56px 0; border: 0; }
+
+  /* Logo card */
+  .logo-card {
+    background: var(--cream-soft);
+    border: 1px solid var(--stone-soft);
+    border-radius: 12px;
+    padding: 40px;
+    margin-top: 24px;
+  }
+  .logo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 32px;
+  }
+  .logo-tile {
+    background: var(--cream);
+    border: 1px solid var(--stone-soft);
+    border-radius: 10px;
+    padding: 36px 24px;
+    text-align: center;
+    min-height: 220px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .logo-tile.dark { background: var(--paddock); }
+  .logo-tile.dark .label { color: var(--cream); }
+  .logo-tile .label {
+    font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--stone); margin-top: 18px; font-weight: 600;
+  }
+  .logo-tile .recommended {
+    position: relative;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: var(--saddle); color: var(--cream);
+    padding: 4px 8px; border-radius: 4px; font-weight: 700;
+    margin-top: 10px;
+  }
+
+  /* Wordmark */
+  .wordmark {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 44px;
+    letter-spacing: -0.02em;
+    color: var(--paddock);
+    line-height: 1;
+  }
+  .wordmark .dot { color: var(--saddle); }
+  .wordmark.on-dark { color: var(--cream); }
+  .wordmark.on-dark .dot { color: var(--saddle); }
+
+  /* Color palette */
+  .palette {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .swatch {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--stone-soft);
+    background: white;
+  }
+  .swatch .chip {
+    height: 120px;
+    display: flex; align-items: flex-end; justify-content: flex-start;
+    padding: 12px;
+    color: var(--cream);
+    font-family: var(--sans);
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 600;
+  }
+  .swatch .meta-row {
+    background: white;
+    padding: 10px 12px 12px;
+    border-top: 1px solid var(--stone-soft);
+  }
+  .swatch .name { font-weight: 600; font-size: 13px; color: var(--tack); }
+  .swatch .hex { font-size: 12px; color: var(--stone); font-family: ui-monospace, Menlo, monospace; margin-top: 2px; }
+
+  /* Type specimen */
+  .type-spec {
+    background: var(--cream-soft);
+    border: 1px solid var(--stone-soft);
+    border-radius: 12px;
+    padding: 40px;
+    margin-top: 24px;
+  }
+  .type-row { display: grid; grid-template-columns: 120px 1fr; gap: 24px; padding: 20px 0; border-bottom: 1px solid var(--stone-soft); align-items: baseline; }
+  .type-row:last-child { border-bottom: 0; }
+  .type-tag { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--stone); font-weight: 600; }
+  .t-display { font-family: var(--serif); font-weight: 600; font-size: 56px; line-height: 1; letter-spacing: -0.02em; color: var(--paddock); }
+  .t-h1 { font-family: var(--serif); font-weight: 600; font-size: 40px; line-height: 1.05; color: var(--paddock); }
+  .t-h2 { font-family: var(--serif); font-weight: 600; font-size: 28px; color: var(--paddock); }
+  .t-lede { font-family: var(--serif); font-style: italic; font-size: 22px; line-height: 1.35; color: #3F3527; }
+  .t-body { font-family: var(--sans); font-size: 16px; line-height: 1.6; color: var(--tack); }
+  .t-caption { font-family: var(--sans); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--stone); font-weight: 600; }
+
+  /* Names list */
+  .names { margin-top: 32px; }
+  .name-row {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 24px;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--stone-soft);
+    align-items: baseline;
+  }
+  .name-row .num {
+    font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--saddle);
+  }
+  .name-row .name {
+    font-family: var(--serif); font-weight: 600; font-size: 28px; color: var(--paddock);
+    letter-spacing: -0.01em;
+  }
+  .name-row .reason { color: var(--tack); font-size: 14px; max-width: 540px; margin: 4px 0 0; }
+  .name-row .tier {
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--saddle); font-weight: 700; padding-top: 6px;
+  }
+  .name-row.top {
+    background: var(--cream-soft);
+    margin: 16px -16px;
+    padding: 24px 16px;
+    border-radius: 10px;
+    border-bottom: 1px solid var(--stone-soft);
+  }
+  .name-row.top .name { font-size: 36px; }
+
+  /* Hero mockup */
+  .hero {
+    background: var(--cream);
+    border: 1px solid var(--stone-soft);
+    border-radius: 14px;
+    padding: 56px 48px;
+    margin-top: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero .nav {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 56px;
+  }
+  .hero .nav .links { display: flex; gap: 28px; font-size: 14px; color: var(--tack); }
+  .hero .nav .cta {
+    background: var(--paddock); color: var(--cream); padding: 10px 20px; border-radius: 6px;
+    font-size: 14px; font-weight: 600;
+  }
+  .hero h1 {
+    font-family: var(--serif); font-weight: 600; color: var(--paddock);
+    font-size: clamp(40px, 5.6vw, 68px); line-height: 1.02; letter-spacing: -0.02em;
+    margin: 0 0 20px; max-width: 780px;
+  }
+  .hero h1 .accent { color: var(--saddle); font-style: italic; }
+  .hero p.sub {
+    font-size: 18px; line-height: 1.55; color: var(--tack); max-width: 580px; margin: 0 0 32px;
+  }
+  .hero .ctas { display: flex; gap: 14px; align-items: center; }
+  .hero .ctas .primary {
+    background: var(--paddock); color: var(--cream); padding: 14px 24px; border-radius: 6px;
+    font-weight: 600; font-size: 15px;
+  }
+  .hero .ctas .secondary {
+    color: var(--paddock); padding: 14px 8px; font-weight: 600; font-size: 15px;
+    border-bottom: 1.5px solid var(--paddock);
+  }
+  .hero .proof {
+    margin-top: 64px; display: flex; gap: 48px; flex-wrap: wrap;
+    color: var(--stone); font-size: 13px; letter-spacing: 0.04em;
+  }
+  .hero .proof span strong { color: var(--paddock); font-weight: 600; }
+
+  /* Quote block */
+  blockquote {
+    border-left: 4px solid var(--saddle);
+    margin: 24px 0;
+    padding: 4px 0 4px 24px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 20px;
+    line-height: 1.4;
+    color: #3F3527;
+    max-width: 720px;
+  }
+
+  /* Tagline cards */
+  .taglines { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+  .tagline-card {
+    background: var(--cream-soft);
+    border: 1px solid var(--stone-soft);
+    border-radius: 10px;
+    padding: 24px;
+  }
+  .tagline-card.lead { border-color: var(--saddle); border-width: 2px; }
+  .tagline-card .line {
+    font-family: var(--serif); font-size: 22px; font-weight: 600; color: var(--paddock); line-height: 1.2;
+  }
+  .tagline-card .why { font-size: 13px; color: var(--stone); margin-top: 10px; }
+
+  /* Pillars */
+  .pillars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 24px; }
+  .pillar { background: var(--paddock); color: var(--cream); border-radius: 10px; padding: 20px; min-height: 160px; display: flex; flex-direction: column; }
+  .pillar .num { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--saddle); margin-bottom: 12px; }
+  .pillar .title { font-family: var(--serif); font-weight: 600; font-size: 18px; line-height: 1.15; margin-bottom: 8px; }
+  .pillar .desc { font-size: 12px; line-height: 1.45; color: rgba(244,236,223,.78); }
+
+  /* Footer */
+  footer { margin-top: 96px; padding-top: 32px; border-top: 1px solid var(--stone-soft); color: var(--stone); font-size: 13px; }
+
+  @media (max-width: 800px) {
+    .palette { grid-template-columns: repeat(3, 1fr); }
+    .logo-grid { grid-template-columns: 1fr; }
+    .pillars { grid-template-columns: 1fr 1fr; }
+    .taglines { grid-template-columns: 1fr; }
+    .hero { padding: 32px 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Brand Foundation · v1.0 · April 2026</div>
+    <h1 class="display">Hoofbeat<span class="dot" style="color:var(--saddle)">.</span></h1>
+    <p class="lede">The rhythm of a yard that runs. An EU-native equestrian SaaS, built by stable people, for stable people.</p>
+    <p class="meta">Working title: Stable OS · Recommended: Hoofbeat · Prepared for Andreja Adaranda</p>
+  </header>
+
+  <section>
+    <div class="eyebrow">01 — Naming</div>
+    <h2>Twelve candidates. One recommendation.</h2>
+    <p class="muted">The brief: 1–2 syllables, EN-first, pronounceable in LT/PL/DE, equestrian-coded but not literal, ownable as a domain and trademark, built to carry a category for ten years.</p>
+
+    <div class="names">
+      <div class="name-row top">
+        <div class="num">01</div>
+        <div>
+          <div class="name">Hoofbeat<span style="color:var(--saddle)">.</span></div>
+          <div class="reason">The system that keeps the rhythm of the yard. Two syllables, four consonants of attack, owns a clear sonic identity. Names the product's actual job — operational rhythm — instead of a piece of equipment. Equine Genie sells records. Stablebuzz sells noise. <strong>Hoofbeat sells the heartbeat of a working yard.</strong></div>
+        </div>
+        <div class="tier">Recommended</div>
+      </div>
+
+      <div class="name-row">
+        <div class="num">02</div>
+        <div><div class="name">Cantor</div><div class="reason">The gait between trot and gallop — controlled, fast, sustainable. Premium and ownable. Risk: religious connotation; check trademarks.</div></div>
+        <div class="tier">Strong alt</div>
+      </div>
+      <div class="name-row">
+        <div class="num">03</div>
+        <div><div class="name">Withers</div><div class="reason">The ridge where horses are measured from. Insider signal — non-equestrian buyers won't get it on first read. That's a feature, not a bug, in this niche.</div></div>
+        <div class="tier">Strong alt</div>
+      </div>
+      <div class="name-row">
+        <div class="num">04</div>
+        <div><div class="name">Stirrup</div><div class="reason">The foothold that lets you mount the day. Warm, equestrian-coded, no SaaS trademark crowding.</div></div>
+        <div class="tier">Strong alt</div>
+      </div>
+      <div class="name-row">
+        <div class="num">05</div>
+        <div><div class="name">Halter</div><div class="reason">Control without coercion. Soft on the ear, premium, brandable. Trademark search needed in classes 9 / 35 / 42.</div></div>
+        <div class="tier">Strong alt</div>
+      </div>
+      <div class="name-row">
+        <div class="num">06</div>
+        <div><div class="name">Manège</div><div class="reason">French/equestrian for the riding arena. Most obviously European of the set. The diacritic costs you in product UX — accept that trade or pass.</div></div>
+        <div class="tier">Strong alt</div>
+      </div>
+      <div class="name-row">
+        <div class="num">07</div>
+        <div><div class="name">Mane</div><div class="reason">Single syllable. Doubles as "the main thing." Memorable but harder to defend in trademark.</div></div>
+        <div class="tier">Strong alt</div>
+      </div>
+      <div class="name-row">
+        <div class="num">08</div>
+        <div><div class="name">Bridle</div><div class="reason">Premium, controlled. Strong as a verb. Risk: connotation of restraint reads negatively unless framed.</div></div>
+        <div class="tier">Strong alt</div>
+      </div>
+      <div class="name-row">
+        <div class="num">09</div>
+        <div><div class="name">Yardly</div><div class="reason">"Yard" + the modern SaaS "-ly" suffix. Most modern-tech feel. Trades premium for approachable.</div></div>
+        <div class="tier">Strong alt</div>
+      </div>
+
+      <div class="name-row">
+        <div class="num">10</div>
+        <div><div class="name">Foddr</div><div class="reason">Vowel-dropped "fodder." Available, modern. Risk: looks like a 2014 startup.</div></div>
+        <div class="tier">Backup</div>
+      </div>
+      <div class="name-row">
+        <div class="num">11</div>
+        <div><div class="name">Equa</div><div class="reason">Latin root for horse, feminine ending. Premium feel. Risk: every equestrian brand starts with Eq-.</div></div>
+        <div class="tier">Backup</div>
+      </div>
+      <div class="name-row">
+        <div class="num">12</div>
+        <div><div class="name">Paddock</div><div class="reason">Place-based, descriptive, warm. Mostly British-English; flat across LT/PL/DE.</div></div>
+        <div class="tier">Backup</div>
+      </div>
+    </div>
+
+    <h3>The five-test checklist (run before commit)</h3>
+    <p>Domain · Trademark (WIPO + EUIPO + LT-VPB, classes 9/35/42) · Phone test with 5 stable owners · Search test (top 3 results) · Five-year fit at 1,000 stables.</p>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="eyebrow">02 — Positioning</div>
+    <h2>Stop running your stable on WhatsApp.</h2>
+
+    <h3>Positioning statement</h3>
+    <blockquote>
+      For European riding-school and livery-yard owners running 15–40 horses out of WhatsApp groups and Excel sheets, Hoofbeat is the stable management system that protects your horses while it runs your business — the only tool that puts horse workload, the schedule, and the invoice on the same screen. Unlike Equine Genie and Stablebuzz, we are built in Europe for European stables: SEPA, GDPR, and your local language from day one.
+    </blockquote>
+
+    <h3>Manifesto (homepage About panel)</h3>
+    <blockquote>
+      Stables don't fail because the people running them stopped caring. They fail because the day eats the work. The lesson runs late. The invoice doesn't get sent. The young horse goes out one ride too many. We built Hoofbeat for the trainer who would rather be in the arena than on a spreadsheet — and for the owner who refuses to choose between running a business and running a yard that horses thrive in.
+    </blockquote>
+
+    <h3>Five brand pillars</h3>
+    <div class="pillars">
+      <div class="pillar"><div class="num">01</div><div class="title">Welfare first</div><div class="desc">Horse workload is a first-class object, not a checkbox. The dashboard shows tired horses in red.</div></div>
+      <div class="pillar"><div class="num">02</div><div class="title">Built by a stable, for stables</div><div class="desc">Domain credibility. Founder's yard is customer zero. Every release note signed.</div></div>
+      <div class="pillar"><div class="num">03</div><div class="title">European-native</div><div class="desc">LT, PL, DE, EN at launch. SEPA, Stripe Tax, GDPR export and erase live in MVP.</div></div>
+      <div class="pillar"><div class="num">04</div><div class="title">Simple over complete</div><div class="desc">30 minutes to value, not 4 hours of data entry. CSV import. Invite link.</div></div>
+      <div class="pillar"><div class="num">05</div><div class="title">Phone-first for trainers</div><div class="desc">The desktop is the back office; the phone is the workplace. Mobile PWA, one-tap check-in.</div></div>
+    </div>
+
+    <h3>Six taglines</h3>
+    <div class="taglines">
+      <div class="tagline-card lead">
+        <div class="line">Run the yard. Protect the horses.</div>
+        <div class="why">Recommended primary. Six words, two verbs, two nouns. Operational + welfare in one breath.</div>
+      </div>
+      <div class="tagline-card">
+        <div class="line">Built for stables that ride more than they admin.</div>
+        <div class="why">Best for paid social and product-page subhead.</div>
+      </div>
+      <div class="tagline-card">
+        <div class="line">The stable management tool that knows what a tired horse looks like.</div>
+        <div class="why">Long-form variant. Works for podcast intros and founder bio.</div>
+      </div>
+      <div class="tagline-card">
+        <div class="line">Schedule, invoice, protect. One screen.</div>
+        <div class="why">Functional anchor. Use on pricing page and feature comparison.</div>
+      </div>
+      <div class="tagline-card">
+        <div class="line">Stop running your stable on WhatsApp.</div>
+        <div class="why">Cold outreach hook. Names the actual incumbent.</div>
+      </div>
+      <div class="tagline-card">
+        <div class="line">Made in the saddle. Built for the back office.</div>
+        <div class="why">Founder-credibility line. Pin to Instagram bio.</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="eyebrow">03 — Visual identity</div>
+    <h2>Warm equestrian premium.</h2>
+    <p class="muted">Should look right next to Aesop, Berluti, and Linear — not next to PetSmart or a US horse magazine.</p>
+
+    <h3>Color palette</h3>
+    <div class="palette">
+      <div class="swatch"><div class="chip" style="background:#1E3A2A">PRIMARY</div><div class="meta-row"><div class="name">Paddock Green</div><div class="hex">#1E3A2A</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#B5793E">SECONDARY</div><div class="meta-row"><div class="name">Saddle Tan</div><div class="hex">#B5793E</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#F4ECDF;color:#1B1B1B">BACKGROUND</div><div class="meta-row"><div class="name">Arena Cream</div><div class="hex">#F4ECDF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#1B1B1B">INK</div><div class="meta-row"><div class="name">Tack Black</div><div class="hex">#1B1B1B</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#9C3D2A">ALERT</div><div class="meta-row"><div class="name">Brick Red</div><div class="hex">#9C3D2A</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#6E6760">NEUTRAL</div><div class="meta-row"><div class="name">Stone Grey</div><div class="hex">#6E6760</div></div></div>
+    </div>
+    <p class="muted" style="margin-top:14px;font-size:14px;">Why these and not the equestrian default of brown + cream + gold: that default is what every saddler and feed company already uses. Paddock Green pulls Hoofbeat out of "horse stuff" into "professional tool that happens to be for horses" — the same move Aesop made for cosmetics.</p>
+
+    <h3>Typography — serif for the promise, sans for the proof</h3>
+    <div class="type-spec">
+      <div class="type-row"><div class="type-tag">Display</div><div class="t-display">Run the yard. Protect the horses.</div></div>
+      <div class="type-row"><div class="type-tag">H1</div><div class="t-h1">Stop running your stable on WhatsApp.</div></div>
+      <div class="type-row"><div class="type-tag">H2</div><div class="t-h2">Built for stables that ride more than they admin.</div></div>
+      <div class="type-row"><div class="type-tag">Lede</div><div class="t-lede">"The system that keeps the rhythm of the yard. 30-minute setup, €49 a month, in your language."</div></div>
+      <div class="type-row"><div class="type-tag">Body</div><div class="t-body">Hoofbeat is the European stable management tool for riding schools and livery yards with 15–40 horses. Schedule lessons, track payments, and protect horse workload — all in one place, in Lithuanian, Polish, German, and English. Built by a stable owner. SEPA, GDPR, mobile-first.</div></div>
+      <div class="type-row"><div class="type-tag">Caption</div><div class="t-caption">From the yard · Vilnius · April 2026</div></div>
+    </div>
+    <p class="muted" style="margin-top:14px;font-size:14px;">Display: <strong>Source Serif 4</strong> (free; production substitute for GT Sectra). Body: <strong>Inter</strong> (free; production substitute for Söhne). This page is rendered in those fonts.</p>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="eyebrow">04 — Logo direction</div>
+    <h2>Three concepts. One recommendation.</h2>
+
+    <div class="logo-card">
+      <div class="logo-grid">
+
+        <!-- Direction A: The Arch -->
+        <div class="logo-tile">
+          <svg width="180" height="120" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
+            <!-- horseshoe arch / doorway mark -->
+            <g fill="none" stroke="#1E3A2A" stroke-width="9" stroke-linecap="round">
+              <path d="M30 100 L30 50 Q30 25 60 25 L120 25 Q150 25 150 50 L150 100" />
+            </g>
+            <!-- two nail dots -->
+            <circle cx="44" cy="70" r="3.5" fill="#B5793E" />
+            <circle cx="136" cy="70" r="3.5" fill="#B5793E" />
+          </svg>
+          <div class="wordmark" style="margin-top:18px">Hoofbeat<span class="dot">.</span></div>
+          <div class="badge">Recommended</div>
+          <div class="label">Direction A · The Arch</div>
+        </div>
+
+        <!-- Direction B: The Withers Mark (pure wordmark) -->
+        <div class="logo-tile">
+          <div style="height:120px;display:flex;align-items:center;justify-content:center;">
+            <div style="font-family:var(--serif);font-weight:600;font-size:64px;color:var(--paddock);letter-spacing:-0.03em;line-height:1;">
+              h<span style="font-style:italic">b</span>
+            </div>
+          </div>
+          <div class="wordmark" style="margin-top:18px">Hoofbeat<span class="dot">.</span></div>
+          <div class="label">Direction B · Withers Mark</div>
+        </div>
+
+        <!-- Direction C: The Rein Line -->
+        <div class="logo-tile">
+          <div style="height:120px;display:flex;align-items:center;justify-content:center;">
+            <div style="text-align:center;">
+              <div style="font-family:var(--serif);font-weight:600;font-size:42px;color:var(--paddock);letter-spacing:-0.02em;line-height:1;">Hoofbeat</div>
+              <div style="height:1.5px;background:var(--saddle);width:140px;margin:8px auto 0;"></div>
+            </div>
+          </div>
+          <div class="label" style="margin-top:24px">Direction C · Rein Line</div>
+        </div>
+      </div>
+
+      <!-- Lockup variants on dark + light + favicon scale -->
+      <div class="logo-grid" style="margin-top:16px;">
+        <div class="logo-tile dark">
+          <svg width="60" height="40" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
+            <g fill="none" stroke="#F4ECDF" stroke-width="9" stroke-linecap="round">
+              <path d="M30 100 L30 50 Q30 25 60 25 L120 25 Q150 25 150 50 L150 100" />
+            </g>
+            <circle cx="44" cy="70" r="3.5" fill="#B5793E" />
+            <circle cx="136" cy="70" r="3.5" fill="#B5793E" />
+          </svg>
+          <div class="wordmark on-dark" style="margin-top:14px;font-size:32px">Hoofbeat<span class="dot">.</span></div>
+          <div class="label">On dark — primary</div>
+        </div>
+        <div class="logo-tile" style="background:var(--saddle);">
+          <svg width="60" height="40" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
+            <g fill="none" stroke="#F4ECDF" stroke-width="9" stroke-linecap="round">
+              <path d="M30 100 L30 50 Q30 25 60 25 L120 25 Q150 25 150 50 L150 100" />
+            </g>
+            <circle cx="44" cy="70" r="3.5" fill="#1E3A2A" />
+            <circle cx="136" cy="70" r="3.5" fill="#1E3A2A" />
+          </svg>
+          <div class="wordmark on-dark" style="margin-top:14px;font-size:32px;color:#F4ECDF">Hoofbeat<span class="dot" style="color:#1E3A2A">.</span></div>
+          <div class="label" style="color:#F4ECDF">On Saddle Tan — accent</div>
+        </div>
+        <div class="logo-tile">
+          <!-- App icon block -->
+          <div style="width:80px;height:80px;background:var(--paddock);border-radius:18px;display:flex;align-items:center;justify-content:center;">
+            <svg width="44" height="30" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
+              <g fill="none" stroke="#F4ECDF" stroke-width="11" stroke-linecap="round">
+                <path d="M30 100 L30 50 Q30 25 60 25 L120 25 Q150 25 150 50 L150 100" />
+              </g>
+              <circle cx="44" cy="70" r="4" fill="#B5793E" />
+              <circle cx="136" cy="70" r="4" fill="#B5793E" />
+            </svg>
+          </div>
+          <div class="label" style="margin-top:18px">App icon · 80×80</div>
+        </div>
+      </div>
+
+      <p class="muted" style="margin-top:24px;font-size:14px;">
+        <strong>Why Direction A wins:</strong> the horseshoe-arch reads as a horseshoe to equestrians and as a doorway / portal to non-equestrians. Carries luck, threshold, and entry — three brand-true ideas. Works at favicon size. Engraves cleanly on saddle leather, embroiders cleanly on a saddle pad, prints cleanly on a single-color invoice footer.
+      </p>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="eyebrow">05 — Brand in use</div>
+    <h2>Homepage hero — production-ready.</h2>
+
+    <div class="hero">
+      <div class="nav">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg width="28" height="20" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
+            <g fill="none" stroke="#1E3A2A" stroke-width="11" stroke-linecap="round">
+              <path d="M30 100 L30 50 Q30 25 60 25 L120 25 Q150 25 150 50 L150 100" />
+            </g>
+            <circle cx="44" cy="70" r="4" fill="#B5793E" />
+            <circle cx="136" cy="70" r="4" fill="#B5793E" />
+          </svg>
+          <div style="font-family:var(--serif);font-weight:600;font-size:22px;color:var(--paddock);letter-spacing:-0.02em;">Hoofbeat<span style="color:var(--saddle)">.</span></div>
+        </div>
+        <div class="links">
+          <span>Product</span><span>Pricing</span><span>For trainers</span><span>Sign in</span>
+          <span class="cta">Start free trial</span>
+        </div>
+      </div>
+      <h1>Run the yard. <span class="accent">Protect the horses.</span></h1>
+      <p class="sub">Hoofbeat is the European stable management tool for riding schools and livery yards with 15–40 horses. Schedule lessons, send invoices, and watch horse workload — on one screen, in your language, on your phone.</p>
+      <div class="ctas">
+        <span class="primary">Start free for 14 days</span>
+        <span class="secondary">Watch the 90-second tour →</span>
+      </div>
+      <div class="proof">
+        <span><strong>30-minute</strong> setup</span>
+        <span><strong>€49 / month</strong> · annual save 15%</span>
+        <span><strong>SEPA + GDPR</strong> from day one</span>
+        <span><strong>LT · PL · DE · EN</strong></span>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="eyebrow">06 — This week</div>
+    <h2>Six decisions to lock in 90 minutes.</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px;">
+      <div class="tagline-card"><div class="line" style="font-size:18px;">01 · Pick the name.</div><div class="why">Run Hoofbeat through the five-test checklist. If it passes, ship it.</div></div>
+      <div class="tagline-card"><div class="line" style="font-size:18px;">02 · Buy the domain stack.</div><div class="why">.com, .eu, .lt minimum. Ideally .pl + .de. Budget: up to €1,500.</div></div>
+      <div class="tagline-card"><div class="line" style="font-size:18px;">03 · File trademark search.</div><div class="why">EUIPO + LT-VPB. Lawyer review 1 hour: €150–€250.</div></div>
+      <div class="tagline-card"><div class="line" style="font-size:18px;">04 · Lock colour + type.</div><div class="why">Six hex codes and two font families to a brand.json. No exceptions.</div></div>
+      <div class="tagline-card"><div class="line" style="font-size:18px;">05 · Commission the logo.</div><div class="why">One designer, two rounds, fixed price (€600–€1,200). Direction A first.</div></div>
+      <div class="tagline-card"><div class="line" style="font-size:18px;">06 · Reserve social handles.</div><div class="why">@hoofbeat on IG, YT, LinkedIn, TikTok, X. Same handle everywhere.</div></div>
+    </div>
+  </section>
+
+  <footer>
+    Hoofbeat — Brand Foundation v1.0 · Prepared for Andreja Adaranda · April 2026 · Phase 2: 90-day go-to-market plan, content calendar, waitlist landing, design-partner outreach.
+  </footer>
+</div>
+</body>
+</html>

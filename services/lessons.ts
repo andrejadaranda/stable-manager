@@ -4,6 +4,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
+import { getHorseWorkloadStatus } from "@/services/horses";
 
 export type CreateLessonInput = {
   horseId: string;
@@ -19,7 +20,15 @@ export type CreateLessonInput = {
   /** Optional service from the stable's price list. Just a label
    *  link — the price still lives on the lesson row. */
   serviceId?: string | null;
+  /** When the booking would push the horse over its daily/weekly cap,
+   *  the trainer must supply a reason to override. Saved verbatim on
+   *  the lesson row for audit. */
+  overLimitReason?: string | null;
 };
+
+// Re-export so callers don't have to know that workload status lives
+// in services/horses.ts. Keeps lesson-creation surface self-contained.
+export type { HorseWorkloadStatus as WorkloadStatus } from "@/services/horses";
 
 // Owner + employee can create lessons.
 export async function createLesson(input: CreateLessonInput) {
@@ -40,6 +49,24 @@ export async function createLesson(input: CreateLessonInput) {
     p_exclude_lesson: null,
   });
   if (free === false) throw new Error("HORSE_DOUBLE_BOOKED");
+
+  // Welfare check: would adding this lesson push the horse over its
+  // daily or weekly cap? horse_is_overworked() returns the *current*
+  // counts on the supplied date, so we compare with-this-lesson-added.
+  const reason = (input.overLimitReason ?? "").trim();
+  if (!reason) {
+    const status = await getHorseWorkloadStatus(
+      input.horseId,
+      input.startsAt.slice(0, 10),
+    );
+    // After-this-lesson counts: existing + 1.
+    if (status.dailyCount + 1 > status.dailyLimit) {
+      throw new Error("HORSE_OVER_DAILY_LIMIT");
+    }
+    if (status.weeklyCount + 1 > status.weeklyLimit) {
+      throw new Error("HORSE_OVER_WEEKLY_LIMIT");
+    }
+  }
 
   // If a package is supplied, validate it belongs to the same client
   // and still has remaining capacity. The DB trigger will catch
@@ -70,6 +97,7 @@ export async function createLesson(input: CreateLessonInput) {
       notes: input.notes ?? null,
       package_id: input.packageId ?? null,
       service_id: input.serviceId ?? null,
+      over_limit_reason: reason || null,
     })
     .select()
     .single();
@@ -114,6 +142,9 @@ export type UpdateLessonInput = {
   packageId?: string | null;
   /** Pass `null` to clear the service link. */
   serviceId?: string | null;
+  /** When moving a lesson into a day that pushes the horse over its
+   *  cap, the trainer must supply a reason. Saved verbatim. */
+  overLimitReason?: string | null;
 };
 
 export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
@@ -145,6 +176,33 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
           p_exclude_lesson:  lessonId,
         });
         if (free === false) throw new Error("HORSE_DOUBLE_BOOKED");
+      }
+    }
+  }
+
+  // Welfare check: if startsAt is changing AND status remains/becomes
+  // a load-counting state (scheduled/completed) AND no reason supplied,
+  // verify the destination day still fits under the cap.
+  if (input.startsAt && (input.status === undefined || input.status === "scheduled" || input.status === "completed")) {
+    const reason = (input.overLimitReason ?? "").trim();
+    if (!reason) {
+      const { data: existing } = await supabase
+        .from("lessons")
+        .select("horse_id, starts_at")
+        .eq("id", lessonId)
+        .maybeSingle();
+      if (existing) {
+        const ex = existing as { horse_id: string; starts_at: string };
+        const oldDay = ex.starts_at.slice(0, 10);
+        const newDay = input.startsAt.slice(0, 10);
+        if (oldDay !== newDay) {
+          const status = await getHorseWorkloadStatus(ex.horse_id, newDay);
+          // The horse_is_overworked counts already include this lesson
+          // on the OLD day, not the new one — so adding +1 to the new
+          // day's count gives the post-move tally.
+          if (status.dailyCount + 1 > status.dailyLimit)  throw new Error("HORSE_OVER_DAILY_LIMIT");
+          if (status.weeklyCount + 1 > status.weeklyLimit) throw new Error("HORSE_OVER_WEEKLY_LIMIT");
+        }
       }
     }
   }
@@ -182,6 +240,9 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
   if (input.notes     !== undefined) update.notes     = input.notes;
   if (input.packageId !== undefined) update.package_id = input.packageId;
   if (input.serviceId !== undefined) update.service_id = input.serviceId;
+  if (input.overLimitReason !== undefined) {
+    update.over_limit_reason = input.overLimitReason;
+  }
 
   const { data, error } = await supabase
     .from("lessons")
@@ -210,6 +271,10 @@ export type CalendarLesson = {
   notes: string | null;
   package_id: string | null;
   service_id: string | null;
+  /** Non-null when the trainer overrode the welfare cap. Reason is
+   *  the trainer's stated justification; surfaced in the lesson card
+   *  badge + audit reports. */
+  over_limit_reason: string | null;
   horse:   { id: string; name: string } | null;
   client:  { id: string; full_name: string } | null;
   trainer: { id: string; full_name: string | null } | null;
@@ -240,7 +305,7 @@ export async function getCalendar(from: string, to: string): Promise<CalendarLes
     .from("lessons")
     .select(
       `
-      id, starts_at, ends_at, status, price, notes, package_id, service_id,
+      id, starts_at, ends_at, status, price, notes, package_id, service_id, over_limit_reason,
       horse:horses(id, name),
       client:clients(id, full_name),
       trainer:profiles(id, full_name),
@@ -298,6 +363,7 @@ export async function getHorseWorkload(horseId: string, from: string, to: string
   if (error) throw error;
   return data?.[0] ?? { total_lessons: 0, total_minutes: 0 };
 }
+
 
 // Lessons for a single client, either upcoming or recent — used by
 // the client detail page. Owner + employee.

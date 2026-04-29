@@ -367,6 +367,41 @@ export function EditLessonDialog({
             {error || ""}
           </p>
 
+          {/* Welfare override prompt — only shows when the server flagged
+              that the move would push the horse over its cap. */}
+          {error?.toLowerCase().includes("limit") && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 flex flex-col gap-2">
+              <p className="text-[12.5px] font-medium text-amber-900">
+                Welfare override
+              </p>
+              <p className="text-[11.5px] text-amber-800 leading-relaxed">
+                Moving despite the cap requires a reason — saved on the
+                lesson for audit.
+              </p>
+              <textarea
+                name="over_limit_reason"
+                rows={2}
+                required
+                maxLength={500}
+                placeholder="e.g. Show prep, owner approved the extra session."
+                className="
+                  rounded-xl border border-amber-300 bg-white text-sm text-ink-900
+                  placeholder:text-ink-400 px-3 py-2
+                  focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500
+                "
+              />
+            </div>
+          )}
+
+          {/* If the lesson is already an override (welfare reason set),
+              show it inline so the editor knows. Read-only. */}
+          {lesson.over_limit_reason && !error?.toLowerCase().includes("limit") && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11.5px] text-amber-900 leading-relaxed">
+              <span className="font-semibold">Welfare override on file:</span>{" "}
+              {lesson.over_limit_reason}
+            </div>
+          )}
+
           {/* Quick-cancel rendered inside the scroll area so it stays
               accessible on small phones. Submitting it is a separate
               form via formAction below — kept below the field stack. */}

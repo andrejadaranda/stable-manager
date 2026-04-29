@@ -25,6 +25,7 @@ import {
   lessonStatusLabel,
   type LessonStatus,
 } from "@/components/ui";
+import { RemindersBlock } from "@/components/reminders/reminders-block";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +98,9 @@ export default async function DashboardHome() {
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-5">
         {/* LEFT — primary content */}
         <div className="flex flex-col gap-5 min-w-0">
+          {/* Reminders */}
+          <RemindersBlock />
+
           {/* Today timeline card */}
           <section className="card-elevated p-5 md:p-6">
             <div className="flex items-baseline justify-between mb-4">
