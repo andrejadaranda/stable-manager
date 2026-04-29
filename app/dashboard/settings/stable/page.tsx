@@ -2,6 +2,7 @@ import { requirePageRole } from "@/lib/auth/redirects";
 import { getOwnStable } from "@/services/stables";
 import { Card, CardHeader, Field, Input, Button } from "@/components/ui";
 import { updateStableNameAction } from "../actions";
+import { ExportPanel } from "@/components/settings/export-panel";
 
 export default async function StableSettingsPage() {
   await requirePageRole("owner");
@@ -26,7 +27,7 @@ export default async function StableSettingsPage() {
               required
               minLength={2}
               maxLength={80}
-              placeholder="e.g. Pajurio Žirgynas"
+              placeholder="e.g. Riverside Stables"
             />
           </Field>
 
@@ -46,13 +47,15 @@ export default async function StableSettingsPage() {
         </form>
       </Card>
 
+      <ExportPanel />
+
       <Card padded={false}>
         <CardHeader
           title="Danger zone"
           subtitle="Irreversible actions. Reach out before deleting data."
         />
         <div className="p-6 text-sm text-ink-500">
-          Stable deletion and data export will appear here in a future release.
+          Stable deletion will appear here once the cancellation flow ships.
         </div>
       </Card>
     </div>

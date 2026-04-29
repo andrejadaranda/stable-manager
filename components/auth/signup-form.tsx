@@ -25,7 +25,7 @@ export function SignupOwnerForm() {
           type="text"
           autoComplete="name"
           required
-          placeholder="Jonas Petraitis"
+          placeholder="e.g. Anna Smith"
         />
       </Field>
 
@@ -34,7 +34,7 @@ export function SignupOwnerForm() {
           name="stable_name"
           type="text"
           required
-          placeholder="Pajurio Žirgynas"
+          placeholder="e.g. Riverside Stables"
           maxLength={80}
         />
       </Field>
@@ -52,7 +52,7 @@ export function SignupOwnerForm() {
           required
           pattern="[a-z0-9-]{2,40}"
           title="2-40 lowercase letters, digits, or hyphens"
-          placeholder="pajurio-zirgynas"
+          placeholder="riverside-stables"
         />
       </Field>
 

@@ -26,6 +26,8 @@ import {
   type LessonStatus,
 } from "@/components/ui";
 import { RemindersBlock } from "@/components/reminders/reminders-block";
+import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
+import { getOnboardingStatus } from "@/services/onboarding";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +36,10 @@ export default async function DashboardHome() {
   if (!session) redirect("/login");
   if (session.role === "client") redirect("/dashboard/my-lessons");
 
-  const [s, profile] = await Promise.all([
+  const [s, profile, onboarding] = await Promise.all([
     getDashboardSummary(),
     getOwnProfile().catch(() => null),
+    getOnboardingStatus().catch(() => null),
   ]);
 
   const firstName = (profile?.full_name ?? "").split(" ")[0] ?? "";
@@ -84,20 +87,81 @@ export default async function DashboardHome() {
           </h1>
           <p className="text-sm text-ink-500 mt-2 capitalize">{today}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <LinkButton href="/dashboard/calendar" variant="primary" size="md">
-            + New lesson
-          </LinkButton>
-          <LinkButton href="/dashboard/sessions" variant="secondary" size="md">
-            Log a session
-          </LinkButton>
-        </div>
       </header>
+
+      {/* Primary action band — Calendar lives front-and-centre because
+          90% of trainer interactions start here. The big "Open
+          Calendar" tile leads; smaller links sit beside it for the
+          secondary flows. Sticks to the top of the dashboard so it's
+          the first thing visible after Hi greeting. */}
+      <div className="grid grid-cols-1 sm:grid-cols-[1.6fr_1fr_1fr] gap-3">
+        <Link
+          href="/dashboard/calendar"
+          className="
+            group rounded-2xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800
+            text-white shadow-lift transition-colors
+            px-5 py-4 flex items-center gap-4
+          "
+        >
+          <span
+            aria-hidden
+            className="w-12 h-12 shrink-0 rounded-xl bg-white/15 inline-flex items-center justify-center"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
+              <path d="M3 9h18M8 3v3M16 3v3" />
+            </svg>
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-display text-xl leading-none">Open calendar</span>
+            <span className="block text-[12.5px] text-white/85 mt-1">
+              Book a lesson, check availability, drag to reschedule
+            </span>
+          </span>
+          <span aria-hidden className="text-white/80 group-hover:translate-x-0.5 transition-transform">
+            →
+          </span>
+        </Link>
+
+        <Link
+          href="/dashboard/calendar"
+          className="
+            rounded-2xl bg-white shadow-soft hover:shadow-lift transition-shadow
+            px-4 py-4 flex flex-col justify-center gap-1
+          "
+        >
+          <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-brand-700">
+            + New lesson
+          </span>
+          <span className="text-[12.5px] text-ink-600">
+            Click any time slot to book.
+          </span>
+        </Link>
+
+        <Link
+          href="/dashboard/sessions"
+          className="
+            rounded-2xl bg-white shadow-soft hover:shadow-lift transition-shadow
+            px-4 py-4 flex flex-col justify-center gap-1
+          "
+        >
+          <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-navy-700">
+            Log a session
+          </span>
+          <span className="text-[12.5px] text-ink-600">
+            Record a ride that just happened.
+          </span>
+        </Link>
+      </div>
 
       {/* ── MAIN GRID ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-5">
         {/* LEFT — primary content */}
         <div className="flex flex-col gap-5 min-w-0">
+          {/* Onboarding — guides a fresh stable to first lesson.
+              Auto-hides once everything is set up. */}
+          <OnboardingChecklist status={onboarding} />
+
           {/* Reminders */}
           <RemindersBlock />
 

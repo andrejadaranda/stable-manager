@@ -8,8 +8,33 @@ import {
 } from "@/services/lessons";
 import { createSessionFromLesson } from "@/services/sessions";
 import { addPayment } from "@/services/payments";
+import { createClient } from "@/services/clients";
 import { getSession, requireRole } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+// Looks up an existing client by phone in the caller's stable, or
+// creates one. Used by the lesson-create quick-add path so trainers
+// don't have to leave the form to onboard a walk-in.
+async function ensureClientForQuickAdd(name: string, phone: string): Promise<string> {
+  const supabase = createSupabaseServerClient();
+  const phoneNorm = phone.replace(/\s+/g, "");
+  // RLS narrows to caller's stable; phone match is exact-string here
+  // because we don't normalise on insert. If we ever standardise to E.164
+  // we'd update the lookup at the same time.
+  const { data: existing } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("phone", phoneNorm)
+    .maybeSingle();
+  if (existing) return (existing as { id: string }).id;
+
+  const created = await createClient({
+    fullName: name.trim(),
+    phone:    phoneNorm,
+    active:   true,
+  });
+  return (created as { id: string }).id;
+}
 
 export type CreateLessonState = {
   error: string | null;
@@ -26,8 +51,10 @@ export async function createLessonAction(
   formData: FormData,
 ): Promise<CreateLessonState> {
   const horseId   = String(formData.get("horse_id") ?? "");
-  const clientId  = String(formData.get("client_id") ?? "");
+  let   clientId  = String(formData.get("client_id") ?? "");
   const trainerId = String(formData.get("trainer_id") ?? "");
+  const newClientName  = String(formData.get("new_client_name")  ?? "").trim();
+  const newClientPhone = String(formData.get("new_client_phone") ?? "").trim();
   const startsAt  = String(formData.get("starts_at") ?? "");   // ISO
   const endsAt    = String(formData.get("ends_at") ?? "");     // ISO
   const priceRaw  = String(formData.get("price") ?? "").trim();
@@ -37,6 +64,20 @@ export async function createLessonAction(
   const overLimitReason = String(formData.get("over_limit_reason") ?? "").trim();
   const repeatRaw = String(formData.get("repeat_count") ?? "").trim();
   const repeatIntervalRaw = String(formData.get("repeat_interval_weeks") ?? "1").trim();
+
+  // Quick-add path — trainer typed a new client right in the lesson
+  // form. Look them up by phone or create. The returned id replaces
+  // the (empty) client_id from the dropdown for the rest of the flow.
+  if (!clientId && newClientName && newClientPhone) {
+    try {
+      clientId = await ensureClientForQuickAdd(newClientName, newClientPhone);
+    } catch (err: any) {
+      return {
+        error: `Couldn't create client: ${err?.message ?? "unknown error"}.`,
+        success: false,
+      };
+    }
+  }
 
   // Field-level validation -----------------------------------------------
   if (!horseId || !clientId || !trainerId || !startsAt || !endsAt) {

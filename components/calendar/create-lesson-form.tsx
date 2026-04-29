@@ -136,6 +136,12 @@ export function CreateLessonForm({
   const [horseId, setHorseId]   = useState("");
   const [trainerId, setTrainerId] = useState("");
   const [serviceId, setServiceId] = useState("");
+  // Quick-add: trainer can type a new client name + phone right here
+  // instead of switching pages. The server creates (or finds-by-phone
+  // dedup) and uses that id for the lesson.
+  const [addingClient, setAddingClient] = useState(false);
+  const [newClientName, setNewClientName] = useState("");
+  const [newClientPhone, setNewClientPhone] = useState("");
 
   const seedStart = initial?.startsLocal || nowRoundedLocal();
   const seedEnd   = initial?.endsLocal   || addMinutes(seedStart, DEFAULT_DURATION_MIN);
@@ -279,7 +285,81 @@ export function CreateLessonForm({
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3.5 min-h-0">
-          <Select label="Client" name="client_id" required value={clientId} onChange={setClientId} options={clients.map((c) => ({ id: c.id, label: c.full_name }))} placeholder="Select…" />
+          {/* Existing-client picker. Required UNLESS the quick-add form
+              below is open — server handles either path. */}
+          {!addingClient && (
+            <Select
+              label="Client"
+              name="client_id"
+              required
+              value={clientId}
+              onChange={setClientId}
+              options={clients.map((c) => ({ id: c.id, label: c.full_name }))}
+              placeholder="Select…"
+            />
+          )}
+
+          {/* Quick-add: walked-in rider, phone call, no time to switch
+              pages. Type name + phone, server creates the client (or
+              finds existing by phone) and uses that id for the lesson. */}
+          {addingClient && (
+            <div className="rounded-xl border border-brand-200 bg-brand-50/40 px-3 py-3 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[12.5px] font-medium text-navy-900">New client</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAddingClient(false);
+                    setNewClientName("");
+                    setNewClientPhone("");
+                  }}
+                  className="text-[11px] text-ink-500 hover:text-navy-900"
+                >
+                  Pick existing instead
+                </button>
+              </div>
+              <input
+                name="new_client_name"
+                value={newClientName}
+                onChange={(e) => setNewClientName(e.target.value)}
+                required
+                maxLength={120}
+                placeholder="Full name"
+                className="
+                  rounded-lg border border-ink-200 bg-white text-sm text-ink-900
+                  placeholder:text-ink-400 px-3 py-2
+                  focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+                "
+              />
+              <input
+                name="new_client_phone"
+                value={newClientPhone}
+                onChange={(e) => setNewClientPhone(e.target.value)}
+                required
+                maxLength={40}
+                placeholder="Phone (used to dedupe — typing the same number reuses the existing client)"
+                inputMode="tel"
+                className="
+                  rounded-lg border border-ink-200 bg-white text-sm text-ink-900
+                  placeholder:text-ink-400 px-3 py-2
+                  focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+                "
+              />
+              <p className="text-[11px] text-ink-600">
+                Saved as a new client. You can fill in email / skill level later.
+              </p>
+            </div>
+          )}
+
+          {!addingClient && (
+            <button
+              type="button"
+              onClick={() => setAddingClient(true)}
+              className="self-start text-[12px] font-medium text-brand-700 hover:text-brand-800 -mt-2"
+            >
+              + Add new client
+            </button>
+          )}
           <Select label="Horse"   name="horse_id"   required value={horseId}  onChange={setHorseId}  options={horses.map((h) => ({ id: h.id, label: h.name }))} placeholder="Select…" />
           <Select label="Trainer" name="trainer_id" required value={trainerId} onChange={setTrainerId} options={trainers.map((t) => ({ id: t.id, label: `${t.full_name ?? "(no name)"} (${t.role})` }))} placeholder="Select…" />
 
