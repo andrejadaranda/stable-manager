@@ -223,3 +223,155 @@ export async function listChargesForClient(
   if (error) throw error;
   return (data ?? []) as BoardingChargeRow[];
 }
+
+// =================================================================
+// Bulk generation
+// =================================================================
+
+export type BoardingPreviewRow = {
+  horseId: string;
+  horseName: string;
+  ownerClientId: string;
+  ownerClientName: string;
+  fee: number;
+  /** True when a charge already exists for this horse in that period
+   *  — the bulk insert will skip it. */
+  alreadyHasCharge: boolean;
+};
+
+export type BoardingPreview = {
+  /** YYYY-MM-01 — first day of the target month. */
+  periodStart: string;
+  /** YYYY-MM-LAST — last day of the target month. */
+  periodEnd: string;
+  /** Friendly label e.g. "April 2026". */
+  label: string;
+  rows: BoardingPreviewRow[];
+};
+
+/** Returns the dry-run preview for "generate boarding charges for the
+ *  given month": which horses qualify, which already have a charge,
+ *  the total amount that would be billed.
+ */
+export async function previewBoardingForMonth(
+  yearMonth: string, // YYYY-MM
+): Promise<BoardingPreview> {
+  const session = await getSession();
+  requireRole(session, "owner");
+
+  const { periodStart, periodEnd, label } = monthBounds(yearMonth);
+
+  const supabase = createSupabaseServerClient();
+
+  // All horses with a boarding fee set + an owner client.
+  const { data: horses, error: hErr } = await supabase
+    .from("horses")
+    .select(
+      `id, name, owner_client_id, monthly_boarding_fee,
+       owner_client:clients!horses_owner_client_id_fkey(id, full_name)`,
+    )
+    .eq("active", true)
+    .not("monthly_boarding_fee", "is", null)
+    .not("owner_client_id", "is", null);
+  if (hErr) throw hErr;
+
+  // Existing charges that overlap this month — used to flag duplicates.
+  const { data: existing, error: eErr } = await supabase
+    .from("horse_boarding_charges")
+    .select("horse_id")
+    .gte("period_start", periodStart)
+    .lte("period_start", periodEnd);
+  if (eErr) throw eErr;
+  const existingByHorse = new Set(
+    ((existing ?? []) as { horse_id: string }[]).map((r) => r.horse_id),
+  );
+
+  type HorseRow = {
+    id: string;
+    name: string;
+    owner_client_id: string;
+    monthly_boarding_fee: number;
+    owner_client: { id: string; full_name: string } | null;
+  };
+  const rows: BoardingPreviewRow[] = ((horses ?? []) as unknown as HorseRow[]).map((h) => ({
+    horseId:         h.id,
+    horseName:       h.name,
+    ownerClientId:   h.owner_client_id,
+    ownerClientName: h.owner_client?.full_name ?? "—",
+    fee:             Number(h.monthly_boarding_fee),
+    alreadyHasCharge: existingByHorse.has(h.id),
+  }));
+
+  return { periodStart, periodEnd, label, rows };
+}
+
+/** Bulk-create boarding charges for the given month.
+ *  Skips horses that already have a charge starting in that month.
+ *  Returns the count of charges actually inserted.
+ */
+export async function generateBoardingForMonth(
+  yearMonth: string, // YYYY-MM
+): Promise<{ created: number; skipped: number; totalAmount: number }> {
+  const session = await getSession();
+  requireRole(session, "owner");
+
+  const preview = await previewBoardingForMonth(yearMonth);
+  const toInsert = preview.rows.filter((r) => !r.alreadyHasCharge);
+  if (toInsert.length === 0) {
+    return {
+      created: 0,
+      skipped: preview.rows.length,
+      totalAmount: 0,
+    };
+  }
+
+  const supabase = createSupabaseServerClient();
+  const records = toInsert.map((r) => ({
+    stable_id:       session.stableId,
+    horse_id:        r.horseId,
+    owner_client_id: r.ownerClientId,
+    period_start:    preview.periodStart,
+    period_end:      preview.periodEnd,
+    period_label:    preview.label,
+    amount:          r.fee,
+    notes:           null,
+  }));
+
+  const { error } = await supabase.from("horse_boarding_charges").insert(records);
+  if (error) throw error;
+
+  const totalAmount = toInsert.reduce((acc, r) => acc + r.fee, 0);
+  return {
+    created: toInsert.length,
+    skipped: preview.rows.length - toInsert.length,
+    totalAmount,
+  };
+}
+
+// ---------- helpers -----------------------------------------------
+
+function monthBounds(yearMonth: string): {
+  periodStart: string;
+  periodEnd: string;
+  label: string;
+} {
+  // yearMonth: "YYYY-MM"
+  const m = /^(\d{4})-(\d{2})$/.exec(yearMonth);
+  if (!m) throw new Error("INVALID_PERIOD");
+  const year  = Number(m[1]);
+  const month = Number(m[2]);
+  if (month < 1 || month > 12) throw new Error("INVALID_PERIOD");
+
+  // Last day of the month: day 0 of the next month.
+  const lastDay = new Date(year, month, 0).getDate();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const periodStart = `${year}-${pad(month)}-01`;
+  const periodEnd   = `${year}-${pad(month)}-${pad(lastDay)}`;
+
+  const label = new Date(year, month - 1, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year:  "numeric",
+  });
+
+  return { periodStart, periodEnd, label };
+}

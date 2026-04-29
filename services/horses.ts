@@ -130,6 +130,8 @@ export type UpdateHorseInput = {
   dailyLessonLimit?: number;
   weeklyLessonLimit?: number;
   notes?: string | null;
+  /** Pass null to clear the owner. */
+  ownerClientId?: string | null;
 };
 
 export async function updateHorse(id: string, input: UpdateHorseInput) {
@@ -143,6 +145,7 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
   if (input.dailyLessonLimit  !== undefined) update.daily_lesson_limit  = input.dailyLessonLimit;
   if (input.weeklyLessonLimit !== undefined) update.weekly_lesson_limit = input.weeklyLessonLimit;
   if (input.notes             !== undefined) update.notes               = input.notes;
+  if (input.ownerClientId     !== undefined) update.owner_client_id     = input.ownerClientId;
 
   const { data, error } = await supabase
     .from("horses")
@@ -152,6 +155,23 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
     .single();
   if (error) throw error;
   return data;
+}
+
+// Quick "set owner" shortcut used by the boarding tab so the user can
+// assign without opening the full edit dialog. Owner-only; same RLS
+// applies. Pass null to clear.
+export async function setHorseOwner(
+  horseId: string,
+  ownerClientId: string | null,
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("horses")
+    .update({ owner_client_id: ownerClientId })
+    .eq("id", horseId);
+  if (error) throw error;
 }
 
 // ------- workload helpers (used by the horse detail page) ----------------

@@ -89,9 +89,10 @@ export default async function HorseDetailPage({
       />
     );
   } else if (tab === "boarding") {
-    const [charges, ownerClient] = await Promise.all([
+    const [charges, ownerClient, allClients] = await Promise.all([
       listChargesForHorse(params.id),
       horse.owner_client_id ? getClient(horse.owner_client_id) : Promise.resolve(null),
+      listClients({ activeOnly: true }),
     ]);
     tabContent = (
       <BoardingTab
@@ -100,6 +101,7 @@ export default async function HorseDetailPage({
         ownerClient={ownerClient ? { id: ownerClient.id, full_name: ownerClient.full_name } : null}
         monthlyFee={horse.monthly_boarding_fee != null ? Number(horse.monthly_boarding_fee) : null}
         charges={charges}
+        clients={allClients.map((c) => ({ id: c.id, full_name: c.full_name }))}
         isOwner={session.role === "owner"}
       />
     );

@@ -12,6 +12,7 @@ import {
   markChargePaid,
   markChargeUnpaid,
 } from "@/services/boarding";
+import { setHorseOwner } from "@/services/horses";
 import { toFriendlyError } from "@/lib/errors/friendly";
 
 export type BoardingActionState = {
@@ -20,6 +21,28 @@ export type BoardingActionState = {
 };
 
 const initial: BoardingActionState = { error: null, success: false };
+
+export async function setOwnerAction(
+  _prev: BoardingActionState,
+  formData: FormData,
+): Promise<BoardingActionState> {
+  const horseId = String(formData.get("horse_id") ?? "");
+  const ownerRaw = String(formData.get("owner_client_id") ?? "").trim();
+  if (!horseId) return { ...initial, error: "Missing horse id." };
+
+  // Empty string means "clear owner". Sentinel "__none__" also clears.
+  const ownerClientId =
+    ownerRaw === "" || ownerRaw === "__none__" ? null : ownerRaw;
+
+  try {
+    await setHorseOwner(horseId, ownerClientId);
+  } catch (err) {
+    return { ...initial, error: toFriendlyError(err).message };
+  }
+
+  revalidatePath(`/dashboard/horses/${horseId}`);
+  return { error: null, success: true };
+}
 
 export async function setMonthlyFeeAction(
   _prev: BoardingActionState,

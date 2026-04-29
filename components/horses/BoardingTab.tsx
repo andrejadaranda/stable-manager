@@ -20,9 +20,12 @@ import {
   deleteChargeAction,
   markChargePaidAction,
   markChargeUnpaidAction,
+  setOwnerAction,
   type BoardingActionState,
 } from "@/app/dashboard/horses/[id]/boarding-actions";
 import type { BoardingChargeRow } from "@/services/boarding";
+
+type ClientOpt = { id: string; full_name: string };
 
 const initialState: BoardingActionState = { error: null, success: false };
 
@@ -37,6 +40,7 @@ export function BoardingTab({
   ownerClient,
   monthlyFee,
   charges,
+  clients,
   isOwner,
 }: {
   horseId: string;
@@ -44,6 +48,8 @@ export function BoardingTab({
   ownerClient: { id: string; full_name: string } | null;
   monthlyFee: number | null;
   charges: BoardingChargeRow[];
+  /** Active clients in the stable, used by the owner-picker on this tab. */
+  clients: ClientOpt[];
   isOwner: boolean;
 }) {
   const totalDue = charges.reduce((acc, c) => {
@@ -72,6 +78,15 @@ export function BoardingTab({
           tone={totalDue > 0 ? "warn" : "ok"}
         />
       </div>
+
+      {/* Owner picker — owner-only ----------------------------------- */}
+      {isOwner && (
+        <OwnerPanel
+          horseId={horseId}
+          currentOwner={ownerClient}
+          clients={clients}
+        />
+      )}
 
       {/* Monthly fee setter ---------------------------------------- */}
       {isOwner && (
@@ -111,6 +126,76 @@ export function BoardingTab({
         )}
       </section>
     </div>
+  );
+}
+
+// =============================================================
+// Owner picker
+// =============================================================
+function OwnerPanel({
+  horseId,
+  currentOwner,
+  clients,
+}: {
+  horseId: string;
+  currentOwner: { id: string; full_name: string } | null;
+  clients: ClientOpt[];
+}) {
+  const [state, action] = useFormState<BoardingActionState, FormData>(
+    setOwnerAction, initialState,
+  );
+  const [ownerId, setOwnerId] = useState<string>(currentOwner?.id ?? "");
+  const dirty = ownerId !== (currentOwner?.id ?? "");
+
+  return (
+    <form
+      action={action}
+      className="bg-white rounded-2xl shadow-soft p-4 flex items-end gap-3"
+    >
+      <input type="hidden" name="horse_id" value={horseId} />
+      <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-0">
+        <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">
+          Owner client
+        </span>
+        <select
+          name="owner_client_id"
+          value={ownerId}
+          onChange={(e) => setOwnerId(e.target.value)}
+          className="
+            rounded-xl border border-ink-200 bg-white text-sm text-ink-900
+            px-3 py-2.5
+            focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+          "
+        >
+          <option value="">— No owner —</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>{c.full_name}</option>
+          ))}
+        </select>
+        {state.error && (
+          <span className="text-[11px] text-rose-700 mt-0.5">{state.error}</span>
+        )}
+      </label>
+      <SaveOwnerButton disabled={!dirty} />
+    </form>
+  );
+}
+
+function SaveOwnerButton({ disabled }: { disabled?: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending || disabled}
+      className="
+        h-10 px-4 rounded-xl text-sm font-medium
+        bg-navy-900 text-white shadow-sm hover:bg-navy-800 active:bg-navy-700
+        disabled:opacity-50 disabled:cursor-not-allowed
+        transition-colors
+      "
+    >
+      {pending ? "Saving…" : "Save"}
+    </button>
   );
 }
 

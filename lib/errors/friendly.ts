@@ -31,6 +31,7 @@ const MAP: Record<string, string> = {
   HORSE_NOT_FOUND:           "Horse not found.",
   HORSE_HAS_NO_OWNER:        "Set an owner on the horse before creating a boarding charge.",
   CHARGE_NOT_FOUND:          "Boarding charge not found.",
+  INVALID_PERIOD:            "Invalid period — use YYYY-MM.",
   STABLE_NAME_TOO_SHORT:     "Stable name is too short (min. 2 characters).",
   STABLE_NAME_TOO_LONG:      "Stable name is too long (max. 80 characters).",
   FULL_NAME_REQUIRED:        "Name is required.",
