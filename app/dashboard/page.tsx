@@ -255,16 +255,27 @@ function RevenueCard({
   monthLabel: string;
   fmtEUR: (n: number) => string;
 }) {
+  // The whole card is now a link into the finance dashboard, where
+  // the owner gets a per-source / per-horse breakdown. Keep the
+  // visual identical so dashboards reading recognise the card.
   return (
-    <div className="card-navy p-5 md:p-6 flex flex-col gap-3">
+    <Link
+      href="/dashboard/finance"
+      className="card-navy p-5 md:p-6 flex flex-col gap-3 group hover:shadow-lift transition-shadow"
+    >
       <div className="flex items-center justify-between">
         <span className="text-[11px] tracking-[0.04em] uppercase text-navy-100/80">
           Monthly revenue
         </span>
-        <span className="text-[11px] text-navy-100/70">{monthLabel}</span>
+        <span className="text-[11px] text-navy-100/70 inline-flex items-center gap-1">
+          {monthLabel}
+          <span aria-hidden className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+        </span>
       </div>
       <div className="font-display text-3xl text-white">{fmtEUR(monthlyRevenue)}</div>
-      <p className="text-[12px] text-navy-100/70">Collected payments this month</p>
+      <p className="text-[12px] text-navy-100/70">
+        Collected payments this month · tap for breakdown
+      </p>
       {/* Mini bars decoration */}
       <div className="mt-2 h-7 flex items-end gap-1.5">
         {[30, 50, 40, 65, 55, 75, 90].map((h, i) => (
@@ -278,7 +289,7 @@ function RevenueCard({
           />
         ))}
       </div>
-    </div>
+    </Link>
   );
 }
 
