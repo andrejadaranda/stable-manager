@@ -282,6 +282,10 @@ function horseAsHorseRow(h: HorseProfileSummary) {
     backup_contact_name:     null,
     backup_contact_phone:    null,
     backup_contact_relation: null,
+    color:         null,
+    sex:           null,
+    unique_number: null,
+    height_hh:     null,
     created_at: "",
     updated_at: "",
   };

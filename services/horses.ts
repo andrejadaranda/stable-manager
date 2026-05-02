@@ -22,6 +22,14 @@ export type HorseRow = {
   backup_contact_phone:    string | null;
   /** Free text: "vet", "neighbour", "partner", etc. */
   backup_contact_relation: string | null;
+  /** Coat color — bay, chestnut, grey, black, palomino, etc. */
+  color:         string | null;
+  /** mare / gelding / stallion / colt / filly */
+  sex:           "mare" | "gelding" | "stallion" | "colt" | "filly" | null;
+  /** Stable-internal id, brand, microchip, or passport number. */
+  unique_number: string | null;
+  /** Height in hands (e.g. 16.2 = 16 hands 2 inches). */
+  height_hh:     number | null;
   created_at: string;
   updated_at: string;
 };
@@ -207,6 +215,10 @@ export type UpdateHorseInput = {
   backupContactName?:     string | null;
   backupContactPhone?:    string | null;
   backupContactRelation?: string | null;
+  color?:        string | null;
+  sex?:          "mare" | "gelding" | "stallion" | "colt" | "filly" | null;
+  uniqueNumber?: string | null;
+  heightHh?:     number | null;
 };
 
 export async function updateHorse(id: string, input: UpdateHorseInput) {
@@ -226,6 +238,10 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
   if (input.backupContactName     !== undefined) update.backup_contact_name     = input.backupContactName;
   if (input.backupContactPhone    !== undefined) update.backup_contact_phone    = input.backupContactPhone;
   if (input.backupContactRelation !== undefined) update.backup_contact_relation = input.backupContactRelation;
+  if (input.color         !== undefined) update.color         = input.color;
+  if (input.sex           !== undefined) update.sex           = input.sex;
+  if (input.uniqueNumber  !== undefined) update.unique_number = input.uniqueNumber;
+  if (input.heightHh      !== undefined) update.height_hh     = input.heightHh;
 
   const { data, error } = await supabase
     .from("horses")

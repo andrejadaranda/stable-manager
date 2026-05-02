@@ -9,7 +9,7 @@
 // since each row is just (name, price, duration, description). Inline
 // is enough.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createServiceAction,
@@ -43,9 +43,17 @@ function CreateServiceCard() {
     createServiceAction, initialState,
   );
   const [open, setOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Reset the form on success so a quick second add starts blank.
-  useEffect(() => { if (state.success) setOpen(false); }, [state.success]);
+  // Imperatively reset() before closing — useFormState keeps state across
+  // re-opens, so just toggling `open` doesn't clear the inputs.
+  useEffect(() => {
+    if (state.success) {
+      formRef.current?.reset();
+      setOpen(false);
+    }
+  }, [state.success]);
 
   if (!open) {
     return (
@@ -65,6 +73,7 @@ function CreateServiceCard() {
 
   return (
     <form
+      ref={formRef}
       action={action}
       className="bg-white rounded-2xl shadow-soft p-5 flex flex-col gap-3"
     >

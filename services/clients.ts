@@ -25,6 +25,9 @@ export type ClientRow = {
   emergency_contact_phone:    string | null;
   /** Free-text relationship: spouse / parent / friend / etc. */
   emergency_contact_relation: string | null;
+  /** True when client is purely a horse-owner (boarder), not a rider.
+   *  Drives Clients-page segmentation + skips skill-level requirement. */
+  is_horse_owner_only: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -133,6 +136,7 @@ export type UpdateClientInput = {
   emergencyContactName?:     string | null;
   emergencyContactPhone?:    string | null;
   emergencyContactRelation?: string | null;
+  isHorseOwnerOnly?:         boolean;
 };
 
 export async function updateClient(id: string, input: UpdateClientInput) {
@@ -150,6 +154,7 @@ export async function updateClient(id: string, input: UpdateClientInput) {
   if (input.emergencyContactName     !== undefined) update.emergency_contact_name     = input.emergencyContactName;
   if (input.emergencyContactPhone    !== undefined) update.emergency_contact_phone    = input.emergencyContactPhone;
   if (input.emergencyContactRelation !== undefined) update.emergency_contact_relation = input.emergencyContactRelation;
+  if (input.isHorseOwnerOnly         !== undefined) update.is_horse_owner_only        = input.isHorseOwnerOnly;
 
   const { data, error } = await supabase
     .from("clients")
