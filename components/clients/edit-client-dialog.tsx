@@ -65,8 +65,24 @@ function EditClientDialog({
         <Field label="Phone (optional)" name="phone" type="tel" defaultValue={client.phone ?? ""} />
         <Field label="Email (optional)" name="email" type="email" defaultValue={client.email ?? ""} />
 
+        <label className="flex items-start gap-2.5 text-sm bg-ink-50/40 rounded-lg px-3 py-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            name="is_horse_owner_only"
+            defaultChecked={(client as ClientRow & { is_horse_owner_only?: boolean }).is_horse_owner_only ?? false}
+            value="true"
+            className="mt-0.5 w-4 h-4 accent-brand-600"
+          />
+          <span className="flex-1">
+            <span className="text-neutral-800 font-medium">Horse owner only</span>
+            <span className="block text-[11.5px] text-neutral-500 mt-0.5">
+              Tick if this person only boards a horse and doesn't ride. Skill level becomes optional and they're filtered to the "Owners" tab on the Clients page.
+            </span>
+          </span>
+        </label>
+
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-neutral-700 font-medium">Skill level</span>
+          <span className="text-neutral-700 font-medium">Skill level (optional for owners)</span>
           <select
             name="skill_level"
             defaultValue={client.skill_level ?? ""}

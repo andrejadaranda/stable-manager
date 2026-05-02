@@ -63,6 +63,56 @@ function EditHorseDialog({
 
         <Field label="Name" name="name" type="text" required defaultValue={horse.name} />
 
+        {/* Identity / pedigree basics */}
+        <fieldset className="border-t border-neutral-200 pt-3.5 mt-1 flex flex-col gap-2.5">
+          <legend className="text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-500 px-1">
+            Identity
+          </legend>
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field
+              label="Color"
+              name="color"
+              type="text"
+              defaultValue={(horse as HorseRow & { color?: string | null }).color ?? ""}
+              placeholder="bay, chestnut, grey…"
+            />
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="text-neutral-700 font-medium">Sex</span>
+              <select
+                name="sex"
+                defaultValue={(horse as HorseRow & { sex?: string | null }).sex ?? ""}
+                className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+              >
+                <option value="">—</option>
+                <option value="mare">Mare</option>
+                <option value="gelding">Gelding</option>
+                <option value="stallion">Stallion</option>
+                <option value="colt">Colt</option>
+                <option value="filly">Filly</option>
+              </select>
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field
+              label="Height (hh)"
+              name="height_hh"
+              type="number"
+              min="8"
+              max="20"
+              step="0.1"
+              defaultValue={(horse as HorseRow & { height_hh?: number | null }).height_hh != null ? String((horse as HorseRow & { height_hh?: number | null }).height_hh) : ""}
+              placeholder="16.2"
+            />
+            <Field
+              label="ID number"
+              name="unique_number"
+              type="text"
+              defaultValue={(horse as HorseRow & { unique_number?: string | null }).unique_number ?? ""}
+              placeholder="passport, microchip, brand"
+            />
+          </div>
+        </fieldset>
+
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="text-neutral-700 font-medium">Status</span>
           <select

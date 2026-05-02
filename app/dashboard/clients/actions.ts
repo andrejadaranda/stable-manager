@@ -73,6 +73,7 @@ export async function updateClientAction(
   const ecName     = String(formData.get("emergency_contact_name") ?? "").trim();
   const ecPhone    = String(formData.get("emergency_contact_phone") ?? "").trim();
   const ecRelation = String(formData.get("emergency_contact_relation") ?? "").trim();
+  const horseOwnerOnly = formData.get("is_horse_owner_only") === "true";
 
   if (!id)        return { error: "Missing client id.", success: false };
   if (!fullName)  return { error: "Full name is required.", success: false };
@@ -98,6 +99,7 @@ export async function updateClientAction(
       emergencyContactName:     ecName     === "" ? null : ecName,
       emergencyContactPhone:    ecPhone    === "" ? null : ecPhone,
       emergencyContactRelation: ecRelation === "" ? null : ecRelation,
+      isHorseOwnerOnly:         horseOwnerOnly,
     });
   } catch (err: any) {
     const message = err?.message ?? "";

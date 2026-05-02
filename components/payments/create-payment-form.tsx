@@ -74,9 +74,9 @@ function CreatePaymentForm({
   return (
     <form
       action={formAction}
-      className="fixed inset-0 z-30 flex items-start justify-center pt-16 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-30 flex items-start justify-center pt-8 md:pt-16 bg-black/40 backdrop-blur-sm overflow-y-auto"
     >
-      <div className="bg-white rounded-xl shadow-xl border border-neutral-200 p-6 w-full max-w-md flex flex-col gap-3.5">
+      <div className="bg-white rounded-xl shadow-xl border border-neutral-200 p-6 w-full max-w-md flex flex-col gap-3.5 max-h-[calc(100vh-4rem)] overflow-y-auto my-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Record payment</h2>
           <button
@@ -142,25 +142,29 @@ function CreatePaymentForm({
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700">Lesson (optional)</span>
+          <span className="text-neutral-700 font-medium">What's this payment for?</span>
           <select
             name="lesson_id"
             defaultValue=""
             disabled={!clientId}
             className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white disabled:bg-neutral-100"
           >
-            <option value="">— No specific lesson —</option>
-            {eligibleLessons.map((l) => (
-              <option key={l.id} value={l.id}>
-                {fmtLessonOption(l)}
-              </option>
-            ))}
+            <option value="">— Boarding, package, misc, or general —</option>
+            {eligibleLessons.length > 0 && (
+              <optgroup label="Link to a specific lesson">
+                {eligibleLessons.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {fmtLessonOption(l)}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
-          {!clientId && (
-            <span className="text-xs text-neutral-500">
-              Select a client first to attach a lesson.
-            </span>
-          )}
+          <span className="text-[11.5px] text-neutral-500 mt-1">
+            {!clientId
+              ? "Select a client first."
+              : "Pick a lesson to link the payment, or leave on the first option for boarding payments, package purchases, misc charges, or general account top-ups. The amount still hits the client's balance — describe the purpose in Notes."}
+          </span>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">

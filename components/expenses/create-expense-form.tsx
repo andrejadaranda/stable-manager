@@ -45,9 +45,9 @@ function CreateExpenseForm({
   return (
     <form
       action={formAction}
-      className="fixed inset-0 z-30 flex items-start justify-center pt-16 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-30 flex items-start justify-center pt-8 md:pt-16 bg-black/40 backdrop-blur-sm overflow-y-auto"
     >
-      <div className="bg-white rounded-xl shadow-xl border border-neutral-200 p-6 w-full max-w-md flex flex-col gap-3.5">
+      <div className="bg-white rounded-xl shadow-xl border border-neutral-200 p-6 w-full max-w-md flex flex-col gap-3.5 max-h-[calc(100vh-4rem)] overflow-y-auto my-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Record expense</h2>
           <button
@@ -99,19 +99,22 @@ function CreateExpenseForm({
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700">Horse (optional)</span>
+          <span className="text-neutral-700 font-medium">Tag to a horse (optional)</span>
           <select
             name="horse_id"
             defaultValue=""
             className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
           >
-            <option value="">— None —</option>
+            <option value="">— Stable-wide (no specific horse) —</option>
             {horses.map((h) => (
               <option key={h.id} value={h.id}>
                 {h.name}
               </option>
             ))}
           </select>
+          <span className="text-[11.5px] text-neutral-500 mt-1">
+            Leave on <strong>Stable-wide</strong> for shared costs (hay delivery, arena footing, insurance). Pick a horse when the cost is for that specific animal (vet bill, dental float).
+          </span>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">

@@ -63,6 +63,10 @@ export async function updateHorseAction(
   const bcName     = String(formData.get("backup_contact_name") ?? "").trim();
   const bcPhone    = String(formData.get("backup_contact_phone") ?? "").trim();
   const bcRelation = String(formData.get("backup_contact_relation") ?? "").trim();
+  const colorRaw   = String(formData.get("color") ?? "").trim();
+  const sexRaw     = String(formData.get("sex") ?? "").trim();
+  const uniqueRaw  = String(formData.get("unique_number") ?? "").trim();
+  const heightRaw  = String(formData.get("height_hh") ?? "").trim();
 
   if (!id)   return { error: "Missing horse id.", success: false };
   if (!name) return { error: "Name is required.", success: false };
@@ -84,6 +88,10 @@ export async function updateHorseAction(
       backupContactName:     bcName     === "" ? null : bcName,
       backupContactPhone:    bcPhone    === "" ? null : bcPhone,
       backupContactRelation: bcRelation === "" ? null : bcRelation,
+      color:        colorRaw  === "" ? null : colorRaw,
+      sex:          (["mare","gelding","stallion","colt","filly"] as const).includes(sexRaw as never) ? (sexRaw as "mare"|"gelding"|"stallion"|"colt"|"filly") : null,
+      uniqueNumber: uniqueRaw === "" ? null : uniqueRaw,
+      heightHh:     heightRaw === "" ? null : (Number.isFinite(Number(heightRaw)) ? Number(heightRaw) : null),
     });
   } catch (err: any) {
     const message = err?.message ?? "";

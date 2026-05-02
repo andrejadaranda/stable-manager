@@ -8,7 +8,7 @@
 //     intact — one click expands the form.
 //   * List uses the same card aesthetic as the calendar lessons.
 
-import { listSessions, getStableSessionStats } from "@/services/sessions";
+import { listSessions, getStableSessionStats, type SessionStats } from "@/services/sessions";
 import { listHorses } from "@/services/horses";
 import { listClients } from "@/services/clients";
 import { getSession, requireRole } from "@/lib/auth/session";
@@ -34,11 +34,25 @@ export default async function SessionsPage() {
     );
   }
 
+  // Defensive .catch — if any of these blows up due to seed-data
+  // edge cases, the rest of the page still renders. The user reported
+  // a client-side crash post-seed; isolating each call helps localise
+  // the failure on next reproduction.
   const [horses, clients, recent, stats] = await Promise.all([
-    listHorses({ activeOnly: true }),
-    listClients({ activeOnly: true }),
-    listSessions({ limit: 50 }),
-    getStableSessionStats(),
+    listHorses({ activeOnly: true }).catch(() => []),
+    listClients({ activeOnly: true }).catch(() => []),
+    listSessions({ limit: 50 }).catch(() => []),
+    getStableSessionStats().catch((): SessionStats => ({
+      weekCount:           0,
+      weekMinutes:         0,
+      monthCount:          0,
+      monthMinutes:        0,
+      totalCount:          0,
+      totalMinutes:        0,
+      topHorse:            null,
+      currentStreakWeeks:  0,
+      typeBreakdown:       [],
+    })),
   ]);
 
   return (
