@@ -11,6 +11,8 @@ export { Field, Input, Select, Textarea } from "./Field";
 export { PageHeader } from "./PageHeader";
 export { StatCard } from "./StatCard";
 export { EmptyState } from "./EmptyState";
+export { FeatureDisabled } from "./FeatureDisabled";
+export { Skeleton, SkeletonText } from "./Skeleton";
 export { SectionTitle } from "./SectionTitle";
 export { FlashToast } from "./Toast";
 export { cn } from "./cn";

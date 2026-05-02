@@ -3,19 +3,22 @@
 @tailwind utilities;
 
 /* =============================================================
-   Stable OS — global design layer (Navy + Orange refresh).
+   Hoofbeat — global design layer (Paddock + Saddle + Cream).
    See tailwind.config.ts for token definitions.
    ============================================================= */
 
 /* Premium serif for hero greetings, horse names, sums. */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap');
 
 :root {
-  --color-brand:        #E04E25;
-  --color-brand-soft:   #FFF1EB;
-  --color-navy:         #1E2A47;
+  --color-brand:        #2D5440; /* Paddock 600 — primary action */
+  --color-brand-soft:   #EEF4EE; /* Paddock 50 */
+  --color-brand-deep:   #1E3A2A; /* Paddock 700 — chrome / serif */
+  --color-saddle:       #B5793E; /* Saddle 500 — accent */
+  --color-saddle-soft:  #FAF1E5;
+  --color-navy:         #1E2A47; /* retained for high-contrast text */
   --color-navy-soft:    #DCE2EE;
-  --color-surface:      #F8F4EE;
+  --color-surface:      #F8F4EE; /* Arena Cream */
   --color-surface-muted:#F1EAE0;
   --color-ink-900:      #1C1A17;
   --color-ink-700:      #3F3934;
@@ -25,9 +28,9 @@
   --radius-card:  24px;
   --radius-input: 10px;
 
-  --shadow-soft:  0 1px 2px rgba(14,23,41,0.04), 0 8px 24px -8px rgba(14,23,41,0.08);
-  --shadow-lift:  0 1px 2px rgba(14,23,41,0.05), 0 14px 32px -10px rgba(14,23,41,0.14);
-  --shadow-focus: 0 0 0 3px rgba(244,102,61,0.22);
+  --shadow-soft:  0 1px 2px rgba(30,58,42,0.04), 0 8px 24px -8px rgba(30,58,42,0.08);
+  --shadow-lift:  0 1px 2px rgba(30,58,42,0.05), 0 14px 32px -10px rgba(30,58,42,0.14);
+  --shadow-focus: 0 0 0 3px rgba(45,84,64,0.22); /* paddock-tinted */
 }
 
 html, body {
@@ -38,7 +41,7 @@ body {
   @apply text-ink-900 antialiased font-sans;
   background:
     radial-gradient(120% 80% at 0% 0%, rgba(255,255,255,0.55), transparent 55%),
-    radial-gradient(120% 80% at 100% 0%, rgba(255,241,235,0.45), transparent 55%),
+    radial-gradient(120% 80% at 100% 0%, rgba(248,234,210,0.55), transparent 55%),
     linear-gradient(180deg, #F8F4EE 0%, #F1EAE0 100%);
   background-attachment: fixed;
   letter-spacing: -0.011em;
@@ -65,15 +68,18 @@ body {
   transform: translateY(-1px);
 }
 
-/* Dark hero card variant — used for high-priority KPIs (Revenue, etc.) */
+/* High-priority hero card variant — Paddock Green chrome.
+   Replaces the previous .card-navy. Old name kept as alias so
+   existing markup migrates without churn. */
+.card-paddock,
 .card-navy {
   @apply rounded-2xl text-white;
-  background: var(--color-navy);
+  background: var(--color-brand-deep);
   box-shadow: var(--shadow-soft);
 }
 
 /* -------------------------------------------------------------
-   Focus rings — orange glow.
+   Focus rings — paddock glow.
    ------------------------------------------------------------- */
 input:focus-visible,
 select:focus-visible,
@@ -108,7 +114,7 @@ h1, h2, h3 {
 
 /* Serif display utility — for hero greetings, horse names, sums. */
 .font-display {
-  font-family: var(--font-serif, Fraunces, Georgia, serif);
+  font-family: var(--font-serif, Fraunces, "Source Serif 4", Georgia, serif);
   font-weight: 500;
   letter-spacing: -0.015em;
 }
@@ -146,9 +152,9 @@ h1, h2, h3 {
    ------------------------------------------------------------- */
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb {
-  background: rgba(14,23,41,0.10);
+  background: rgba(30,58,42,0.10);
   border-radius: 999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(14,23,41,0.18);
+  background: rgba(30,58,42,0.18);
 }

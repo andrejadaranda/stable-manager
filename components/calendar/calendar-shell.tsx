@@ -17,7 +17,7 @@
 // the same week. Day selection stays client-side so toggling between
 // views is instant and doesn't trigger server round trips.
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addDays, fmtISODate } from "@/lib/utils/dates";
@@ -29,6 +29,7 @@ import { EditLessonDialog } from "./edit-lesson-dialog";
 import { WeekGrid } from "./week-grid";
 import { DayGrid } from "./day-grid";
 import { DayAgenda } from "./day-agenda";
+import { rescheduleLessonAction } from "@/app/dashboard/calendar/reschedule-action";
 
 type ClientOpt  = { id: string; full_name: string; default_lesson_price?: number | null };
 type HorseOpt   = { id: string; name: string };
@@ -79,6 +80,13 @@ export function CalendarShell({
   const [slot,    setSlot]    = useState<Slot | null>(null);
   const [selected, setSelected] = useState<CalendarLesson | null>(null);
 
+  // Optimistic overrides: lessonId → new starts/ends. Cleared after
+  // server reconciliation via router.refresh(). Server-truth re-arrives
+  // through the lessons prop on the next render.
+  const [optimistic, setOptimistic] = useState<Record<string, { starts_at: string; ends_at: string }>>({});
+  const [, startTransition] = useTransition();
+  const [dropError, setDropError] = useState<string | null>(null);
+
   // Read-only callers (clients in /dashboard/my-lessons) get a horse
   // preview navigation when they tap a lesson; staff get the editor.
   function handleLessonClick(l: CalendarLesson) {
@@ -106,17 +114,75 @@ export function CalendarShell({
   }, [days]);
 
   // Lessons grouped by local day key — each grid only re-buckets when
-  // the lesson list actually changes.
+  // the lesson list (or optimistic overlay) actually changes. The
+  // overlay shifts a lesson to its dragged position before the server
+  // round-trip lands, so the card "sticks" where the user dropped it.
+  const visibleLessons = useMemo(() => {
+    if (Object.keys(optimistic).length === 0) return lessons;
+    return lessons.map((l) => {
+      const o = optimistic[l.id];
+      if (!o) return l;
+      return { ...l, starts_at: o.starts_at, ends_at: o.ends_at };
+    });
+  }, [lessons, optimistic]);
+
   const byDay = useMemo(() => {
     const m = new Map<string, CalendarLesson[]>();
-    for (const l of lessons) {
+    for (const l of visibleLessons) {
       const k = fmtISODate(new Date(l.starts_at));
       const arr = m.get(k) ?? [];
       arr.push(l);
       m.set(k, arr);
     }
     return m;
-  }, [lessons]);
+  }, [visibleLessons]);
+
+  /** Drag-and-drop reschedule. The week grid passes a snapped local
+   *  start string ("YYYY-MM-DDTHH:mm"); we preserve duration and submit. */
+  function handleLessonDrop(lessonId: string, newStartLocal: string) {
+    const lesson = lessons.find((l) => l.id === lessonId);
+    if (!lesson) return;
+    const original = new Date(lesson.starts_at);
+    const originalEnd = new Date(lesson.ends_at);
+    const durMs = originalEnd.getTime() - original.getTime();
+    const newStart = parseLocal(newStartLocal);
+    const newEnd   = new Date(newStart.getTime() + durMs);
+
+    // Optimistic flip
+    setDropError(null);
+    setOptimistic((prev) => ({
+      ...prev,
+      [lessonId]: {
+        starts_at: newStart.toISOString(),
+        ends_at:   newEnd.toISOString(),
+      },
+    }));
+
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("lesson_id", lessonId);
+      fd.set("starts_at", newStartLocal);
+      fd.set("ends_at",   toLocalInput(newEnd));
+      const res = await rescheduleLessonAction(fd);
+      if (!res.ok) {
+        setDropError(res.error);
+        // Revert overlay so card snaps back
+        setOptimistic((prev) => {
+          const { [lessonId]: _, ...rest } = prev;
+          return rest;
+        });
+        return;
+      }
+      router.refresh();
+      // Clear after a tick so the refreshed lessons reach us first.
+      setTimeout(() => {
+        setOptimistic((prev) => {
+          const { [lessonId]: _, ...rest } = prev;
+          return rest;
+        });
+      }, 600);
+    });
+  }
 
   // Click on an empty grid cell — open the create form prefilled.
   function handleCreateAt(startsLocal: string, endsLocal: string) {
@@ -149,6 +215,23 @@ export function CalendarShell({
         }}
       />
 
+      {/* Drag-error toast (banner) — clears on next successful reschedule */}
+      {dropError && (
+        <div
+          role="alert"
+          className="rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[13px] px-4 py-2.5 flex items-center justify-between gap-3"
+        >
+          <span>{dropError}</span>
+          <button
+            type="button"
+            onClick={() => setDropError(null)}
+            className="text-rose-600 hover:text-rose-800 text-xs"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Desktop views ----------------------------------------------- */}
       <div className="hidden md:block">
         {view === "week" ? (
@@ -160,6 +243,7 @@ export function CalendarShell({
             onLessonClick={handleLessonClick}
             onSlotClick={handleCreateAt}
             onDayHeaderClick={handleExpandDay}
+            onLessonDrop={editable ? handleLessonDrop : undefined}
             editable={editable}
           />
         ) : (
@@ -170,6 +254,7 @@ export function CalendarShell({
             lessons={byDay.get(dayKey) ?? []}
             onLessonClick={handleLessonClick}
             onSlotClick={handleCreateAt}
+            onLessonDrop={editable ? handleLessonDrop : undefined}
             onBack={() => setView("week")}
             dayPicker={
               <DayPickerPills
@@ -286,18 +371,35 @@ function CalendarHero({
         </div>
 
         {showCreate && (
-          <button
-            type="button"
-            onClick={onCreate}
-            className="
-              inline-flex items-center justify-center gap-1.5
-              h-10 px-4 rounded-xl text-sm font-medium
-              bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800
-              transition-colors
-            "
-          >
-            + New lesson
-          </button>
+          <>
+            <Link
+              href="/dashboard/calendar/print"
+              className="
+                hidden md:inline-flex items-center justify-center gap-1.5
+                h-10 px-3.5 rounded-xl text-sm font-medium
+                bg-white text-ink-700 shadow-soft hover:shadow-lift
+                transition-shadow
+              "
+              aria-label="Print this week's schedule"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+              </svg>
+              Print
+            </Link>
+            <button
+              type="button"
+              onClick={onCreate}
+              className="
+                inline-flex items-center justify-center gap-1.5
+                h-10 px-4 rounded-xl text-sm font-medium
+                bg-brand-600 text-white shadow-sm hover:bg-brand-700 active:bg-brand-800
+                transition-colors
+              "
+            >
+              + New lesson
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -431,4 +533,13 @@ function seedSlotForDay(dayKey: string): Slot {
 function toLocalInput(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function parseLocal(local: string): Date {
+  // Parses "YYYY-MM-DDTHH:mm" as a *local* time (not UTC). new Date(s)
+  // would treat ISO with no zone as UTC in some engines, so we split.
+  const [date, time] = local.split("T");
+  const [y, m, d]    = date.split("-").map(Number);
+  const [hh, mm]     = (time ?? "00:00").split(":").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0);
 }

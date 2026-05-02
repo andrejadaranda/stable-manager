@@ -19,6 +19,12 @@ export type ClientRow = {
   skill_level: SkillLevel | null;
   active: boolean;
   notes: string | null;
+  /** Emergency contact name — for accidents during a lesson. */
+  emergency_contact_name:     string | null;
+  /** Emergency contact phone. */
+  emergency_contact_phone:    string | null;
+  /** Free-text relationship: spouse / parent / friend / etc. */
+  emergency_contact_relation: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -124,6 +130,9 @@ export type UpdateClientInput = {
   skillLevel?: SkillLevel | null;
   active?: boolean;
   notes?: string | null;
+  emergencyContactName?:     string | null;
+  emergencyContactPhone?:    string | null;
+  emergencyContactRelation?: string | null;
 };
 
 export async function updateClient(id: string, input: UpdateClientInput) {
@@ -138,6 +147,9 @@ export async function updateClient(id: string, input: UpdateClientInput) {
   if (input.skillLevel  !== undefined) update.skill_level = input.skillLevel;
   if (input.active      !== undefined) update.active      = input.active;
   if (input.notes       !== undefined) update.notes       = input.notes;
+  if (input.emergencyContactName     !== undefined) update.emergency_contact_name     = input.emergencyContactName;
+  if (input.emergencyContactPhone    !== undefined) update.emergency_contact_phone    = input.emergencyContactPhone;
+  if (input.emergencyContactRelation !== undefined) update.emergency_contact_relation = input.emergencyContactRelation;
 
   const { data, error } = await supabase
     .from("clients")

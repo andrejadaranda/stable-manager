@@ -102,6 +102,19 @@ function EditClientDialog({
           />
         </label>
 
+        {/* Emergency contact — for accidents during a lesson */}
+        <fieldset className="border-t border-neutral-200 pt-3.5 mt-1 flex flex-col gap-2.5">
+          <legend className="text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-500 px-1">
+            Emergency contact
+          </legend>
+          <p className="text-[11px] text-neutral-500 -mt-1">
+            Who do we call if something happens during a lesson? Optional, kept private to staff.
+          </p>
+          <Field label="Name" name="emergency_contact_name" type="text" defaultValue={client.emergency_contact_name ?? ""} placeholder="e.g. Jonas Kazlauskas" />
+          <Field label="Phone" name="emergency_contact_phone" type="tel" defaultValue={client.emergency_contact_phone ?? ""} placeholder="+370 6…" />
+          <Field label="Relationship" name="emergency_contact_relation" type="text" defaultValue={client.emergency_contact_relation ?? ""} placeholder="spouse, parent, friend…" />
+        </fieldset>
+
         <Submit />
         {state.error && (
           <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">

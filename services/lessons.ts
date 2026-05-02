@@ -24,6 +24,9 @@ export type CreateLessonInput = {
    *  the trainer must supply a reason to override. Saved verbatim on
    *  the lesson row for audit. */
   overLimitReason?: string | null;
+  /** Shared series uuid linking sibling lessons in a recurring booking.
+   *  Set automatically by createRecurringLessons; ignored for one-offs. */
+  seriesId?: string | null;
 };
 
 // Re-export so callers don't have to know that workload status lives
@@ -61,6 +64,13 @@ export async function createRecurringLessons(
   if (opts.count > 52) throw new Error("RECURRENCE_TOO_LONG"); // sanity cap
   const interval = Math.max(1, opts.intervalWeeks ?? 1);
 
+  // One series_id shared across all created rows. Generate client-side
+  // so we can stamp every insert before the round-trip — no need for
+  // a second UPDATE pass.
+  const seriesId = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
   const result: RecurringCreateResult = { created: [], skipped: [] };
 
   for (let i = 0; i < opts.count; i++) {
@@ -69,7 +79,7 @@ export async function createRecurringLessons(
     const endsAt   = new Date(new Date(base.endsAt).getTime()   + offset).toISOString();
 
     try {
-      const created = await createLesson({ ...base, startsAt, endsAt });
+      const created = await createLesson({ ...base, startsAt, endsAt, seriesId });
       result.created.push({ id: (created as { id: string }).id, startsAt });
     } catch (err) {
       const message = err instanceof Error ? err.message : "unknown error";
@@ -148,6 +158,7 @@ export async function createLesson(input: CreateLessonInput) {
       package_id: input.packageId ?? null,
       service_id: input.serviceId ?? null,
       over_limit_reason: reason || null,
+      series_id: input.seriesId ?? null,
     })
     .select()
     .single();

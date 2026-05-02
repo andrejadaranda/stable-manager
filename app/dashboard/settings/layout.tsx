@@ -1,11 +1,22 @@
 import Link from "next/link";
 import { requirePageRole } from "@/lib/auth/redirects";
+import { getStableFeatures, type FeatureKey } from "@/services/features";
 
-const TABS = [
+type Tab = {
+  href: string;
+  label: string;
+  ownerOnly: boolean;
+  /** If set, hide tab when this feature is disabled. */
+  feature?: FeatureKey;
+};
+
+const TABS: Tab[] = [
   { href: "/dashboard/settings/stable",   label: "Stable",   ownerOnly: true  },
-  { href: "/dashboard/settings/services", label: "Services", ownerOnly: true  },
-  { href: "/dashboard/settings/boarding", label: "Boarding", ownerOnly: true  },
+  { href: "/dashboard/settings/features", label: "Features", ownerOnly: true  },
+  { href: "/dashboard/settings/services", label: "Services", ownerOnly: true, feature: "services"  },
+  { href: "/dashboard/settings/boarding", label: "Boarding", ownerOnly: true, feature: "boarding"  },
   { href: "/dashboard/settings/import",   label: "Import",   ownerOnly: true  },
+  { href: "/dashboard/settings/activity", label: "Activity", ownerOnly: true  },
   { href: "/dashboard/settings/profile",  label: "Profile",  ownerOnly: false },
   { href: "/dashboard/settings/security", label: "Security", ownerOnly: false },
   { href: "/dashboard/settings/billing",  label: "Billing",  ownerOnly: true  },
@@ -17,7 +28,12 @@ export default async function SettingsLayout({
   children: React.ReactNode;
 }) {
   const session = await requirePageRole("owner", "employee", "client");
-  const visible = TABS.filter((t) => !t.ownerOnly || session.role === "owner");
+  const features = session.role === "owner" ? await getStableFeatures() : null;
+  const visible = TABS.filter((t) => {
+    if (t.ownerOnly && session.role !== "owner") return false;
+    if (t.feature && features && !features[t.feature]) return false;
+    return true;
+  });
 
   return (
     <div className="flex flex-col gap-6">

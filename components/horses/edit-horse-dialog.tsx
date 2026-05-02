@@ -103,6 +103,14 @@ function EditHorseDialog({
           />
         </label>
 
+        <Field
+          label="Photo URL"
+          name="photo_url"
+          type="url"
+          placeholder="https://… (paste link to a public image)"
+          defaultValue={(horse as HorseRow & { photo_url?: string | null }).photo_url ?? ""}
+        />
+
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="text-neutral-700 font-medium">Public bio</span>
           <textarea
@@ -117,6 +125,19 @@ function EditHorseDialog({
             Helps young riders recognise the horse before their lesson.
           </span>
         </label>
+
+        {/* Backup contact — when the owner can't be reached */}
+        <fieldset className="border-t border-neutral-200 pt-3.5 mt-1 flex flex-col gap-2.5">
+          <legend className="text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-500 px-1">
+            Backup contact
+          </legend>
+          <p className="text-[11px] text-neutral-500 -mt-1">
+            Who do we call when the owner is unreachable (vet decisions, transport, end-of-life). Survives ownership changes.
+          </p>
+          <Field label="Name" name="backup_contact_name" type="text" defaultValue={(horse as HorseRow & { backup_contact_name?: string | null }).backup_contact_name ?? ""} placeholder="e.g. Marija Vilkienė" />
+          <Field label="Phone" name="backup_contact_phone" type="tel" defaultValue={(horse as HorseRow & { backup_contact_phone?: string | null }).backup_contact_phone ?? ""} placeholder="+370 6…" />
+          <Field label="Relationship" name="backup_contact_relation" type="text" defaultValue={(horse as HorseRow & { backup_contact_relation?: string | null }).backup_contact_relation ?? ""} placeholder="vet, neighbour, partner…" />
+        </fieldset>
 
         <Submit />
         {state.error && (

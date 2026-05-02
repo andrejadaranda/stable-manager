@@ -17,6 +17,11 @@ export type HorseRow = {
   owner_client_id: string | null;
   available_for_lessons: boolean;
   public_bio: string | null;
+  /** Backup contact name (called when the owner can't be reached). */
+  backup_contact_name:     string | null;
+  backup_contact_phone:    string | null;
+  /** Free text: "vet", "neighbour", "partner", etc. */
+  backup_contact_relation: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -197,6 +202,11 @@ export type UpdateHorseInput = {
   ownerClientId?: string | null;
   /** Owner-curated description visible to clients. Pass null to clear. */
   publicBio?: string | null;
+  /** Public URL of the horse photo. Pass null to clear. */
+  photoUrl?: string | null;
+  backupContactName?:     string | null;
+  backupContactPhone?:    string | null;
+  backupContactRelation?: string | null;
 };
 
 export async function updateHorse(id: string, input: UpdateHorseInput) {
@@ -212,6 +222,10 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
   if (input.notes             !== undefined) update.notes               = input.notes;
   if (input.ownerClientId     !== undefined) update.owner_client_id     = input.ownerClientId;
   if (input.publicBio         !== undefined) update.public_bio          = input.publicBio;
+  if (input.photoUrl          !== undefined) update.photo_url           = input.photoUrl;
+  if (input.backupContactName     !== undefined) update.backup_contact_name     = input.backupContactName;
+  if (input.backupContactPhone    !== undefined) update.backup_contact_phone    = input.backupContactPhone;
+  if (input.backupContactRelation !== undefined) update.backup_contact_relation = input.backupContactRelation;
 
   const { data, error } = await supabase
     .from("horses")

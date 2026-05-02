@@ -21,7 +21,7 @@ export function MemberList({ members }: { members: Member[] }) {
 
   return (
     <div className="border border-neutral-200 rounded-lg bg-white overflow-hidden">
-      <div className="grid grid-cols-[2fr_2fr_1fr] gap-3 px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 bg-neutral-50 border-b border-neutral-200">
+      <div className="hidden md:grid grid-cols-[2fr_2fr_1fr] gap-3 px-5 py-3 text-[11px] font-medium uppercase tracking-wider text-neutral-500 bg-neutral-50 border-b border-neutral-200">
         <div>Name</div>
         <div>Email</div>
         <div>Role</div>
@@ -30,15 +30,26 @@ export function MemberList({ members }: { members: Member[] }) {
         {members.map((m) => (
           <li
             key={m.id}
-            className="grid grid-cols-[2fr_2fr_1fr] gap-3 px-5 py-3.5 text-sm items-center hover:bg-neutral-50 transition-colors"
+            className="
+              block md:grid md:grid-cols-[2fr_2fr_1fr] md:gap-3 md:items-center
+              px-4 md:px-5 py-3 md:py-3.5 text-sm
+              hover:bg-neutral-50 transition-colors
+            "
           >
-            <div className="font-semibold text-neutral-900">
-              {m.full_name ?? <span className="text-neutral-400">—</span>}
+            <div className="flex items-center justify-between md:block min-w-0">
+              <span className="font-semibold text-neutral-900 truncate">
+                {m.full_name ?? <span className="text-neutral-400">—</span>}
+              </span>
+              <span className="md:hidden ml-2 shrink-0">
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${ROLE_BADGE[m.role]}`}>
+                  {ROLE_LABEL[m.role]}
+                </span>
+              </span>
             </div>
-            <div className="text-neutral-700 truncate">
+            <div className="text-neutral-700 truncate text-[12.5px] md:text-sm mt-0.5 md:mt-0">
               {m.email ?? <span className="text-neutral-400">—</span>}
             </div>
-            <div>
+            <div className="hidden md:block">
               <span
                 className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${ROLE_BADGE[m.role]}`}
               >

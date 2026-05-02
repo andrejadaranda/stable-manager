@@ -8,13 +8,25 @@
 
 import { requirePageRole } from "@/lib/auth/redirects";
 import { listMySessions, getMySessionStats } from "@/services/sessions";
+import { getStableFeatures } from "@/services/features";
 import { SessionList } from "@/components/sessions/session-list";
 import { SessionsHero } from "@/components/sessions/sessions-hero";
+import { FeatureDisabled, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function MySessionsPage() {
   await requirePageRole("client");
+
+  const features = await getStableFeatures();
+  if (!features.sessions) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Your rides" />
+        <FeatureDisabled feature="Session log" isOwner={false} />
+      </div>
+    );
+  }
 
   const [sessions, stats] = await Promise.all([
     listMySessions(50),

@@ -9,26 +9,26 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default:  "Stable.OS",
-    template: "%s · Stable.OS",
+    default:  "Hoofbeat.",
+    template: "%s · Hoofbeat.",
   },
   description:
     "Schedule lessons, track payments, and protect your horses. Built for European riding stables.",
-  applicationName: "Stable.OS",
+  applicationName: "Hoofbeat.",
   // Apple-specific PWA flags. Safari reads these when "Add to Home
   // Screen" is tapped — they make the launched app run full-screen
   // without the URL bar and use a translucent status bar in the
   // brand-orange palette.
   appleWebApp: {
     capable:    true,
-    title:      "Stable.OS",
+    title:      "Hoofbeat.",
     statusBarStyle: "black-translucent",
   },
   // Open Graph + Twitter previews for shared links.
   openGraph: {
-    title:       "Stable.OS",
+    title:       "Hoofbeat.",
     description: "Modern stable management. Calendar, payments, welfare, packages — one place.",
-    siteName:    "Stable.OS",
+    siteName:    "Hoofbeat.",
     type:        "website",
   },
   // Manifest for Android Chrome's Add-to-Home-Screen + Lighthouse PWA
@@ -46,7 +46,7 @@ export const viewport: Viewport = {
   // app surface instead of jumping to white.
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F8F4EE" },
-    { media: "(prefers-color-scheme: dark)",  color: "#1E2A47" },
+    { media: "(prefers-color-scheme: dark)",  color: "#1E3A2A" },
   ],
 };
 

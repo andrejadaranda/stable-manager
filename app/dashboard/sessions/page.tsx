@@ -12,15 +12,27 @@ import { listSessions, getStableSessionStats } from "@/services/sessions";
 import { listHorses } from "@/services/horses";
 import { listClients } from "@/services/clients";
 import { getSession, requireRole } from "@/lib/auth/session";
+import { getStableFeatures } from "@/services/features";
 import { LogSessionPanel } from "@/components/sessions/log-session-panel";
 import { SessionList } from "@/components/sessions/session-list";
 import { SessionsHero } from "@/components/sessions/sessions-hero";
+import { FeatureDisabled, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function SessionsPage() {
   const ctx = await getSession();
   requireRole(ctx, "owner", "employee");
+
+  const features = await getStableFeatures();
+  if (!features.sessions) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Sessions" />
+        <FeatureDisabled feature="Session log" isOwner={ctx.role === "owner"} />
+      </div>
+    );
+  }
 
   const [horses, clients, recent, stats] = await Promise.all([
     listHorses({ activeOnly: true }),
@@ -33,7 +45,7 @@ export default async function SessionsPage() {
     <div className="flex flex-col gap-6">
       <SessionsHero
         title="Sessions"
-        subtitle="Every ride that happened. Log a session in 15 seconds."
+        subtitle="Every ride that happened — training, hacks, turnout. Sessions are NOT billed (Lessons are). They feed the welfare workload count."
         stats={stats}
         scope="stable"
         action={

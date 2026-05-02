@@ -14,7 +14,7 @@ export default async function BillingSettingsPage() {
         />
         <div className="p-6 flex flex-col gap-4">
           <p className="text-sm text-ink-700 leading-relaxed">
-            You're using Stable OS during the early preview. Billing isn't
+            You're using Hoofbeat during the early preview. Billing isn't
             enabled yet — once paid plans launch, your stable will keep
             working and you'll have a chance to choose a plan.
           </p>

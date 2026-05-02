@@ -27,7 +27,11 @@ import {
 } from "@/components/ui";
 import { RemindersBlock } from "@/components/reminders/reminders-block";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
+import { SmartSuggestions } from "@/components/dashboard/smart-suggestions";
+import { BirthdaysWidget } from "@/components/dashboard/birthdays-widget";
 import { getOnboardingStatus } from "@/services/onboarding";
+import { getSmartSuggestions } from "@/services/suggestions";
+import { getUpcomingBirthdays } from "@/services/birthdays";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +40,12 @@ export default async function DashboardHome() {
   if (!session) redirect("/login");
   if (session.role === "client") redirect("/dashboard/my-lessons");
 
-  const [s, profile, onboarding] = await Promise.all([
+  const [s, profile, onboarding, suggestions, birthdays] = await Promise.all([
     getDashboardSummary(),
     getOwnProfile().catch(() => null),
     getOnboardingStatus().catch(() => null),
+    getSmartSuggestions().catch(() => []),
+    getUpcomingBirthdays().catch(() => []),
   ]);
 
   const firstName = (profile?.full_name ?? "").split(" ")[0] ?? "";
@@ -161,6 +167,14 @@ export default async function DashboardHome() {
           {/* Onboarding — guides a fresh stable to first lesson.
               Auto-hides once everything is set up. */}
           <OnboardingChecklist status={onboarding} />
+
+          {/* Smart suggestions — proactive welfare/money/calendar
+              signals. Auto-hides when there's nothing to surface. */}
+          <SmartSuggestions items={suggestions} />
+
+          {/* Birthdays — emotional micro-widget. Auto-hides when no
+              horse/client birthday in the next 14 days. */}
+          <BirthdaysWidget items={birthdays} />
 
           {/* Reminders */}
           <RemindersBlock />
@@ -332,31 +346,18 @@ function RevenueCard({
       className="card-navy p-5 md:p-6 flex flex-col gap-3 group hover:shadow-lift transition-shadow"
     >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] tracking-[0.04em] uppercase text-navy-100/80">
+        <span className="text-[11px] tracking-[0.04em] uppercase text-white/80">
           Monthly revenue
         </span>
-        <span className="text-[11px] text-navy-100/70 inline-flex items-center gap-1">
+        <span className="text-[11px] text-white/70 inline-flex items-center gap-1">
           {monthLabel}
           <span aria-hidden className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
         </span>
       </div>
       <div className="font-display text-3xl text-white">{fmtEUR(monthlyRevenue)}</div>
-      <p className="text-[12px] text-navy-100/70">
+      <p className="text-[12px] text-white/70">
         Collected payments this month · tap for breakdown
       </p>
-      {/* Mini bars decoration */}
-      <div className="mt-2 h-7 flex items-end gap-1.5">
-        {[30, 50, 40, 65, 55, 75, 90].map((h, i) => (
-          <span
-            key={i}
-            className="flex-1 rounded-sm"
-            style={{
-              height: `${h}%`,
-              background: i === 6 ? "#F4663D" : "#2F406A",
-            }}
-          />
-        ))}
-      </div>
     </Link>
   );
 }

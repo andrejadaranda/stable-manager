@@ -1,9 +1,17 @@
 import { requirePageRole } from "@/lib/auth/redirects";
 import { listServices } from "@/services/services";
+import { getStableFeatures } from "@/services/features";
 import { ServicesManager } from "@/components/services/services-manager";
+import { FeatureDisabled } from "@/components/ui";
 
 export default async function ServicesSettingsPage() {
   await requirePageRole("owner");
+
+  const features = await getStableFeatures();
+  if (!features.services) {
+    return <FeatureDisabled feature="Services & price list" isOwner />;
+  }
+
   // Owners see active + inactive entries so they can re-enable.
   const services = await listServices({ activeOnly: false });
 

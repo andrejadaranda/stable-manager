@@ -44,8 +44,30 @@ export function Field({
 }
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
-export function Input({ className, ...rest }: InputProps) {
-  return <input className={cn(inputBase, className)} {...rest} />;
+export function Input({ className, inputMode, type, step, ...rest }: InputProps) {
+  // Auto-attach the right mobile keyboard for common HTML input types
+  // so we don't have to remember inputMode at every call site.
+  // - type="number" with a decimal step → decimal pad (price, duration in min, fees)
+  // - type="number" without step or with step="1" → numeric pad (counts, ages)
+  // - type="email" / "tel" → already trigger their own keyboards
+  let resolvedInputMode = inputMode;
+  if (!resolvedInputMode && type === "number") {
+    const isDecimal = step !== undefined && step !== "1" && step !== 1;
+    resolvedInputMode = isDecimal ? "decimal" : "numeric";
+  }
+  if (!resolvedInputMode && type === "tel")    resolvedInputMode = "tel";
+  if (!resolvedInputMode && type === "email")  resolvedInputMode = "email";
+  if (!resolvedInputMode && type === "url")    resolvedInputMode = "url";
+  if (!resolvedInputMode && type === "search") resolvedInputMode = "search";
+  return (
+    <input
+      type={type}
+      step={step}
+      inputMode={resolvedInputMode}
+      className={cn(inputBase, className)}
+      {...rest}
+    />
+  );
 }
 
 type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;

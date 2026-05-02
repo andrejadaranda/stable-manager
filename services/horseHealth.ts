@@ -175,6 +175,84 @@ export async function updateHealthRecord(id: string, input: UpdateHealthRecordIn
   return data;
 }
 
+// ---------- stable-wide alerts ---------------------------------
+//
+// Cross-horse aggregation for the dashboard. Returns the soonest
+// overdue / due-soon items per kind, capped, so the Smart
+// Suggestions widget can light them up without rendering one row
+// per horse.
+
+export type HealthAlert = {
+  horseId:    string;
+  horseName:  string;
+  kind:       "vaccination" | "farrier" | "vet";
+  nextDue:    string;
+  daysUntil:  number;
+  overdue:    boolean;
+  /** "Last vaccination" / "Trim due", etc. — the record title. */
+  title:      string;
+};
+
+export async function listStableHealthAlerts(): Promise<HealthAlert[]> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+
+  const supabase = createSupabaseServerClient();
+
+  // Pull recurring-kind records across the stable that have a future
+  // (or past-but-unresolved) next_due_on. RLS narrows to current
+  // stable. Limit at the source to keep payload small.
+  const { data, error } = await supabase
+    .from("horse_health_records")
+    .select("horse_id, kind, next_due_on, title, horse:horses(name)")
+    .in("kind", ["vaccination", "farrier", "vet"])
+    .not("next_due_on", "is", null);
+  if (error) throw error;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const alerts: HealthAlert[] = [];
+  // Per (horse,kind) we keep only the soonest next_due_on. This avoids
+  // the same horse appearing 5 times for 5 vaccination doses.
+  const seen = new Map<string, HealthAlert>();
+
+  for (const r of (data ?? []) as Array<{
+    horse_id:    string;
+    kind:        "vaccination" | "farrier" | "vet";
+    next_due_on: string;
+    title:       string;
+    horse:       { name: string } | { name: string }[] | null;
+  }>) {
+    const horseName = Array.isArray(r.horse) ? (r.horse[0]?.name ?? "") : (r.horse?.name ?? "");
+    const due       = new Date(r.next_due_on);
+    due.setHours(0, 0, 0, 0);
+    const days      = Math.round((due.getTime() - today.getTime()) / 86400000);
+    // Show overdue (any) + due in the next 30 days.
+    if (days > 30) continue;
+
+    const key = `${r.horse_id}:${r.kind}`;
+    const existing = seen.get(key);
+    if (existing && existing.daysUntil <= days) continue;
+
+    seen.set(key, {
+      horseId:   r.horse_id,
+      horseName,
+      kind:      r.kind,
+      nextDue:   r.next_due_on,
+      daysUntil: days,
+      overdue:   days < 0,
+      title:     r.title,
+    });
+  }
+
+  for (const a of seen.values()) alerts.push(a);
+
+  // Sort: overdue first (most negative daysUntil), then by daysUntil
+  alerts.sort((a, b) => a.daysUntil - b.daysUntil);
+  return alerts;
+}
+
 // ---------- delete ---------------------------------------------
 
 export async function deleteHealthRecord(id: string) {

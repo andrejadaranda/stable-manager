@@ -54,36 +54,57 @@ export function ExpenseList({ expenses }: { expenses: ExpenseRow[] }) {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="grid grid-cols-[1fr_0.8fr_1fr_1.2fr_1.6fr] gap-3 px-6 py-3 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
+        <div className="hidden md:grid grid-cols-[1fr_0.8fr_1fr_1.2fr_1.6fr] gap-3 px-5 py-3 text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">
           <div>Category</div>
           <div>Amount</div>
           <div>Date</div>
           <div>Horse</div>
           <div>Notes</div>
         </div>
-        <ul>
+        <ul className="divide-y divide-ink-100/60 md:divide-y-0">
           {expenses.map((e) => (
             <li
               key={e.id}
-              className="grid grid-cols-[1fr_0.8fr_1fr_1.2fr_1.6fr] gap-3 px-6 py-4 text-sm items-center hover:bg-neutral-50/70 transition-colors"
+              className="
+                block px-4 md:px-5 py-3.5 md:py-4 text-sm
+                md:grid md:grid-cols-[1fr_0.8fr_1fr_1.2fr_1.6fr] md:gap-3 md:items-center
+                hover:bg-neutral-50/70 transition-colors
+              "
             >
-              <div>
+              <div className="flex items-baseline justify-between md:hidden mb-1">
+                <Badge tone={CATEGORY_TONE[e.category]} dot>
+                  {CATEGORY_LABEL[e.category]}
+                </Badge>
+                <span className="font-semibold text-navy-900 tabular-nums">
+                  €{Number(e.amount).toFixed(2)}
+                </span>
+              </div>
+              <div className="hidden md:block">
                 <Badge tone={CATEGORY_TONE[e.category]} dot>
                   {CATEGORY_LABEL[e.category]}
                 </Badge>
               </div>
-              <div className="font-semibold text-neutral-900 tabular-nums">
+              <div className="hidden md:block font-semibold text-neutral-900 tabular-nums">
                 {Number(e.amount).toFixed(2)}
               </div>
-              <div className="text-neutral-700">
+              <div className="hidden md:block text-neutral-700">
                 {fmtDayLabel(new Date(e.incurred_on))}
               </div>
-              <div className="text-neutral-700">
+              <div className="hidden md:block text-neutral-700">
                 {e.horse?.name ?? <span className="text-neutral-300">—</span>}
               </div>
-              <div className="text-neutral-500 truncate">
+              <div className="hidden md:block text-neutral-500 truncate">
                 {e.description ?? <span className="text-neutral-300">—</span>}
               </div>
+
+              {/* Mobile-only meta */}
+              <div className="md:hidden flex flex-wrap gap-x-3 gap-y-0.5 text-[12.5px] text-neutral-600">
+                <span>{fmtDayLabel(new Date(e.incurred_on))}</span>
+                {e.horse?.name && <span className="text-neutral-500">· {e.horse.name}</span>}
+              </div>
+              {e.description && (
+                <p className="md:hidden mt-1 text-[12px] text-neutral-500 truncate">{e.description}</p>
+              )}
             </li>
           ))}
         </ul>

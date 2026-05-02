@@ -47,6 +47,33 @@ export default async function StableSettingsPage() {
         </form>
       </Card>
 
+      <Card padded={false}>
+        <CardHeader
+          title="Public page"
+          subtitle="Share this link with prospective clients on Instagram, WhatsApp, or printed flyers. Read-only — no internal data is exposed."
+        />
+        <div className="p-6 flex flex-col gap-3">
+          <code className="bg-ink-50 border border-ink-200 rounded-lg px-3 py-2 text-sm tabular-nums break-all">
+            /s/{stable.slug}
+          </code>
+          <a
+            href={`/s/${stable.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="
+              self-start h-9 px-3 rounded-lg text-[12.5px] font-medium
+              text-brand-700 hover:bg-brand-50 inline-flex items-center gap-1.5
+            "
+          >
+            Open in new tab →
+          </a>
+          <p className="text-[12px] text-ink-500 leading-relaxed">
+            Horses appear once you add a public bio to them in their profile.
+            Services appear automatically from your price list.
+          </p>
+        </div>
+      </Card>
+
       <ExportPanel />
 
       <Card padded={false}>

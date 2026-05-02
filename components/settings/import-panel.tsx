@@ -17,14 +17,14 @@ const initial: ImportState = {
 };
 
 const CLIENT_TEMPLATE = `full_name,email,phone,skill_level,default_lesson_price,notes
-Marija Petrauskienė,marija@example.com,+37061111111,intermediate,30,Loves Bella
-Tomas Jonaitis,tomas@example.com,,beginner,25,
-Eglė Kazlauskaitė,,+37062222222,advanced,35,Show prep`;
+Anna Mueller,anna@example.com,+491701111111,intermediate,30,Loves Bella
+Tom Becker,tom@example.com,,beginner,25,
+Sophie Lambert,,+491702222222,advanced,35,Show prep`;
 
 const HORSE_TEMPLATE = `name,breed,date_of_birth,daily_lesson_limit,weekly_lesson_limit,notes
 Bella,Trakehner,2015-03-12,4,18,Calm with kids
-Apolonas,Hanoverian,2012-07-04,3,15,Strong jumper
-Donatas,Lithuanian heavy draft,2017-09-01,5,20,`;
+Apollo,Hanoverian,2012-07-04,3,15,Strong jumper
+Atlas,Heavy draft,2017-09-01,5,20,`;
 
 export function ImportPanel() {
   return (

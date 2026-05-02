@@ -1,8 +1,13 @@
-// Sticky hero for the horse profile. Photo + name (serif) + status pill +
-// owner badge + KPI strip + primary action.
+// Horse profile hero — premium magazine-style header.
 //
-// Server component — no interactivity needed. Sticks to the viewport top
-// with a thin shadow once the user scrolls.
+// Refresh (2026-04-30):
+//   * Gradient banner (paddock green + warm cream) instead of plain card.
+//   * Floating photo overlapping the banner like a profile avatar.
+//   * Name in serif XL with subtle tracking.
+//   * Status + welfare + owner pills clustered under name.
+//   * KPI strip becomes 4-up tiles with bigger numbers (display font),
+//     each with a soft brand-tone background instead of grey.
+//   * Mobile: photo centers above name, full-width tiles 2x2.
 
 import Link from "next/link";
 import type { HorseProfileSummary } from "@/services/horseProfile";
@@ -43,91 +48,119 @@ export function HorseProfileHero({ horse }: { horse: HorseProfileSummary }) {
   );
 
   return (
-    <header className="card-elevated p-5 md:p-6">
-      <div className="flex flex-col md:flex-row md:items-center gap-5">
-        {/* Photo / fallback */}
-        <div className="shrink-0">
-          {horse.photo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={horse.photo_url}
-              alt={horse.name}
-              className="w-20 h-20 md:w-[88px] md:h-[88px] rounded-2xl object-cover ring-1 ring-white"
-            />
-          ) : (
-            <div
-              className="w-20 h-20 md:w-[88px] md:h-[88px] rounded-2xl flex items-center justify-center"
-              style={{ background: "#F5DDCB" }}
-              aria-hidden
-            >
-              <span
-                className="text-3xl text-brand-700"
-                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-              >
-                {initial}
-              </span>
-            </div>
-          )}
-        </div>
+    <header className="relative bg-white rounded-3xl shadow-soft overflow-hidden">
+      {/* Gradient banner */}
+      <div
+        className="h-32 md:h-36 w-full"
+        style={{
+          background:
+            "linear-gradient(135deg, #1E3A2A 0%, #2D5440 45%, #5C7C5F 80%, #C8B89A 100%)",
+        }}
+        aria-hidden
+      >
+        {/* Subtle pattern overlay */}
+        <div
+          className="w-full h-full opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 30%, white 1px, transparent 1px)",
+            backgroundSize: "32px 32px, 26px 26px",
+          }}
+        />
+      </div>
 
-        {/* Name + meta */}
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <div className="px-5 md:px-7 pb-5 md:pb-6">
+        <div className="flex flex-col md:flex-row md:items-end md:gap-6 -mt-12 md:-mt-14">
+          {/* Photo */}
+          <div className="shrink-0 self-center md:self-end">
+            {horse.photo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={horse.photo_url}
+                alt={horse.name}
+                className="w-28 h-28 md:w-32 md:h-32 rounded-3xl object-cover ring-4 ring-white shadow-soft"
+              />
+            ) : (
+              <div
+                className="w-28 h-28 md:w-32 md:h-32 rounded-3xl flex items-center justify-center ring-4 ring-white shadow-soft"
+                style={{ background: "#F5DDCB" }}
+                aria-hidden
+              >
+                <span
+                  className="text-5xl text-brand-700"
+                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                >
+                  {initial}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Name + meta */}
+          <div className="flex-1 min-w-0 mt-3 md:mt-0 md:pb-1 text-center md:text-left">
             <h1
-              className="text-[28px] md:text-[32px] leading-none text-ink-900"
-              style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: 500 }}
+              className="text-3xl md:text-[36px] leading-none text-ink-900"
+              style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: 500, letterSpacing: "-0.01em" }}
             >
               {horse.name}
             </h1>
             {breedAndAge && (
-              <span className="text-[11px] tracking-[0.04em] uppercase text-ink-500">
+              <p className="text-[11px] tracking-[0.08em] uppercase text-ink-500 mt-2">
                 {breedAndAge}
-              </span>
+              </p>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <StatusPill active={horse.active} />
-            <WelfarePill
-              weekCount={horse.week.lesson_count}
-              weeklyLimit={horse.weekly_lesson_limit}
-            />
-            {horse.owner_client_id && horse.owner_client_name && (
-              <Link
-                href={`/dashboard/clients/${horse.owner_client_id}`}
-                className="text-xs text-ink-500 hover:text-ink-900"
-              >
-                Owned by <span className="text-ink-700 font-medium">{horse.owner_client_name}</span>
-              </Link>
-            )}
+          {/* Actions */}
+          <div className="flex items-center gap-2 shrink-0 mt-3 md:mt-0 self-center md:self-end md:pb-1">
+            <EditHorseButton horse={horseAsHorseRow(horse)} />
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          <EditHorseButton horse={horseAsHorseRow(horse)} />
+        {/* Pills row */}
+        <div className="flex flex-wrap items-center gap-2 mt-4 justify-center md:justify-start">
+          <StatusPill active={horse.active} />
+          <WelfarePill
+            weekCount={horse.week.lesson_count}
+            weeklyLimit={horse.weekly_lesson_limit}
+          />
+          {horse.owner_client_id && horse.owner_client_name && (
+            <Link
+              href={`/dashboard/clients/${horse.owner_client_id}`}
+              className="text-[11.5px] text-ink-500 hover:text-ink-900 inline-flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-ink-100/60 transition-colors"
+            >
+              Owned by <span className="text-ink-700 font-medium">{horse.owner_client_name}</span>
+            </Link>
+          )}
         </div>
-      </div>
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-5">
-        <Kpi
-          label="This week"
-          value={`${horse.week.lesson_count} lesson${horse.week.lesson_count === 1 ? "" : "s"}`}
-        />
-        <Kpi
-          label="Workload"
-          value={`${weeklyPct}% of cap`}
-          tone={weeklyPct >= 100 ? "danger" : weeklyPct >= 80 ? "warning" : "default"}
-        />
-        <Kpi
-          label="Last ridden"
-          value={horse.week.last_session_at ? fmtRelative(horse.week.last_session_at) : "—"}
-        />
-        <Kpi
-          label="Next lesson"
-          value={horse.week.next_lesson_at ? fmtDate(horse.week.next_lesson_at) : "None scheduled"}
-        />
+        {/* KPI strip */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mt-5">
+          <Kpi
+            label="This week"
+            value={String(horse.week.lesson_count)}
+            sub={horse.week.lesson_count === 1 ? "lesson" : "lessons"}
+            color="brand"
+          />
+          <Kpi
+            label="Workload"
+            value={`${weeklyPct}%`}
+            sub="of weekly cap"
+            color={weeklyPct >= 100 ? "danger" : weeklyPct >= 80 ? "warning" : "ok"}
+          />
+          <Kpi
+            label="Last ridden"
+            value={horse.week.last_session_at ? fmtRelative(horse.week.last_session_at) : "—"}
+            sub={horse.week.last_session_at ? "" : "no rides logged"}
+            color="navy"
+          />
+          <Kpi
+            label="Next lesson"
+            value={horse.week.next_lesson_at ? fmtDate(horse.week.next_lesson_at) : "None"}
+            sub={horse.week.next_lesson_at ? "" : "schedule one"}
+            color="navy"
+          />
+        </div>
       </div>
     </header>
   );
@@ -156,10 +189,6 @@ function StatusPill({ active }: { active: boolean }) {
   );
 }
 
-// Welfare pill — single glance read of how loaded the horse is this
-// week. Computed from the same numbers the workload-cap enforcement
-// uses on lesson create/update, so what shows here matches what
-// blocks bookings.
 function WelfarePill({
   weekCount,
   weeklyLimit,
@@ -196,16 +225,40 @@ function WelfarePill({
   );
 }
 
-type Tone = "default" | "warning" | "danger";
-function Kpi({ label, value, tone = "default" }: { label: string; value: string; tone?: Tone }) {
-  const valueColor =
-    tone === "danger"  ? "text-rose-700"
-    : tone === "warning" ? "text-amber-700"
-    : "text-ink-900";
+type KpiColor = "brand" | "navy" | "warning" | "danger" | "ok";
+function Kpi({
+  label,
+  value,
+  sub,
+  color = "brand",
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  color?: KpiColor;
+}) {
+  const palette: Record<KpiColor, { bg: string; value: string; label: string }> = {
+    brand:   { bg: "bg-brand-50",    value: "text-brand-700",   label: "text-brand-700/70"   },
+    navy:    { bg: "bg-navy-50",     value: "text-navy-900",    label: "text-ink-500"        },
+    ok:      { bg: "bg-emerald-50",  value: "text-emerald-800", label: "text-emerald-700/80" },
+    warning: { bg: "bg-amber-50",    value: "text-amber-800",   label: "text-amber-700/80"   },
+    danger:  { bg: "bg-rose-50",     value: "text-rose-800",    label: "text-rose-700/80"    },
+  };
+  const c = palette[color];
   return (
-    <div className="bg-ink-50/60 rounded-xl px-3 py-2.5">
-      <div className="text-[10.5px] tracking-[0.04em] uppercase text-ink-500">{label}</div>
-      <div className={`text-[15px] md:text-[16px] font-medium mt-1 ${valueColor}`}>{value}</div>
+    <div className={`${c.bg} rounded-2xl px-4 py-3`}>
+      <div className={`text-[10.5px] tracking-[0.08em] uppercase font-semibold ${c.label}`}>
+        {label}
+      </div>
+      <div
+        className={`mt-1.5 text-2xl md:text-[26px] leading-none ${c.value} tabular-nums`}
+        style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: 500 }}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div className={`text-[11px] ${c.label} mt-1`}>{sub}</div>
+      )}
     </div>
   );
 }
@@ -226,6 +279,9 @@ function horseAsHorseRow(h: HorseProfileSummary) {
     owner_client_id: h.owner_client_id,
     available_for_lessons: h.available_for_lessons,
     public_bio: h.public_bio,
+    backup_contact_name:     null,
+    backup_contact_phone:    null,
+    backup_contact_relation: null,
     created_at: "",
     updated_at: "",
   };

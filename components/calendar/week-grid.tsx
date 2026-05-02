@@ -46,6 +46,7 @@ export function WeekGrid({
   onLessonClick,
   onSlotClick,
   onDayHeaderClick,
+  onLessonDrop,
   editable,
 }: {
   days: Date[];
@@ -55,6 +56,10 @@ export function WeekGrid({
   onLessonClick: (l: CalendarLesson) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
   onDayHeaderClick: (key: string) => void;
+  /** Drag-and-drop reschedule callback. Receives lesson + new local
+   *  start string (snapped to 15-min). Optional — when omitted, drag
+   *  is disabled (e.g. read-only client portal calendar). */
+  onLessonDrop?: (lessonId: string, newStartLocal: string) => void;
   editable: boolean;
 }) {
   // Pre-compute layout per day so render is cheap.
@@ -130,6 +135,7 @@ export function WeekGrid({
               onLessonClick={onLessonClick}
               onSlotClick={onSlotClick}
               onOverflowClick={() => onDayHeaderClick(k)}
+              onLessonDrop={onLessonDrop}
               editable={editable}
             />
           );
@@ -176,6 +182,7 @@ export function DayColumn({
   onLessonClick,
   onSlotClick,
   onOverflowClick,
+  onLessonDrop,
   editable,
   fullDetail = false,
 }: {
@@ -185,6 +192,7 @@ export function DayColumn({
   onLessonClick: (l: CalendarLesson) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
   onOverflowClick?: () => void;
+  onLessonDrop?: (lessonId: string, newStartLocal: string) => void;
   editable: boolean;
   fullDetail?: boolean;
 }) {
@@ -205,6 +213,34 @@ export function DayColumn({
     onSlotClick(slot.startsLocal, slot.endsLocal);
   }
 
+  // Drag-and-drop reschedule -----------------------------------------
+  // We accept lesson cards being dropped anywhere inside the column.
+  // dataTransfer carries: { lessonId, durationMin } so the drop handler
+  // can preserve duration. preventDefault on dragOver enables the drop.
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+    if (!editable || !onLessonDrop) return;
+    if (!e.dataTransfer.types.includes("application/x-hoofbeat-lesson")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    if (!editable || !onLessonDrop) return;
+    const raw = e.dataTransfer.getData("application/x-hoofbeat-lesson");
+    if (!raw) return;
+    e.preventDefault();
+    let payload: { lessonId: string; offsetWithinCard?: number };
+    try { payload = JSON.parse(raw); } catch { return; }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    // Anchor the drop to where the *top* of the card lands, not the
+    // cursor — feels closer to Google Calendar. We subtract the offset
+    // the user grabbed inside the card from the cursor's Y position.
+    const dropY  = e.clientY - rect.top - (payload.offsetWithinCard ?? 0);
+    const slot   = computeSlotFromOffset(dropY, dayKey);
+    onLessonDrop(payload.lessonId, slot.startsLocal);
+  }
+
   return (
     // role=presentation: the column itself isn't a "button" — its
     // clickability is a sighted-mouse affordance for fast scheduling.
@@ -219,6 +255,8 @@ export function DayColumn({
       }
       style={{ height: GRID_HEIGHT }}
       onClick={editable ? handleColumnClick : undefined}
+      onDragOver={editable && onLessonDrop ? handleDragOver : undefined}
+      onDrop={editable && onLessonDrop ? handleDrop : undefined}
     >
       {/* Hour separators ------------------------------------------- */}
       <HourSeparators />
@@ -237,6 +275,22 @@ export function DayColumn({
             key={p.lesson.id}
             type="button"
             data-lesson-card
+            draggable={editable && !!onLessonDrop}
+            onDragStart={
+              editable && onLessonDrop
+                ? (e) => {
+                    // Compute where in the card the user grabbed, so on
+                    // drop we can anchor the new start to that offset.
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                    const offsetWithinCard = e.clientY - rect.top;
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData(
+                      "application/x-hoofbeat-lesson",
+                      JSON.stringify({ lessonId: p.lesson.id, offsetWithinCard }),
+                    );
+                  }
+                : undefined
+            }
             onClick={(e) => {
               e.stopPropagation();
               onLessonClick(p.lesson);
@@ -244,6 +298,7 @@ export function DayColumn({
             aria-label={ariaLabelForLesson(p.lesson)}
             className={`absolute rounded-lg overflow-hidden text-left ${s.bg} ${s.border} ${s.dashed ? "border-dashed" : ""}
                         ${p.lesson.over_limit_reason ? "ring-1 ring-amber-300" : ""}
+                        ${editable && onLessonDrop ? "cursor-grab active:cursor-grabbing" : ""}
                         hover:shadow-soft transition-shadow border-l-[3px] ${s.stripe}`}
             style={{
               top:    p.top,

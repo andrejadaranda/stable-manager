@@ -59,6 +59,10 @@ export async function updateHorseAction(
   const weeklyRaw = String(formData.get("weekly_lesson_limit") ?? "").trim();
   const notesRaw  = String(formData.get("notes") ?? "");
   const publicBioRaw = String(formData.get("public_bio") ?? "");
+  const photoUrlRaw  = String(formData.get("photo_url") ?? "").trim();
+  const bcName     = String(formData.get("backup_contact_name") ?? "").trim();
+  const bcPhone    = String(formData.get("backup_contact_phone") ?? "").trim();
+  const bcRelation = String(formData.get("backup_contact_relation") ?? "").trim();
 
   if (!id)   return { error: "Missing horse id.", success: false };
   if (!name) return { error: "Name is required.", success: false };
@@ -76,6 +80,10 @@ export async function updateHorseAction(
       weeklyLessonLimit: weekly,
       notes: notesRaw.trim() === "" ? null : notesRaw.trim(),
       publicBio: publicBioRaw.trim() === "" ? null : publicBioRaw.trim(),
+      photoUrl:  photoUrlRaw === "" ? null : photoUrlRaw,
+      backupContactName:     bcName     === "" ? null : bcName,
+      backupContactPhone:    bcPhone    === "" ? null : bcPhone,
+      backupContactRelation: bcRelation === "" ? null : bcRelation,
     });
   } catch (err: any) {
     const message = err?.message ?? "";

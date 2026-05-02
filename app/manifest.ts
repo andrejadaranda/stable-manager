@@ -6,8 +6,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name:        "Stable.OS — stable management",
-    short_name:  "Stable.OS",
+    name:        "Hoofbeat — stable management",
+    short_name:  "Hoofbeat",
     description: "Schedule lessons, track payments, and protect your horses.",
     // Standalone = no browser chrome when launched from home screen.
     display:           "standalone",
@@ -15,7 +15,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url:         "/dashboard",
     scope:             "/",
     background_color:  "#F8F4EE",
-    theme_color:       "#E04E25",
+    theme_color:       "#2D5440",
     categories:        ["business", "productivity"],
     icons: [
       // Next.js dynamically renders these via app/icon.tsx and

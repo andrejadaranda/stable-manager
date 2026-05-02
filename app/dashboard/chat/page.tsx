@@ -6,7 +6,8 @@
 
 import { requirePageRole } from "@/lib/auth/redirects";
 import { listChatThreads, getChatMessages } from "@/services/chat";
-import { PageHeader } from "@/components/ui";
+import { getStableFeatures } from "@/services/features";
+import { PageHeader, FeatureDisabled } from "@/components/ui";
 import { ChatLayout } from "@/components/chat/ChatLayout";
 
 type SearchParams = { thread?: string };
@@ -19,6 +20,17 @@ export default async function ChatPage({
   searchParams: SearchParams;
 }) {
   const session = await requirePageRole("owner", "employee", "client");
+
+  const features = await getStableFeatures();
+  if (!features.chat) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Chat" />
+        <FeatureDisabled feature="Chat" isOwner={session.role === "owner"} />
+      </div>
+    );
+  }
+
   const threads = await listChatThreads();
 
   // Pick the active thread: ?thread=ID if valid, else the first

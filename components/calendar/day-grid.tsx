@@ -27,6 +27,7 @@ export function DayGrid({
   lessons,
   onLessonClick,
   onSlotClick,
+  onLessonDrop,
   onBack,
   dayPicker,
   editable,
@@ -37,6 +38,7 @@ export function DayGrid({
   lessons: CalendarLesson[];
   onLessonClick: (l: CalendarLesson) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
+  onLessonDrop?: (lessonId: string, newStartLocal: string) => void;
   onBack: () => void;
   dayPicker: React.ReactNode;
   editable: boolean;
@@ -74,6 +76,7 @@ export function DayGrid({
             layout={layout}
             onLessonClick={onLessonClick}
             onSlotClick={onSlotClick}
+            onLessonDrop={onLessonDrop}
             editable={editable}
             fullDetail
           />

@@ -30,6 +30,25 @@ export async function getOwnProfile(): Promise<OwnProfileRow> {
   };
 }
 
+export type OwnStableRow = {
+  id:    string;
+  name:  string;
+  slug:  string | null;
+};
+
+/** Returns the stable the caller belongs to. RLS narrows to one row. */
+export async function getOwnStable(): Promise<OwnStableRow | null> {
+  const session = await getSession();
+  void session;
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("stables")
+    .select("id, name, slug")
+    .single();
+  if (error) return null;
+  return data as OwnStableRow;
+}
+
 export async function updateOwnProfile(input: { fullName: string }) {
   const session = await getSession();
   const trimmed = input.fullName.trim();

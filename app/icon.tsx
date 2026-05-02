@@ -1,5 +1,5 @@
 // Dynamic 512x512 app icon. Rendered server-side via @vercel/og at
-// build time, cached aggressively. The Stable.OS mark = an orange
+// build time, cached aggressively. The Hoofbeat mark = an orange
 // stable-house silhouette on a navy ground — readable at 32px, dramatic
 // at 512px.
 
@@ -18,7 +18,7 @@ export default function Icon() {
           display:        "flex",
           alignItems:     "center",
           justifyContent: "center",
-          background:     "linear-gradient(135deg, #1E2A47 0%, #0E1729 100%)",
+          background:     "linear-gradient(135deg, #1E3A2A 0%, #0D1A12 100%)",
         }}
       >
         <svg width="320" height="320" viewBox="0 0 24 24" fill="none">
@@ -26,7 +26,7 @@ export default function Icon() {
               header so the brand mark stays consistent. */}
           <path
             d="M5 18V8.5l5-3.5 5 3.5V18M9 18v-4h2v4"
-            stroke="#F4663D"
+            stroke="#B5793E"
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"

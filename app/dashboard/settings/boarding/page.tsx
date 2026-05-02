@@ -1,6 +1,8 @@
 import { requirePageRole } from "@/lib/auth/redirects";
 import { previewBoardingForMonth } from "@/services/boarding";
+import { getStableFeatures } from "@/services/features";
 import { BulkBoardingPanel } from "@/components/boarding/bulk-boarding-panel";
+import { FeatureDisabled } from "@/components/ui";
 
 function currentYearMonth(): string {
   const d = new Date();
@@ -13,6 +15,11 @@ export default async function BoardingSettingsPage({
   searchParams: { period?: string };
 }) {
   await requirePageRole("owner");
+
+  const features = await getStableFeatures();
+  if (!features.boarding) {
+    return <FeatureDisabled feature="Horse boarding" isOwner />;
+  }
 
   const period = /^\d{4}-\d{2}$/.test(searchParams.period ?? "")
     ? (searchParams.period as string)

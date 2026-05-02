@@ -5,17 +5,25 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { logoutAction } from "@/lib/auth/actions";
 import type { Role } from "@/lib/auth/session";
+import type { StableFeatures, FeatureKey } from "@/services/features";
 
-type Item = { href: string; label: string; icon: React.ReactNode };
+type Item = {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  /** If set, hide nav item when this feature is disabled. */
+  feature?: FeatureKey;
+};
 
 const NAV: Record<Role, Item[]> = {
   owner: [
     { href: "/dashboard",          label: "Overview", icon: <IconHome /> },
     { href: "/dashboard/calendar", label: "Calendar", icon: <IconCal />  },
-    { href: "/dashboard/sessions", label: "Sessions", icon: <IconActivity /> },
+    { href: "/dashboard/welfare",  label: "Welfare",  icon: <IconHeart /> },
+    { href: "/dashboard/sessions", label: "Sessions", icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/horses",   label: "Horses",   icon: <IconHorse /> },
     { href: "/dashboard/clients",  label: "Clients",  icon: <IconUsers /> },
-    { href: "/dashboard/chat",     label: "Chat",     icon: <IconChat /> },
+    { href: "/dashboard/chat",     label: "Chat",     icon: <IconChat />, feature: "chat" },
     { href: "/dashboard/payments", label: "Payments", icon: <IconCash /> },
     { href: "/dashboard/expenses", label: "Expenses", icon: <IconReceipt /> },
     { href: "/dashboard/team",     label: "Team",     icon: <IconShield /> },
@@ -23,16 +31,17 @@ const NAV: Record<Role, Item[]> = {
   employee: [
     { href: "/dashboard",          label: "Overview", icon: <IconHome /> },
     { href: "/dashboard/calendar", label: "Calendar", icon: <IconCal />  },
-    { href: "/dashboard/sessions", label: "Sessions", icon: <IconActivity /> },
+    { href: "/dashboard/welfare",  label: "Welfare",  icon: <IconHeart /> },
+    { href: "/dashboard/sessions", label: "Sessions", icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/horses",   label: "Horses",   icon: <IconHorse /> },
     { href: "/dashboard/clients",  label: "Clients",  icon: <IconUsers /> },
-    { href: "/dashboard/chat",     label: "Chat",     icon: <IconChat /> },
+    { href: "/dashboard/chat",     label: "Chat",     icon: <IconChat />, feature: "chat" },
   ],
   client: [
     { href: "/dashboard/my-lessons",   label: "My Lessons",  icon: <IconCal />      },
-    { href: "/dashboard/my-sessions",  label: "My Rides",    icon: <IconActivity /> },
+    { href: "/dashboard/my-sessions",  label: "My Rides",    icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/my-payments",  label: "My Payments", icon: <IconCash />     },
-    { href: "/dashboard/chat",         label: "Chat",        icon: <IconChat />     },
+    { href: "/dashboard/chat",         label: "Chat",        icon: <IconChat />, feature: "chat" },
   ],
 };
 
@@ -42,9 +51,18 @@ const ROLE_LABEL: Record<Role, string> = {
   client: "Client",
 };
 
-export function Sidebar({ role, email }: { role: Role; email: string }) {
+export function Sidebar({
+  role,
+  email,
+  features,
+}: {
+  role: Role;
+  email: string;
+  features: StableFeatures;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const items = NAV[role].filter((it) => !it.feature || features[it.feature]);
 
   useEffect(() => { setOpen(false); }, [pathname]);
 
@@ -128,8 +146,27 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
 
         <div className="mx-5 my-2 h-px bg-navy-100/50" aria-hidden />
 
+        {/* Search trigger — opens the Cmd+K palette via custom event so
+            the click works without re-using a global keyboard binding. */}
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("hoofbeat:open-search"))}
+          className="
+            mx-3 mb-2 px-3 py-2 rounded-xl
+            flex items-center gap-3 text-sm text-ink-500
+            bg-white/40 hover:bg-white/80 transition-colors
+          "
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.5" y2="16.5" />
+          </svg>
+          <span className="flex-1 text-left">Search…</span>
+          <kbd className="hidden md:inline-flex items-center px-1.5 h-5 rounded border border-ink-200 text-[10px] font-medium text-ink-500">⌘K</kbd>
+        </button>
+
         <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5 overflow-y-auto">
-          {NAV[role].map((item) => {
+          {items.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href + "/")) ||
@@ -140,8 +177,8 @@ export function Sidebar({ role, email }: { role: Role; email: string }) {
                 href={item.href}
                 className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                   isActive
-                    ? "bg-navy-700 text-white font-medium shadow-sm"
-                    : "text-ink-700 hover:bg-white/70 hover:text-navy-700"
+                    ? "bg-brand-700 text-white font-medium shadow-sm"
+                    : "text-ink-700 hover:bg-white/70 hover:text-brand-700"
                 }`}
               >
                 <span
@@ -187,12 +224,12 @@ function Brand({ small }: { small?: boolean }) {
     <div className="flex items-center gap-2.5">
       <span
         aria-hidden
-        className={`${small ? "w-6 h-6" : "w-8 h-8"} rounded-lg bg-navy-700 inline-flex items-center justify-center shadow-sm`}
+        className={`${small ? "w-6 h-6" : "w-8 h-8"} rounded-lg bg-brand-700 inline-flex items-center justify-center shadow-sm`}
       >
         <svg width={small ? 14 : 18} height={small ? 14 : 18} viewBox="0 0 24 24" fill="none">
           <path
             d="M5 18V8.5l5-3.5 5 3.5V18M9 18v-4h2v4"
-            stroke="#F4663D"
+            stroke="#B5793E"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -203,7 +240,7 @@ function Brand({ small }: { small?: boolean }) {
         className={`text-navy-900 leading-none ${small ? "text-base" : "text-[19px]"} font-display`}
         style={{ letterSpacing: "-0.015em" }}
       >
-        Stable<span className="text-brand-600">.</span>OS
+        Hoofbeat<span className="text-brand-600">.</span>
       </span>
     </div>
   );
@@ -264,4 +301,7 @@ function IconChat() {
 }
 function IconActivity() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>;
+}
+function IconHeart() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6.5 5.5 5.5 0 0 1 21.5 12C19 16.5 12 21 12 21z"/></svg>;
 }

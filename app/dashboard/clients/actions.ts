@@ -70,6 +70,9 @@ export async function updateClientAction(
   const skill    = String(formData.get("skill_level") ?? "");
   const status   = String(formData.get("status") ?? "active");
   const notes    = String(formData.get("notes") ?? "");
+  const ecName     = String(formData.get("emergency_contact_name") ?? "").trim();
+  const ecPhone    = String(formData.get("emergency_contact_phone") ?? "").trim();
+  const ecRelation = String(formData.get("emergency_contact_relation") ?? "").trim();
 
   if (!id)        return { error: "Missing client id.", success: false };
   if (!fullName)  return { error: "Full name is required.", success: false };
@@ -92,6 +95,9 @@ export async function updateClientAction(
       skillLevel,
       active: status === "active",
       notes: notes.trim() === "" ? null : notes.trim(),
+      emergencyContactName:     ecName     === "" ? null : ecName,
+      emergencyContactPhone:    ecPhone    === "" ? null : ecPhone,
+      emergencyContactRelation: ecRelation === "" ? null : ecRelation,
     });
   } catch (err: any) {
     const message = err?.message ?? "";
