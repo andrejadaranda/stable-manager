@@ -168,18 +168,12 @@ export default async function DashboardHome() {
               Auto-hides once everything is set up. */}
           <OnboardingChecklist status={onboarding} />
 
-          {/* Smart suggestions — proactive welfare/money/calendar
-              signals. Auto-hides when there's nothing to surface. */}
+          {/* Smart suggestions — proactive welfare / health / money
+              signals. Highest information value, top of column. */}
           <SmartSuggestions items={suggestions} />
 
-          {/* Birthdays — emotional micro-widget. Auto-hides when no
-              horse/client birthday in the next 14 days. */}
-          <BirthdaysWidget items={birthdays} />
-
-          {/* Reminders */}
-          <RemindersBlock />
-
-          {/* Today timeline card */}
+          {/* Today's lessons — moved up (post-feedback, was below
+              reminders + birthdays). The most-used "what now" surface. */}
           <section className="card-elevated p-5 md:p-6">
             <div className="flex items-baseline justify-between mb-4">
               <h2 className="text-sm font-semibold text-navy-900">Today's lessons</h2>
@@ -207,6 +201,9 @@ export default async function DashboardHome() {
             )}
           </section>
 
+          {/* Reminders */}
+          <RemindersBlock />
+
           {/* Active horses + Revenue row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <ActiveHorsesCard count={s.activeHorses} />
@@ -216,6 +213,10 @@ export default async function DashboardHome() {
               fmtEUR={fmtEUR}
             />
           </div>
+
+          {/* Birthdays — emotional micro-widget, moved to the bottom.
+              Auto-hides when no horse/client birthday in next 14 days. */}
+          <BirthdaysWidget items={birthdays} />
 
           {/* Quick actions — owner only */}
           {s.isOwner && (

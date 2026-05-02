@@ -210,7 +210,9 @@ function HorseWelfareTile({ horse }: { horse: HorseWelfareCard }) {
         </div>
         <div className="flex items-baseline justify-between mt-1.5">
           <span className="text-[11px] text-ink-500 tabular-nums">{horse.load_pct}% of weekly cap</span>
-          <span className="text-[11px] text-ink-500 tabular-nums">{horse.weekly_minutes}m saddled</span>
+          <span className="text-[11px] text-ink-500 tabular-nums">
+            {horse.weekly_count} {horse.weekly_count === 1 ? "lesson" : "lessons"} this week
+          </span>
         </div>
       </div>
 

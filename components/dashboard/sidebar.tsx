@@ -55,10 +55,12 @@ export function Sidebar({
   role,
   email,
   features,
+  photoUrl,
 }: {
   role: Role;
   email: string;
   features: StableFeatures;
+  photoUrl?: string | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -123,15 +125,18 @@ export function Sidebar({
           href="/dashboard/settings/profile"
           className="mx-3 mt-4 md:mt-2 mb-2 px-3 py-3 rounded-xl bg-white shadow-soft hover:shadow-lift transition-shadow flex items-center gap-3 group"
         >
-          <Avatar initial={initial} />
+          <Avatar initial={initial} photoUrl={photoUrl} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-ink-900 truncate">{email}</p>
             <p className="text-[10.5px] uppercase tracking-[0.14em] text-ink-500 mt-0.5">
               {ROLE_LABEL[role]}
             </p>
           </div>
-          <span className="text-ink-400 group-hover:text-brand-600 transition-colors text-sm">
-            ⚙
+          <span className="text-ink-400 group-hover:text-brand-600 transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14 3h-4l-.6 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2L10 21h4l.6-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/>
+            </svg>
           </span>
         </Link>
 
@@ -139,9 +144,12 @@ export function Sidebar({
           type="button"
           onClick={() => setOpen(false)}
           aria-label="Close menu"
-          className="md:hidden absolute top-4 right-4 text-ink-400 hover:text-ink-900 p-1"
+          className="md:hidden absolute top-3 right-3 w-9 h-9 rounded-full bg-white/80 hover:bg-white text-ink-500 hover:text-ink-900 inline-flex items-center justify-center shadow-soft"
         >
-          ✕
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="6" y1="18" x2="18" y2="6" />
+          </svg>
         </button>
 
         <div className="mx-5 my-2 h-px bg-navy-100/50" aria-hidden />
@@ -246,8 +254,26 @@ function Brand({ small }: { small?: boolean }) {
   );
 }
 
-function Avatar({ initial, small }: { initial: string; small?: boolean }) {
+function Avatar({
+  initial,
+  small,
+  photoUrl,
+}: {
+  initial: string;
+  small?: boolean;
+  photoUrl?: string | null;
+}) {
   const size = small ? "w-8 h-8 text-sm" : "w-9 h-9 text-sm";
+  if (photoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photoUrl}
+        alt=""
+        className={`${size} shrink-0 rounded-full object-cover ring-1 ring-white`}
+      />
+    );
+  }
   return (
     <span
       aria-hidden

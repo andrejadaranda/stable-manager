@@ -23,7 +23,7 @@
 // All sizes / colors are tokens (Tailwind + design system) so the grid
 // stays consistent with the rest of the dashboard.
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { CalendarLesson, LessonPaymentStatus } from "@/services/lessons";
 import {
   HOUR_START,
@@ -37,6 +37,11 @@ import {
   STATUS_LABEL,
 } from "./grid-utils";
 import { fmtTime } from "@/lib/utils/dates";
+
+/** Format a "YYYY-MM-DDTHH:mm" local string back into "HH:mm" for tooltip. */
+function fmtLocalTime(local: string): string {
+  return local.slice(11, 16);
+}
 
 export function WeekGrid({
   days,
@@ -217,18 +222,36 @@ export function DayColumn({
   // We accept lesson cards being dropped anywhere inside the column.
   // dataTransfer carries: { lessonId, durationMin } so the drop handler
   // can preserve duration. preventDefault on dragOver enables the drop.
+  // Live preview of where the card would drop. Shown as a snapped
+  // ghost time chip so the user sees the new time before releasing —
+  // matches Google Calendar / Outlook drag UX.
+  const [dragHover, setDragHover] = useState<{ top: number; label: string } | null>(null);
+
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
     if (!editable || !onLessonDrop) return;
     if (!e.dataTransfer.types.includes("application/x-hoofbeat-lesson")) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetY = e.clientY - rect.top;
+    const slot = computeSlotFromOffset(offsetY, dayKey);
+    // Translate the snapped local-time string back to a top-px so the
+    // chip renders at the exact slot the drop will land in.
+    const [h, m] = slot.startsLocal.slice(11, 16).split(":").map(Number);
+    const minsFromGridStart = (h - HOUR_START) * 60 + m;
+    const top = (minsFromGridStart / 60) * HOUR_HEIGHT;
+    setDragHover({ top, label: fmtLocalTime(slot.startsLocal) });
   }
+
+  function handleDragLeave() { setDragHover(null); }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     if (!editable || !onLessonDrop) return;
     const raw = e.dataTransfer.getData("application/x-hoofbeat-lesson");
     if (!raw) return;
     e.preventDefault();
+    setDragHover(null);
     let payload: { lessonId: string; offsetWithinCard?: number };
     try { payload = JSON.parse(raw); } catch { return; }
 
@@ -256,8 +279,21 @@ export function DayColumn({
       style={{ height: GRID_HEIGHT }}
       onClick={editable ? handleColumnClick : undefined}
       onDragOver={editable && onLessonDrop ? handleDragOver : undefined}
+      onDragLeave={editable && onLessonDrop ? handleDragLeave : undefined}
       onDrop={editable && onLessonDrop ? handleDrop : undefined}
     >
+      {dragHover && (
+        <div
+          aria-hidden
+          className="absolute left-0 right-0 z-20 pointer-events-none"
+          style={{ top: dragHover.top }}
+        >
+          <div className="border-t-2 border-dashed border-brand-600" />
+          <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center px-2 py-0.5 rounded-md bg-brand-600 text-white text-[11px] font-semibold tabular-nums shadow-lift">
+            {dragHover.label}
+          </span>
+        </div>
+      )}
       {/* Hour separators ------------------------------------------- */}
       <HourSeparators />
 

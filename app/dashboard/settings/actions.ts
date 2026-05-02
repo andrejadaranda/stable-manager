@@ -37,11 +37,14 @@ export async function updateStableNameAction(formData: FormData): Promise<void> 
 
 export async function updateProfileNameAction(formData: FormData): Promise<void> {
   const fullName = String(formData.get("full_name") ?? "");
+  const photoUrl = String(formData.get("photo_url") ?? "");
+  const phone    = String(formData.get("phone")     ?? "");
   try {
-    await updateOwnProfile({ fullName });
+    await updateOwnProfile({ fullName, photoUrl, phone });
   } catch (err) {
     bounce("/dashboard/settings/profile", { err: toFriendlyError(err).message });
   }
   revalidatePath("/dashboard/settings/profile");
-  bounce("/dashboard/settings/profile", { ok: "Profilis atnaujintas." });
+  revalidatePath("/dashboard", "layout");
+  bounce("/dashboard/settings/profile", { ok: "Profile updated." });
 }

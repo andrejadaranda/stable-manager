@@ -41,6 +41,18 @@ alter table clients
 comment on column clients.is_horse_owner_only is
   'True when the client is purely a horse-owner (boarder), not a rider. Drives Clients-page filter and skill-level requirement.';
 
+-- 4. Profile photo + phone for the logged-in user. Settings → Profile
+--    surfaces these so owners + employees + clients can personalise their
+--    own account (replaces the bare initial-letter avatar in the sidebar).
+alter table profiles
+  add column if not exists photo_url  text,
+  add column if not exists phone      text;
+
+comment on column profiles.photo_url is
+  'URL of the user''s avatar. Free-text URL until Supabase Storage upload ships in a later migration.';
+comment on column profiles.phone is
+  'Personal contact phone for the staff member. Optional.';
+
 -- =============================================================
 -- DONE.
 -- =============================================================

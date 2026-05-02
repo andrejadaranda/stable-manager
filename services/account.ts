@@ -9,6 +9,8 @@ export type OwnProfileRow = {
   full_name: string | null;
   role: "owner" | "employee" | "client";
   email: string | null;
+  photo_url: string | null;
+  phone: string | null;
 };
 
 export async function getOwnProfile(): Promise<OwnProfileRow> {
@@ -16,7 +18,7 @@ export async function getOwnProfile(): Promise<OwnProfileRow> {
   const supabase = createSupabaseServerClient();
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, full_name, role")
+    .select("id, full_name, role, photo_url, phone")
     .eq("id", session.userId)
     .single();
   if (error) throw error;
@@ -25,7 +27,7 @@ export async function getOwnProfile(): Promise<OwnProfileRow> {
   // for this request via the SSR client.
   const { data: { user } } = await supabase.auth.getUser();
   return {
-    ...(profile as { id: string; full_name: string | null; role: OwnProfileRow["role"] }),
+    ...(profile as { id: string; full_name: string | null; role: OwnProfileRow["role"]; photo_url: string | null; phone: string | null }),
     email: user?.email ?? null,
   };
 }
@@ -49,16 +51,35 @@ export async function getOwnStable(): Promise<OwnStableRow | null> {
   return data as OwnStableRow;
 }
 
-export async function updateOwnProfile(input: { fullName: string }) {
+export async function updateOwnProfile(input: {
+  fullName?: string;
+  photoUrl?: string | null;
+  phone?: string | null;
+}) {
   const session = await getSession();
-  const trimmed = input.fullName.trim();
-  if (trimmed.length < 1)  throw new Error("FULL_NAME_REQUIRED");
-  if (trimmed.length > 80) throw new Error("FULL_NAME_TOO_LONG");
+  const update: Record<string, unknown> = {};
+
+  if (input.fullName !== undefined) {
+    const trimmed = input.fullName.trim();
+    if (trimmed.length < 1)  throw new Error("FULL_NAME_REQUIRED");
+    if (trimmed.length > 80) throw new Error("FULL_NAME_TOO_LONG");
+    update.full_name = trimmed;
+  }
+  if (input.photoUrl !== undefined) {
+    const v = input.photoUrl?.trim();
+    update.photo_url = !v ? null : v;
+  }
+  if (input.phone !== undefined) {
+    const v = input.phone?.trim();
+    update.phone = !v ? null : v;
+  }
+
+  if (Object.keys(update).length === 0) return;
 
   const supabase = createSupabaseServerClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name: trimmed })
+    .update(update)
     .eq("id", session.userId);
   if (error) throw error;
 }
