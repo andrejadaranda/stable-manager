@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 180" width="760" height="180" role="img" aria-label="Longrein.">
+  <title>Longrein. — primary wordmark</title>
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500&amp;display=swap');
+      .lr-word {
+        font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+        font-weight: 500;
+        font-size: 132px;
+        letter-spacing: -2px;
+        font-feature-settings: "liga" 1, "kern" 1;
+      }
+    </style>
+  </defs>
+  <text x="40" y="128" class="lr-word" fill="#1E3A2A">Longrein<tspan fill="#B5793E">.</tspan></text>
+</svg>

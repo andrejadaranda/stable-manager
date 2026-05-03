@@ -2,6 +2,7 @@
 // Brand-styled (Paddock + Cream). Footer back-link to home.
 
 import Link from "next/link";
+import { LinkedLogo } from "@/components/brand/logo";
 
 export default function LegalLayout({
   children,
@@ -12,28 +13,7 @@ export default function LegalLayout({
     <div className="min-h-screen bg-surface flex flex-col">
       <header className="border-b border-ink-100 bg-white/70 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between">
-          <Link href="/" className="inline-flex items-center gap-2.5 group">
-            <span
-              aria-hidden
-              className="w-8 h-8 rounded-lg bg-brand-700 inline-flex items-center justify-center"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M5 18V8.5l5-3.5 5 3.5V18M9 18v-4h2v4"
-                  stroke="#B5793E"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            <span
-              className="text-[18px] text-navy-900 leading-none font-display"
-              style={{ letterSpacing: "-0.015em" }}
-            >
-              Longrein<span className="text-brand-600">.</span>
-            </span>
-          </Link>
+          <LinkedLogo size="md" />
           <nav className="flex items-center gap-5 text-[13px] text-ink-600">
             <Link href="/legal/terms"   className="hover:text-ink-900">Terms</Link>
             <Link href="/legal/privacy" className="hover:text-ink-900">Privacy</Link>

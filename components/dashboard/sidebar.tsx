@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { logoutAction } from "@/lib/auth/actions";
 import type { Role } from "@/lib/auth/session";
 import type { StableFeatures, FeatureKey } from "@/services/features";
+import { BrandIcon, Wordmark } from "@/components/brand/logo";
 
 type Item = {
   href: string;
@@ -228,28 +229,13 @@ export function Sidebar({
 }
 
 function Brand({ small }: { small?: boolean }) {
+  // Shared brand mark — see components/brand/logo.tsx. The "small"
+  // prop maps to the sidebar's collapsed mobile chrome.
+  const size = small ? "sm" : "md";
   return (
     <div className="flex items-center gap-2.5">
-      <span
-        aria-hidden
-        className={`${small ? "w-6 h-6" : "w-8 h-8"} rounded-lg bg-brand-700 inline-flex items-center justify-center shadow-sm`}
-      >
-        <svg width={small ? 14 : 18} height={small ? 14 : 18} viewBox="0 0 24 24" fill="none">
-          <path
-            d="M5 18V8.5l5-3.5 5 3.5V18M9 18v-4h2v4"
-            stroke="#B5793E"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-      <span
-        className={`text-navy-900 leading-none ${small ? "text-base" : "text-[19px]"} font-display`}
-        style={{ letterSpacing: "-0.015em" }}
-      >
-        Longrein<span className="text-brand-600">.</span>
-      </span>
+      <BrandIcon size={size} />
+      <Wordmark  size={size} />
     </div>
   );
 }

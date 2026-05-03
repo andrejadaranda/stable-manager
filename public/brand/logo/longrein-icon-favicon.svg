@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Longrein favicon">
+  <title>Longrein — favicon</title>
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500&amp;display=swap');
+      .lr-fav {
+        font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+        font-weight: 500;
+        font-size: 38px;
+      }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="64" height="64" rx="14" ry="14" fill="#1E3A2A"/>
+  <text x="26" y="48" class="lr-fav" text-anchor="middle" fill="#F4ECDF">L</text>
+  <circle cx="44" cy="46" r="3.5" fill="#B5793E"/>
+</svg>

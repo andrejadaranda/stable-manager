@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Longrein app icon">
+  <title>Longrein — app icon (L + brand-mark dot)</title>
+  <desc>L set in Source Serif 4 Medium with the period elevated to a deliberate Saddle Tan circle, sized and placed to remain legible at small sizes and within iOS / Android safe areas.</desc>
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500&amp;display=swap');
+      .lr-mono {
+        font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+        font-weight: 500;
+        font-size: 700px;
+      }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="#1E3A2A"/>
+  <text x="430" y="750" class="lr-mono" text-anchor="middle" fill="#F4ECDF">L</text>
+  <circle cx="730" cy="715" r="48" fill="#B5793E"/>
+</svg>

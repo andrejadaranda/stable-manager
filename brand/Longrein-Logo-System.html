@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Longrein. — Logo System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="logo/longrein-icon-favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paddock: #1E3A2A;
+      --tan: #B5793E;
+      --cream: #F4ECDF;
+      --black: #1B1B1B;
+      --brick: #9C3D2A;
+      --stone: #6E6760;
+      --hairline: rgba(27,27,27,0.12);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--cream);
+      color: var(--black);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 80px 48px 120px; }
+    h1, h2, h3, .serif {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-weight: 500;
+      color: var(--paddock);
+      letter-spacing: -0.01em;
+    }
+    h1 { font-size: 88px; line-height: 0.95; margin: 0 0 16px; letter-spacing: -0.03em; }
+    h1 .dot { color: var(--tan); }
+    h2 {
+      font-size: 36px;
+      line-height: 1.1;
+      margin: 96px 0 8px;
+      letter-spacing: -0.015em;
+    }
+    h3 {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--stone);
+      margin: 0 0 24px;
+    }
+    .lede {
+      font-size: 19px;
+      max-width: 64ch;
+      color: var(--black);
+      margin: 0 0 12px;
+      line-height: 1.5;
+    }
+    .meta {
+      font-size: 13px;
+      color: var(--stone);
+      letter-spacing: 0.02em;
+    }
+    .rule { height: 1px; background: var(--hairline); margin: 0; border: 0; }
+    section + section { margin-top: 0; }
+    .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; }
+    .section-head .meta { white-space: nowrap; }
+    .row { display: grid; gap: 24px; margin-top: 32px; }
+    .row.cols-2 { grid-template-columns: 1fr 1fr; }
+    .row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .row.cols-5 { grid-template-columns: repeat(5, 1fr); }
+    .card {
+      background: #fff;
+      border: 1px solid var(--hairline);
+      border-radius: 4px;
+      padding: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 180px;
+    }
+    .card.dark { background: var(--paddock); }
+    .card.tan { background: var(--tan); }
+    .card.cream { background: var(--cream); }
+    .card.black { background: var(--black); }
+    .card-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--stone);
+      margin-top: 12px;
+      display: block;
+    }
+    .card img { max-width: 100%; height: auto; display: block; }
+    .icon-tile { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .icon-tile img { display: block; }
+    /* Color swatches */
+    .swatch { padding: 0; border-radius: 4px; overflow: hidden; border: 1px solid var(--hairline); }
+    .swatch-color { height: 140px; }
+    .swatch-meta {
+      padding: 16px 20px;
+      background: #fff;
+      font-size: 13px;
+    }
+    .swatch-meta .name { font-family: 'Source Serif 4', serif; font-weight: 500; color: var(--paddock); font-size: 17px; display: block; margin-bottom: 4px; }
+    .swatch-meta .hex { font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--stone); letter-spacing: 0.05em; }
+    .swatch-meta .role { color: var(--stone); margin-top: 6px; font-size: 12px; }
+    /* Typography specimens */
+    .specimen {
+      background: #fff;
+      border: 1px solid var(--hairline);
+      border-radius: 4px;
+      padding: 40px 48px;
+    }
+    .specimen .label { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--stone); }
+    .specimen .sample { font-family: 'Source Serif 4', serif; color: var(--paddock); margin-top: 12px; }
+    .specimen .sample.h1 { font-size: 64px; line-height: 1; font-weight: 500; letter-spacing: -0.02em; }
+    .specimen .sample.h2 { font-size: 36px; line-height: 1.1; font-weight: 500; }
+    .specimen .sample.body { font-family: 'Inter', sans-serif; font-size: 17px; line-height: 1.55; color: var(--black); margin-top: 18px; max-width: 60ch; }
+    /* Don'ts */
+    .donts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 32px; }
+    .dont {
+      background: #fff;
+      border: 1px solid var(--hairline);
+      border-radius: 4px;
+      padding: 24px;
+      display: flex; flex-direction: column; gap: 14px; min-height: 200px;
+    }
+    .dont-bad { color: var(--brick); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+    .dont .demo { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; }
+    .dont .reason { font-size: 13px; color: var(--stone); line-height: 1.5; }
+    /* File table */
+    .files { width: 100%; border-collapse: collapse; margin-top: 32px; font-size: 14px; }
+    .files th, .files td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--hairline); }
+    .files th { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--stone); font-weight: 600; }
+    .files a { color: var(--paddock); text-decoration: none; border-bottom: 1px solid var(--hairline); }
+    .files a:hover { border-bottom-color: var(--paddock); }
+    .files code { font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--stone); }
+    .pill {
+      display: inline-block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 999px; color: var(--paddock);
+      border: 1px solid var(--paddock); margin-right: 8px;
+    }
+    /* Hero */
+    .hero {
+      padding: 56px 0 80px;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .hero-mark {
+      font-family: 'Source Serif 4', serif; font-weight: 500;
+      font-size: 156px; letter-spacing: -0.04em; line-height: 1;
+      color: var(--paddock);
+      margin: 32px 0 24px;
+    }
+    .hero-mark .dot { color: var(--tan); }
+    .tagline { font-family: 'Source Serif 4', serif; font-size: 24px; color: var(--paddock); margin: 0; font-style: italic; font-weight: 400; }
+    /* Mockups */
+    .home-screen {
+      background: linear-gradient(135deg, #2a2a2a, #4a4a4a);
+      border-radius: 28px;
+      padding: 48px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px 32px;
+      align-items: start;
+    }
+    .home-app { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .home-app img { width: 64px; height: 64px; border-radius: 14px; box-shadow: 0 6px 14px rgba(0,0,0,0.25); }
+    .home-app .name { color: rgba(255,255,255,0.95); font-size: 12px; }
+    .home-app.placeholder img { background: rgba(255,255,255,0.18); }
+    /* Browser tab */
+    .browser-tab {
+      background: #fff;
+      border: 1px solid var(--hairline);
+      border-radius: 8px 8px 0 0;
+      padding: 8px 12px 8px 14px;
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px;
+      max-width: 220px;
+    }
+    .browser-tab img { width: 16px; height: 16px; }
+    /* Stable card */
+    .stable-card {
+      background: var(--cream);
+      border: 1px solid var(--hairline);
+      border-radius: 6px;
+      padding: 28px;
+      display: flex; align-items: center; gap: 20px;
+    }
+    .stable-card img { width: 56px; height: 56px; border-radius: 12px; }
+    .stable-card .who { font-family: 'Source Serif 4', serif; color: var(--paddock); font-size: 20px; line-height: 1.2; }
+    .stable-card .role { font-size: 13px; color: var(--stone); margin-top: 2px; }
+    /* Footer */
+    footer { margin-top: 96px; padding-top: 32px; border-top: 1px solid var(--hairline); font-size: 13px; color: var(--stone); }
+    @media (max-width: 800px) {
+      .wrap { padding: 48px 24px 80px; }
+      h1 { font-size: 56px; }
+      h2 { font-size: 28px; margin-top: 64px; }
+      .hero-mark { font-size: 88px; }
+      .row.cols-3, .row.cols-4, .row.cols-5, .donts { grid-template-columns: 1fr 1fr; }
+      .home-screen { grid-template-columns: repeat(3, 1fr); padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- HERO -->
+    <section class="hero">
+      <span class="meta">Longrein — Brand · Logo System v1 · 2026-05-03</span>
+      <div class="hero-mark">Longrein<span class="dot">.</span></div>
+      <p class="tagline">Run the yard. Protect the horses.</p>
+    </section>
+
+    <!-- PRIMARY WORDMARK -->
+    <section>
+      <div class="section-head" style="margin-top:96px;">
+        <div>
+          <h3>01 — Primary wordmark</h3>
+          <h2>The wordmark is the brand.</h2>
+          <p class="lede">Source Serif 4 Medium. The period is not punctuation — it is the brand mark, set in Saddle Tan as the single moment of warmth in an otherwise composed identity.</p>
+        </div>
+        <span class="meta">Use for: site header, marketing, decks, email signatures.</span>
+      </div>
+      <div class="card" style="padding: 64px; margin-top: 32px;">
+        <img src="logo/longrein-wordmark.svg" alt="Longrein. wordmark" style="max-width: 80%;">
+      </div>
+    </section>
+
+    <!-- APP ICON -->
+    <section>
+      <div class="section-head">
+        <div>
+          <h3>02 — App icon</h3>
+          <h2>The L. monogram.</h2>
+          <p class="lede">For tile contexts where the full wordmark won't read — phone home screens, browser tabs, avatars, social profile photos.</p>
+        </div>
+        <span class="meta">iOS / Android / Web.</span>
+      </div>
+
+      <div class="row cols-4" style="margin-top: 32px;">
+        <div class="icon-tile">
+          <img src="logo/longrein-icon.svg" alt="Icon 1024" style="width: 100%; max-width: 220px; border-radius: 22%;">
+          <span class="card-label">1024 px · Master</span>
+        </div>
+        <div class="icon-tile">
+          <img src="logo/longrein-icon.svg" alt="Icon 180" style="width: 180px; height: 180px; border-radius: 22%;">
+          <span class="card-label">180 px · iOS</span>
+        </div>
+        <div class="icon-tile">
+          <img src="logo/longrein-icon.svg" alt="Icon 96" style="width: 96px; height: 96px; border-radius: 22%;">
+          <span class="card-label">96 px · Android</span>
+        </div>
+        <div class="icon-tile">
+          <img src="logo/longrein-icon-favicon.svg" alt="Favicon 32" style="width: 32px; height: 32px;">
+          <span class="card-label">32 px · Favicon</span>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 64px;">In context</h3>
+
+      <div class="row cols-2" style="margin-top: 24px;">
+        <!-- Phone home screen -->
+        <div class="home-screen">
+          <div class="home-app placeholder"><img src="" alt=""><span class="name">Mail</span></div>
+          <div class="home-app placeholder"><img src="" alt=""><span class="name">Calendar</span></div>
+          <div class="home-app"><img src="logo/longrein-icon.svg" alt="Longrein"><span class="name">Longrein</span></div>
+          <div class="home-app placeholder"><img src="" alt=""><span class="name">Notes</span></div>
+          <div class="home-app placeholder"><img src="" alt=""><span class="name">Photos</span></div>
+          <div class="home-app placeholder"><img src="" alt=""><span class="name">Maps</span></div>
+          <div class="home-app placeholder"><img src="" alt=""><span class="name">Music</span></div>
+          <div class="home-app placeholder"><img src="" alt=""><span class="name">Files</span></div>
+        </div>
+        <!-- Browser tab + profile -->
+        <div style="display:flex; flex-direction:column; gap:24px; justify-content:center;">
+          <div>
+            <div class="browser-tab">
+              <img src="logo/longrein-icon-favicon.svg" alt="">
+              <span>Longrein. — Run the yard.</span>
+            </div>
+            <span class="card-label" style="margin-top:8px;">Browser tab</span>
+          </div>
+          <div class="stable-card">
+            <img src="logo/longrein-icon.svg" alt="">
+            <div>
+              <div class="who">Vilkaviškio žirgynas</div>
+              <div class="role">Stable account · 24 horses</div>
+            </div>
+          </div>
+          <span class="card-label" style="margin-top:-12px;">Profile / avatar</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- STACKED LOCKUP -->
+    <section>
+      <div class="section-head">
+        <div>
+          <h3>03 — Stacked lockup</h3>
+          <h2>Vertical use.</h2>
+          <p class="lede">When the horizontal wordmark is too wide — login screens, sidebars, square social posts, splash screens.</p>
+        </div>
+      </div>
+      <div class="card" style="padding: 48px;">
+        <img src="logo/longrein-stacked.svg" alt="Longrein stacked" style="max-width: 320px;">
+      </div>
+    </section>
+
+    <!-- COLOUR VARIANTS -->
+    <section>
+      <div class="section-head">
+        <div>
+          <h3>04 — Colour variants</h3>
+          <h2>One identity, four reproductions.</h2>
+          <p class="lede">Default green-on-cream is canonical. The other variants exist for backgrounds the brand cannot control.</p>
+        </div>
+      </div>
+      <div class="row cols-2" style="margin-top:32px;">
+        <div class="card" style="padding:48px; flex-direction:column; gap:16px;">
+          <img src="logo/longrein-wordmark.svg" alt="Default" style="max-width:100%;">
+          <span class="card-label">Default · Green on Cream</span>
+        </div>
+        <div class="card dark" style="padding:48px; flex-direction:column; gap:16px;">
+          <img src="logo/longrein-wordmark-cream.svg" alt="Reverse" style="max-width:100%;">
+          <span class="card-label" style="color:rgba(244,236,223,0.7);">Reverse · Cream on Green</span>
+        </div>
+        <div class="card" style="padding:48px; flex-direction:column; gap:16px;">
+          <img src="logo/longrein-wordmark-mono-black.svg" alt="Mono black" style="max-width:100%;">
+          <span class="card-label">Mono · Black (press / fax / 1-bit)</span>
+        </div>
+        <div class="card" style="padding:48px; flex-direction:column; gap:16px; background:url('https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=900') center/cover, #444;">
+          <div style="background: rgba(30,58,42,0.85); padding: 32px; border-radius: 4px;">
+            <img src="logo/longrein-wordmark-cream.svg" alt="On photo" style="max-width:100%;">
+          </div>
+          <span class="card-label" style="color:rgba(244,236,223,0.85);">Over photography · Tinted block</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLOUR PALETTE -->
+    <section>
+      <div class="section-head">
+        <div>
+          <h3>05 — Palette</h3>
+          <h2>Locked. Don't add colours.</h2>
+          <p class="lede">No navy, no orange (retired April 2026), no purple/blue SaaS gradients. The full system runs on five hexes plus two muted neutrals.</p>
+        </div>
+      </div>
+      <div class="row cols-5" style="margin-top:32px;">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#1E3A2A;"></div>
+          <div class="swatch-meta"><span class="name">Paddock Green</span><span class="hex">#1E3A2A</span><div class="role">Primary action · headings</div></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#B5793E;"></div>
+          <div class="swatch-meta"><span class="name">Saddle Tan</span><span class="hex">#B5793E</span><div class="role">Accent only · brand mark</div></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#F4ECDF;"></div>
+          <div class="swatch-meta"><span class="name">Arena Cream</span><span class="hex">#F4ECDF</span><div class="role">Background base</div></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#1B1B1B;"></div>
+          <div class="swatch-meta"><span class="name">Tack Black</span><span class="hex">#1B1B1B</span><div class="role">Body type</div></div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#9C3D2A;"></div>
+          <div class="swatch-meta"><span class="name">Brick Red</span><span class="hex">#9C3D2A</span><div class="role">Alerts · sparingly</div></div>
+        </div>
+      </div>
+      <p class="meta" style="margin-top:24px;">Captions / muted text: <code style="font-family:'JetBrains Mono',monospace;color:#6E6760;">#6E6760 Stone Grey</code></p>
+    </section>
+
+    <!-- TYPOGRAPHY -->
+    <section>
+      <div class="section-head">
+        <div>
+          <h3>06 — Typography</h3>
+          <h2>Serif for promise. Sans for proof.</h2>
+          <p class="lede">Source Serif 4 carries the brand voice — warm, considered, European. Inter handles the working text — clean, neutral, readable on phones.</p>
+        </div>
+      </div>
+      <div class="row cols-2" style="margin-top:32px;">
+        <div class="specimen">
+          <span class="label">Source Serif 4 Medium</span>
+          <div class="sample h1">Run the yard.</div>
+          <div class="sample h2">Protect the horses.</div>
+          <p class="meta" style="margin-top:16px;">Headlines, marketing copy, the wordmark itself.</p>
+        </div>
+        <div class="specimen">
+          <span class="label">Inter Regular / Medium</span>
+          <p class="sample body" style="margin-top:18px;">Yes, you can run a stable on WhatsApp. Yes, you'll lose €200 a month doing it — in missed lessons, double-booked stalls, and feed orders that never made it to the supplier.</p>
+          <p class="meta" style="margin-top:16px;">UI copy, body, captions, buttons.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLEAR SPACE -->
+    <section>
+      <div class="section-head">
+        <div>
+          <h3>07 — Clear space &amp; minimum size</h3>
+          <h2>Give it room.</h2>
+        </div>
+      </div>
+      <div class="row cols-2" style="margin-top:32px;">
+        <div class="card" style="padding: 64px; flex-direction: column; gap: 16px;">
+          <div style="position: relative; padding: 60px;">
+            <img src="logo/longrein-wordmark.svg" alt="" style="display:block; width:100%; max-width:340px;">
+            <div style="position:absolute; inset:0; border:1px dashed #B5793E; opacity:0.5;"></div>
+            <div style="position:absolute; inset:60px; border:1px solid var(--paddock); opacity:0.25;"></div>
+          </div>
+          <span class="card-label">Clear space = 1× cap-height of the L on every side</span>
+        </div>
+        <div class="card" style="padding: 48px; flex-direction: column; gap: 24px;">
+          <img src="logo/longrein-wordmark.svg" alt="" style="width:200px;">
+          <img src="logo/longrein-wordmark.svg" alt="" style="width:120px;">
+          <img src="logo/longrein-wordmark.svg" alt="" style="width:80px;">
+          <span class="card-label">Minimum: 80 px wide on screen, 24 mm in print</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- DON'TS -->
+    <section>
+      <div class="section-head">
+        <div>
+          <h3>08 — Don'ts</h3>
+          <h2>What breaks the identity.</h2>
+        </div>
+      </div>
+      <div class="donts">
+        <div class="dont">
+          <span class="dont-bad">Don't · re-colour</span>
+          <div class="demo"><span style="font-family:'Source Serif 4',serif; font-weight:500; font-size:36px; color:#3a5cff; letter-spacing:-0.02em;">Longrein<span style="color:#ff7a00;">.</span></span></div>
+          <p class="reason">Navy + orange was the pre-rebrand palette. Retired 2026-04-30.</p>
+        </div>
+        <div class="dont">
+          <span class="dont-bad">Don't · stretch</span>
+          <div class="demo"><span style="font-family:'Source Serif 4',serif; font-weight:500; font-size:36px; color:var(--paddock); letter-spacing:-0.02em; transform:scaleY(1.6); display:inline-block; transform-origin:center;">Longrein<span style="color:var(--tan);">.</span></span></div>
+          <p class="reason">Never warp, condense, or distort. Resize proportionally only.</p>
+        </div>
+        <div class="dont">
+          <span class="dont-bad">Don't · drop the dot</span>
+          <div class="demo"><span style="font-family:'Source Serif 4',serif; font-weight:500; font-size:36px; color:var(--paddock); letter-spacing:-0.02em;">Longrein</span></div>
+          <p class="reason">The period is the brand mark — not optional. Keep it.</p>
+        </div>
+        <div class="dont">
+          <span class="dont-bad">Don't · sans-serif swap</span>
+          <div class="demo"><span style="font-family:'Inter',sans-serif; font-weight:600; font-size:36px; color:var(--paddock); letter-spacing:-0.02em;">Longrein<span style="color:var(--tan);">.</span></span></div>
+          <p class="reason">The wordmark is locked to Source Serif 4. Inter is for body, never for the mark.</p>
+        </div>
+        <div class="dont">
+          <span class="dont-bad">Don't · add equestrian clichés</span>
+          <div class="demo">
+            <span style="font-family:'Source Serif 4',serif; font-weight:500; font-size:32px; color:var(--paddock); letter-spacing:-0.02em;">🐴 Longrein<span style="color:var(--tan);">.</span></span>
+          </div>
+          <p class="reason">No horse silhouettes, hoofprints, horseshoes, emojis. The name is the equestrian signal — quietly.</p>
+        </div>
+        <div class="dont">
+          <span class="dont-bad">Don't · low contrast</span>
+          <div class="demo" style="background:#3a5b46; padding:20px;">
+            <span style="font-family:'Source Serif 4',serif; font-weight:500; font-size:32px; color:var(--paddock); letter-spacing:-0.02em;">Longrein<span style="color:var(--tan);">.</span></span>
+          </div>
+          <p class="reason">Use the cream variant on green/dark backgrounds. Never green-on-green.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILE INDEX -->
+    <section>
+      <div class="section-head">
+        <div>
+          <h3>09 — Files</h3>
+          <h2>Asset library.</h2>
+          <p class="lede">SVG is the source of truth — scales without loss. PNGs are pre-rendered for places SVG can't go (Slack avatars, app stores, email).</p>
+        </div>
+      </div>
+      <table class="files">
+        <thead><tr><th>File</th><th>Format</th><th>Use</th></tr></thead>
+        <tbody>
+          <tr><td><a href="logo/longrein-wordmark.svg">longrein-wordmark.svg</a></td><td><span class="pill">SVG</span></td><td>Primary horizontal wordmark · default colour</td></tr>
+          <tr><td><a href="logo/longrein-wordmark-cream.svg">longrein-wordmark-cream.svg</a></td><td><span class="pill">SVG</span></td><td>Wordmark for dark / coloured backgrounds</td></tr>
+          <tr><td><a href="logo/longrein-wordmark-mono-black.svg">longrein-wordmark-mono-black.svg</a></td><td><span class="pill">SVG</span></td><td>Single-colour black for press, fax, 1-bit print</td></tr>
+          <tr><td><a href="logo/longrein-icon.svg">longrein-icon.svg</a></td><td><span class="pill">SVG</span></td><td>App icon — green tile · master</td></tr>
+          <tr><td><a href="logo/longrein-icon-mono.svg">longrein-icon-mono.svg</a></td><td><span class="pill">SVG</span></td><td>App icon — cream tile (for dark backgrounds)</td></tr>
+          <tr><td><a href="logo/longrein-icon-favicon.svg">longrein-icon-favicon.svg</a></td><td><span class="pill">SVG</span></td><td>Favicon (optimised for 16-64 px)</td></tr>
+          <tr><td><a href="logo/longrein-stacked.svg">longrein-stacked.svg</a></td><td><span class="pill">SVG</span></td><td>Stacked lockup — icon over wordmark</td></tr>
+          <tr><td><a href="logo/longrein-symbol-arc.svg">longrein-symbol-arc.svg</a></td><td><span class="pill">SVG</span></td><td>Decorative long-rein arc (dividers, watermarks)</td></tr>
+          <tr><td colspan="3" style="background:rgba(0,0,0,0.02); font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--stone);">PNG exports — /logo/png/</td></tr>
+          <tr><td><a href="logo/png/wordmark-3040x720.png">wordmark · 3040×720</a></td><td><span class="pill">PNG</span></td><td>Hero / large-format · @4x retina</td></tr>
+          <tr><td><a href="logo/png/wordmark-1520x360.png">wordmark · 1520×360</a></td><td><span class="pill">PNG</span></td><td>Web header @2x</td></tr>
+          <tr><td><a href="logo/png/icon-1024x1024.png">icon · 1024×1024</a></td><td><span class="pill">PNG</span></td><td>App store master</td></tr>
+          <tr><td><a href="logo/png/icon-180x180.png">icon · 180×180</a></td><td><span class="pill">PNG</span></td><td>iOS home screen (apple-touch-icon)</td></tr>
+          <tr><td><a href="logo/png/favicon-32x32.png">favicon · 32×32</a></td><td><span class="pill">PNG</span></td><td>Browser tab</td></tr>
+          <tr><td><a href="logo/png/stacked-960x720.png">stacked · 960×720</a></td><td><span class="pill">PNG</span></td><td>Login screen, splash</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      <strong>Longrein.</strong> — Logo system v1, drafted 2026-05-03 against the brand-system memory locked 2026-05-02.<br>
+      Source: <code>/Documents/Claude/Projects/APP/brand/logo/</code><br>
+      Production note: SVGs reference Source Serif 4 via Google Fonts. To use offline (Figma / Canva / Illustrator), install Source Serif 4 — free at <a href="https://fonts.google.com/specimen/Source+Serif+4" style="color:var(--paddock);">fonts.google.com</a> — or open the SVG in a browser and the text will render correctly.
+    </footer>
+
+  </div>
+</body>
+</html>

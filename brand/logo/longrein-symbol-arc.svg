@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 90" width="240" height="90" role="img" aria-label="Longrein long-rein mark">
+  <title>Longrein — supplementary long-rein arc (decorative mark)</title>
+  <!-- The line: a relaxed long rein coming to rest -->
+  <path d="M 14 70 C 70 -2, 150 -2, 206 56"
+        stroke="#1E3A2A" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <!-- The grip / period — echoes the wordmark's terminal dot -->
+  <circle cx="206" cy="56" r="4.5" fill="#B5793E"/>
+</svg>

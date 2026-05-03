@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" width="480" height="360" role="img" aria-label="Longrein.">
+  <title>Longrein — stacked lockup (icon above wordmark)</title>
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500&amp;display=swap');
+      .lr-stack-mark {
+        font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+        font-weight: 500;
+        font-size: 100px;
+      }
+      .lr-stack-word {
+        font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, serif;
+        font-weight: 500;
+        font-size: 76px;
+        letter-spacing: -1.2px;
+      }
+    </style>
+  </defs>
+  <!-- Mark -->
+  <g transform="translate(168, 24)">
+    <rect x="0" y="0" width="144" height="144" rx="32" ry="32" fill="#1E3A2A"/>
+    <text x="60" y="112" class="lr-stack-mark" text-anchor="middle" fill="#F4ECDF">L</text>
+    <circle cx="103" cy="107" r="7" fill="#B5793E"/>
+  </g>
+  <!-- Wordmark — Longrein in green, period as a saddle-tan circle for reliable rendering -->
+  <text x="240" y="294" class="lr-stack-word" text-anchor="middle" fill="#1E3A2A">Longrein</text>
+  <circle cx="406" cy="290" r="5" fill="#B5793E"/>
+</svg>

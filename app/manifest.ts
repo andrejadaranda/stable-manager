@@ -18,10 +18,14 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color:       "#2D5440",
     categories:        ["business", "productivity"],
     icons: [
-      // Next.js dynamically renders these via app/icon.tsx and
-      // app/apple-icon.tsx. The browser fetches them through the same
-      // routes, so no static files are needed.
+      // Static PNGs from the Longrein. brand system (see /APP/brand/).
+      // app/icon.png and app/apple-icon.png are Next.js conventions and
+      // are served at /icon and /apple-icon automatically. The same
+      // square is registered as both "any" and "maskable" — the source
+      // SVG bakes in a 22% safe-area, so Android's adaptive-icon
+      // clipping won't crop the L. mark.
       { src: "/icon",        sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon",        sizes: "512x512", type: "image/png", purpose: "maskable" },
       { src: "/apple-icon",  sizes: "180x180", type: "image/png", purpose: "any" },
     ],
   };
