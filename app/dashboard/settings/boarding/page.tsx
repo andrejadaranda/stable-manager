@@ -3,7 +3,7 @@ import { previewBoardingForMonth, listOutstandingBoardingCharges } from "@/servi
 import { getStableFeatures } from "@/services/features";
 import { BulkBoardingPanel } from "@/components/boarding/bulk-boarding-panel";
 import { OutstandingBoardingBoard } from "@/components/boarding/outstanding-board";
-import { FeatureDisabled } from "@/components/ui";
+import { FeatureDisabled, HelpHint } from "@/components/ui";
 
 function currentYearMonth(): string {
   const d = new Date();
@@ -34,9 +34,21 @@ export default async function BoardingSettingsPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight text-ink-900">
-          Boarding
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold tracking-tight text-ink-900">
+            Boarding
+          </h2>
+          <HelpHint
+            title="Boarding workflow"
+            body={
+              <>
+                <p><strong>Outstanding boarders</strong> — every horse with an unpaid boarding charge. Click a row → pick payment method (Cash / Card / Transfer / Other) → marked paid instantly.</p>
+                <p><strong>Bulk-generate</strong> — at the start of each month, click <em>Generate</em> to create one boarding charge per horse with a monthly fee + owner set. Safe to re-run: it skips horses that already have a charge for that month.</p>
+                <p>Set the fee + owner on each horse&apos;s profile. Horses without a fee or owner are skipped.</p>
+              </>
+            }
+          />
+        </div>
         <p className="text-sm text-ink-500 mt-1">
           Bulk-generate monthly boarding charges for every horse with a fee
           and an owner client set. Skips horses that already have a charge in

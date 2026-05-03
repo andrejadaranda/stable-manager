@@ -17,6 +17,7 @@ import {
   type FeatureKey,
 } from "@/services/features";
 import { FeatureToggleRow } from "@/components/settings/feature-toggle-row";
+import { HelpHint } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 

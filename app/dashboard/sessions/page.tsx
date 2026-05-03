@@ -16,7 +16,7 @@ import { getStableFeatures } from "@/services/features";
 import { LogSessionPanel } from "@/components/sessions/log-session-panel";
 import { SessionList } from "@/components/sessions/session-list";
 import { SessionsHero } from "@/components/sessions/sessions-hero";
-import { FeatureDisabled, PageHeader } from "@/components/ui";
+import { FeatureDisabled, PageHeader, HelpHint } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +63,22 @@ export default async function SessionsPage() {
         stats={stats}
         scope="stable"
         action={
-          <LogSessionPanel
-            horses={horses.map((h) => ({ id: h.id, name: h.name }))}
-            clients={clients.map((c) => ({ id: c.id, full_name: c.full_name }))}
-          />
+          <div className="flex items-center gap-2">
+            <HelpHint
+              title="Sessions vs Lessons"
+              body={
+                <>
+                  <p><strong>Sessions</strong> = every ride that happened (training, hacks, lunging, turnout). They feed the welfare workload count but are NOT billed.</p>
+                  <p><strong>Lessons</strong> (Calendar) = scheduled, billable rides with a client. Once marked complete they appear here too.</p>
+                  <p>"+ Log session" records any ride in 15 seconds.</p>
+                </>
+              }
+            />
+            <LogSessionPanel
+              horses={horses.map((h) => ({ id: h.id, name: h.name }))}
+              clients={clients.map((c) => ({ id: c.id, full_name: c.full_name }))}
+            />
+          </div>
         }
       />
 

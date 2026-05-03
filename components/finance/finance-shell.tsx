@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { MonthFinancials } from "@/services/finance";
+import { HelpHint } from "@/components/ui";
 
 const FMT_EUR = new Intl.NumberFormat(undefined, {
   style: "currency",
@@ -56,8 +57,19 @@ export function FinanceShell({ data }: { data: MonthFinancials }) {
           >
             ← Dashboard
           </Link>
-          <h1 className="font-display text-3xl md:text-4xl text-navy-900 leading-none mt-2">
+          <h1 className="font-display text-3xl md:text-4xl text-navy-900 leading-none mt-2 inline-flex items-center gap-2">
             Finance
+            <HelpHint
+              title="How Finance is calculated"
+              body={
+                <>
+                  <p><strong>Revenue</strong> = paid lessons + paid packages + paid boarding charges. Only payments marked <em>paid</em> count.</p>
+                  <p><strong>Expenses</strong> = entries from the Expenses page (feed, vet, farrier, maintenance, staff, other).</p>
+                  <p><strong>Net</strong> = Revenue − Expenses for the selected month.</p>
+                  <p>Use the month picker on the right to look back at any prior month. Per-horse profit splits revenue and expenses by horse — packages aren&apos;t included there because a package isn&apos;t tied to a single horse.</p>
+                </>
+              }
+            />
           </h1>
           <p className="text-sm text-ink-500 mt-2">{data.label}</p>
         </div>

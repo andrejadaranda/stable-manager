@@ -30,6 +30,7 @@ import { WeekGrid } from "./week-grid";
 import { DayGrid } from "./day-grid";
 import { DayAgenda } from "./day-agenda";
 import { rescheduleLessonAction } from "@/app/dashboard/calendar/reschedule-action";
+import { HelpHint } from "@/components/ui";
 
 type ClientOpt  = { id: string; full_name: string; default_lesson_price?: number | null };
 type HorseOpt   = { id: string; name: string };
@@ -341,8 +342,19 @@ function CalendarHero({
   return (
     <div className="flex items-end justify-between flex-wrap gap-4">
       <div className="flex flex-col gap-1.5 min-w-0">
-        <h1 className="font-display text-3xl md:text-4xl text-navy-900 leading-none">
+        <h1 className="font-display text-3xl md:text-4xl text-navy-900 leading-none inline-flex items-center gap-2">
           Calendar
+          <HelpHint
+            title="How the calendar works"
+            body={
+              <>
+                <p><strong>Click any empty slot</strong> → opens the booking form prefilled with that time.</p>
+                <p><strong>Click a lesson card</strong> → opens edit dialog (status, price, package, welfare override).</p>
+                <p><strong>Drag a lesson card</strong> → drops at the new time (15-min snap, paddock-green guide line shows where it lands). Conflicts (double-bookings, over-cap) show as a red banner above.</p>
+                <p>The horse + trainer columns are physically protected at the database level — no double-booking is possible, ever.</p>
+              </>
+            }
+          />
         </h1>
         <span className="text-sm text-ink-500 font-medium tabular-nums">
           {rangeLabel}

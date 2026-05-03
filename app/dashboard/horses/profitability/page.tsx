@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { getMonthFinancials, type PerHorseFinancial } from "@/services/finance";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, HelpHint } from "@/components/ui";
 
 const FMT_EUR = new Intl.NumberFormat(undefined, {
   style: "currency",
@@ -92,12 +92,26 @@ export default async function PerHorseProfitabilityPage({
         title="Per-horse profitability"
         subtitle="Lesson + boarding revenue earned by each horse, minus expenses tagged to it. Package revenue excluded — it isn't tied to a single horse."
         actions={
-          <Link
-            href="/dashboard/finance"
-            className="text-[12.5px] text-ink-500 hover:text-ink-900"
-          >
-            ← Finance
-          </Link>
+          <>
+            <HelpHint
+              title="Per-horse profitability"
+              body={
+                <>
+                  <p><strong>Revenue</strong> = lesson payments where the lesson had this horse + boarding charges paid to this horse.</p>
+                  <p><strong>Expenses</strong> = expenses tagged to this horse on the Expenses page (vet, farrier, dental, etc.).</p>
+                  <p><strong>Net</strong> = revenue minus expenses for the month.</p>
+                  <p>Negative net = a horse that's costing more than it earned this month — not a verdict, just a signal. Old horses, retirees, and seasonal lulls all show negative.</p>
+                  <p>Package revenue is excluded — packages aren't tied to a single horse.</p>
+                </>
+              }
+            />
+            <Link
+              href="/dashboard/finance"
+              className="text-[12.5px] text-ink-500 hover:text-ink-900"
+            >
+              ← Finance
+            </Link>
+          </>
         }
       />
 

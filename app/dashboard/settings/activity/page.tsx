@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { listAuditLog, type AuditLogRow } from "@/services/auditLog";
+import { HelpHint } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +55,21 @@ export default async function AuditPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight text-ink-900">
-          Activity log
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold tracking-tight text-ink-900">
+            Activity log
+          </h2>
+          <HelpHint
+            title="Activity log"
+            body={
+              <>
+                <p>Every write to your stable&apos;s data — who created, edited, or deleted what, and when. Captured at the database level by a trigger, so nothing slips through.</p>
+                <p><strong>Tamper-evident:</strong> rows here can&apos;t be edited or deleted by anyone (including you) — only added by the system. That&apos;s what makes it audit-quality.</p>
+                <p>Use it to answer &quot;who marked that lesson paid?&quot; or &quot;when was this horse&apos;s fee last changed?&quot;. Click a row (where available) to open the affected record.</p>
+              </>
+            }
+          />
+        </div>
         <p className="text-sm text-ink-500 mt-1">
           Every change to lessons, payments, packages, boarding,
           horses, services, charges, and agreements — captured at the
