@@ -1,5 +1,7 @@
 # Hoofbeat — Full SaaS Audit & Strategic Report
 
+> **Note (2026-05-02):** The product name was **Hoofbeat** at the time of this audit. It was renamed to **Longrein** on 2026-05-02 because `hoofbeat.eu` was already registered. Filename kept as historical reference. Strategic findings, brand palette (Paddock Green / Saddle Tan / Arena Cream), typography (Source Serif 4 + Inter), tagline ("Run the yard. Protect the horses."), ICP, and pricing structure all carry over to Longrein unchanged. See `Longrein-Readiness-Audit-2026-05-02.md` for the post-rename launch plan.
+
 **Date:** 30 April 2026
 **Auditor brief:** Senior SaaS product auditor + startup strategist + UX expert. Brutally honest. No politeness. No generic advice. Money-on-the-line tone.
 **Status of product:** Substantial Next.js + Supabase build. ~30 dashboard pages, ~70 components, ~30 services, production-grade Postgres schema. Pre-public-launch. Waitlist landing exists but is not yet capturing emails.

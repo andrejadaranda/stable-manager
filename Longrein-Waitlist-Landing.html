@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Longrein — Run the yard. Protect the horses.</title>
+<meta name="description" content="The European stable management tool for riding schools and livery yards with 15–40 horses. Schedule lessons, send invoices, and watch horse workload — on one screen, in your language. Built by a stable owner in Lithuania.">
+<meta property="og:title" content="Longrein — Run the yard. Protect the horses.">
+<meta property="og:description" content="EU-native stable management. Made in the saddle.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paddock: #1E3A2A;
+    --paddock-dark: #16291E;
+    --saddle: #B5793E;
+    --saddle-dark: #98622F;
+    --cream: #F4ECDF;
+    --cream-soft: #FBF6EC;
+    --tack: #1B1B1B;
+    --brick: #9C3D2A;
+    --stone: #6E6760;
+    --stone-soft: #C9BFAE;
+    --serif: "Source Serif 4", Georgia, serif;
+    --sans: "Inter", -apple-system, system-ui, sans-serif;
+    --max: 1120px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; padding: 0; background: var(--cream); color: var(--tack); font-family: var(--sans); font-size: 17px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { color: var(--paddock); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+  a:hover { color: var(--saddle); }
+  .container { max-width: var(--max); margin: 0 auto; padding: 0 32px; }
+
+  /* Nav */
+  nav.top {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(244,236,223,0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--stone-soft);
+  }
+  nav.top .row { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+  nav.top .brand { display: flex; align-items: center; gap: 10px; }
+  nav.top .brand .mark svg { display: block; }
+  nav.top .brand .word {
+    font-family: var(--serif); font-weight: 600; font-size: 22px;
+    color: var(--paddock); letter-spacing: -0.02em;
+  }
+  nav.top .brand .word .dot { color: var(--saddle); }
+  nav.top .links { display: flex; align-items: center; gap: 28px; font-size: 15px; }
+  nav.top .links a { color: var(--tack); text-decoration: none; font-weight: 500; }
+  nav.top .links a:hover { color: var(--paddock); }
+  nav.top .links .lang { color: var(--stone); font-weight: 600; letter-spacing: 0.06em; }
+  nav.top .cta {
+    background: var(--paddock); color: var(--cream);
+    padding: 11px 20px; border-radius: 7px;
+    font-size: 14px; font-weight: 600; text-decoration: none;
+  }
+  nav.top .cta:hover { background: var(--paddock-dark); color: var(--cream); }
+
+  /* Hero */
+  .hero { padding: 96px 0 80px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--saddle); font-weight: 600; }
+  h1.h1 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(48px, 7vw, 84px); line-height: 1.0;
+    letter-spacing: -0.025em; color: var(--paddock);
+    margin: 16px 0 24px; max-width: 900px;
+  }
+  h1.h1 .accent { color: var(--saddle); font-style: italic; }
+  .hero p.lede { font-size: 20px; line-height: 1.55; color: #2A2520; max-width: 640px; margin: 0 0 36px; }
+
+  /* Email capture */
+  .capture { display: flex; gap: 10px; max-width: 540px; margin-bottom: 14px; }
+  .capture input[type="email"] {
+    flex: 1; padding: 16px 18px; border-radius: 8px;
+    border: 1.5px solid var(--stone-soft); background: white;
+    font-family: var(--sans); font-size: 16px; color: var(--tack);
+    outline: none;
+  }
+  .capture input[type="email"]:focus { border-color: var(--paddock); }
+  .capture button {
+    background: var(--paddock); color: var(--cream);
+    padding: 16px 24px; border-radius: 8px; border: 0;
+    font-family: var(--sans); font-size: 15px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+  }
+  .capture button:hover { background: var(--paddock-dark); }
+  .capture-note { font-size: 13px; color: var(--stone); }
+
+  .proof-row {
+    display: flex; gap: 36px; flex-wrap: wrap; margin-top: 56px;
+    padding-top: 28px; border-top: 1px solid var(--stone-soft);
+    color: var(--stone); font-size: 13px;
+  }
+  .proof-row strong { color: var(--paddock); font-weight: 600; }
+
+  /* Section base */
+  section { padding: 80px 0; }
+  section h2 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(32px, 4vw, 48px); line-height: 1.1;
+    letter-spacing: -0.015em; color: var(--paddock);
+    margin: 12px 0 18px; max-width: 760px;
+  }
+  section .lede2 { font-size: 18px; color: #3F3527; max-width: 680px; margin: 0 0 12px; }
+
+  /* Pain block */
+  .pain { background: var(--paddock); color: var(--cream); padding: 96px 0; }
+  .pain h2 { color: var(--cream); }
+  .pain p { color: rgba(244,236,223,0.85); font-size: 19px; max-width: 720px; }
+  .pain p strong { color: var(--saddle); font-weight: 600; }
+  .pain .punch {
+    font-family: var(--serif); font-size: clamp(28px, 3.6vw, 40px);
+    font-style: italic; color: var(--cream); margin-top: 32px;
+    border-left: 4px solid var(--saddle); padding-left: 24px;
+  }
+
+  /* Features */
+  .features { background: var(--cream-soft); }
+  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 56px; }
+  .feature-card {
+    background: var(--cream); padding: 36px 32px;
+    border-radius: 12px; border: 1px solid var(--stone-soft);
+  }
+  .feature-card .num {
+    font-family: var(--serif); font-style: italic; font-size: 14px;
+    color: var(--saddle); margin-bottom: 18px;
+  }
+  .feature-card h3 {
+    font-family: var(--serif); font-weight: 600;
+    font-size: 24px; line-height: 1.2; color: var(--paddock);
+    margin: 0 0 14px;
+  }
+  .feature-card p { font-size: 15px; line-height: 1.55; color: #3F3527; margin: 0; }
+
+  /* Founder block */
+  .founder {
+    display: grid; grid-template-columns: 240px 1fr; gap: 56px;
+    align-items: start; padding: 96px 0;
+  }
+  .founder .avatar {
+    width: 240px; height: 280px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--saddle) 0%, var(--paddock) 100%);
+    display: flex; align-items: flex-end; justify-content: center;
+    color: var(--cream); padding: 18px; font-size: 12px; letter-spacing: 0.1em;
+    text-transform: uppercase; font-weight: 600;
+    /* Replace with real photo: background: url('/founder.jpg') center/cover; */
+  }
+  .founder .body h2 { margin-top: 0; }
+  .founder .body p { font-size: 18px; line-height: 1.6; color: #2A2520; max-width: 580px; }
+  .founder .signature {
+    font-family: var(--serif); font-style: italic; font-size: 22px;
+    color: var(--paddock); margin-top: 18px;
+  }
+
+  /* Pricing */
+  .pricing { background: var(--cream-soft); }
+  .pricing .disclaimer {
+    font-family: var(--serif); font-style: italic; color: #3F3527; font-size: 18px;
+    max-width: 680px; margin-bottom: 48px;
+    border-left: 3px solid var(--saddle); padding-left: 20px;
+  }
+  .price-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .price-card {
+    background: var(--cream); padding: 36px 32px;
+    border-radius: 12px; border: 1px solid var(--stone-soft);
+    position: relative;
+  }
+  .price-card.featured { border: 2px solid var(--saddle); }
+  .price-card.featured::before {
+    content: "Most stables"; position: absolute; top: -12px; left: 24px;
+    background: var(--saddle); color: var(--cream);
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700;
+    padding: 5px 10px; border-radius: 4px;
+  }
+  .price-card .tier {
+    font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--stone); font-weight: 600;
+  }
+  .price-card h3 {
+    font-family: var(--serif); font-weight: 600; font-size: 22px;
+    color: var(--paddock); margin: 6px 0 10px;
+  }
+  .price-card .price {
+    font-family: var(--serif); font-weight: 600; font-size: 44px;
+    color: var(--paddock); line-height: 1; margin: 16px 0 4px;
+  }
+  .price-card .price small {
+    font-size: 16px; color: var(--stone); font-weight: 400;
+  }
+  .price-card .desc { font-size: 14px; color: #3F3527; line-height: 1.5; margin-top: 14px; }
+
+  .pricing .annual-note {
+    margin-top: 32px; font-size: 14px; font-style: italic; color: var(--stone);
+  }
+
+  /* FAQ */
+  .faq-list { margin-top: 48px; max-width: 820px; }
+  .faq-item {
+    border-top: 1px solid var(--stone-soft);
+    padding: 26px 0;
+  }
+  .faq-item:last-child { border-bottom: 1px solid var(--stone-soft); }
+  .faq-item h4 {
+    font-family: var(--serif); font-weight: 600; font-size: 22px;
+    color: var(--paddock); margin: 0 0 12px;
+  }
+  .faq-item p { font-size: 16px; line-height: 1.6; color: #2A2520; margin: 0; max-width: 760px; }
+
+  /* Final CTA */
+  .final-cta { background: var(--paddock); color: var(--cream); text-align: center; padding: 120px 0; }
+  .final-cta h2 {
+    color: var(--cream); margin: 0 auto 24px; font-size: clamp(40px, 5vw, 60px);
+  }
+  .final-cta h2 .accent { color: var(--saddle); font-style: italic; }
+  .final-cta p { color: rgba(244,236,223,0.85); font-size: 18px; margin: 0 0 36px; }
+  .final-cta .capture { margin: 0 auto 16px; }
+  .final-cta input[type="email"] { background: var(--cream); }
+  .final-cta button { background: var(--saddle); }
+  .final-cta button:hover { background: var(--saddle-dark); }
+  .final-cta .footnote { color: rgba(244,236,223,0.7); font-size: 14px; }
+
+  /* Footer */
+  footer.site {
+    padding: 48px 0; border-top: 1px solid var(--stone-soft);
+    color: var(--stone); font-size: 13px;
+  }
+  footer.site .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px; }
+  footer.site .left { display: flex; align-items: center; gap: 12px; }
+  footer.site .left .word {
+    font-family: var(--serif); font-weight: 600; font-size: 18px;
+    color: var(--paddock);
+  }
+  footer.site .left .word .dot { color: var(--saddle); }
+  footer.site .right { display: flex; gap: 22px; }
+  footer.site a { color: var(--stone); text-decoration: none; }
+  footer.site a:hover { color: var(--paddock); }
+
+  @media (max-width: 800px) {
+    nav.top .links { display: none; }
+    nav.top .links.mobile-cta { display: flex; gap: 0; }
+    .hero { padding: 56px 0 56px; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .founder { grid-template-columns: 1fr; }
+    .founder .avatar { width: 100%; max-width: 320px; height: 240px; }
+    .price-grid { grid-template-columns: 1fr; }
+    .capture { flex-direction: column; }
+    .pain { padding: 64px 0; }
+    section { padding: 56px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- =========== NAV =========== -->
+<nav class="top">
+  <div class="container row">
+    <a href="#" class="brand" style="text-decoration:none;">
+      <span class="mark">
+        <svg width="28" height="20" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
+          <g fill="none" stroke="#1E3A2A" stroke-width="11" stroke-linecap="round">
+            <path d="M30 100 L30 50 Q30 25 60 25 L120 25 Q150 25 150 50 L150 100" />
+          </g>
+          <circle cx="44" cy="70" r="4" fill="#B5793E" />
+          <circle cx="136" cy="70" r="4" fill="#B5793E" />
+        </svg>
+      </span>
+      <span class="word">Longrein<span class="dot">.</span></span>
+    </a>
+    <div class="links">
+      <a href="#features">Product</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#founder">For trainers</a>
+      <span class="lang">EN · LT</span>
+      <a href="#waitlist" class="cta">Join the waitlist</a>
+    </div>
+  </div>
+</nav>
+
+<!-- =========== HERO =========== -->
+<header class="hero">
+  <div class="container">
+    <div class="eyebrow">EU-native · made in the saddle</div>
+    <h1 class="h1">Run the yard. <span class="accent">Protect the horses.</span></h1>
+    <p class="lede">Longrein is the European stable management tool for riding schools and livery yards with 15–40 horses. Schedule lessons, send invoices, and watch horse workload — on one screen, in your language, on your phone. Built by a stable owner, in Lithuania.</p>
+
+    <form id="waitlist" class="capture js-waitlist-form" data-source="hero">
+      <input type="email" name="email" placeholder="your@email.com" required aria-label="Your email" />
+      <input type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;height:0;width:0;opacity:0;" />
+      <button type="submit">Join the waitlist →</button>
+    </form>
+    <p class="js-waitlist-msg" role="status" aria-live="polite" style="margin-top:8px;font-size:13px;color:#1E3A2A;display:none;"></p>
+    <p class="capture-note">Free for 14 days at launch. No card. Cancel any time. Your data is yours, exportable in one click.</p>
+
+    <div class="proof-row">
+      <span><strong>30-minute</strong> setup</span>
+      <span><strong>€49/mo</strong> · 15% annual discount</span>
+      <span><strong>SEPA + GDPR</strong> from day one</span>
+      <span><strong>LT · PL · DE · EN</strong></span>
+    </div>
+  </div>
+</header>
+
+<!-- =========== PAIN =========== -->
+<section class="pain">
+  <div class="container">
+    <div class="eyebrow" style="color:var(--saddle)">The five-tool problem</div>
+    <h2>Right now your stable is run on five tools that do not talk to each other.</h2>
+    <p>Excel for the lesson schedule. WhatsApp for last-minute changes. A paper diary in the office. A Messenger group for the trainers. A printed invoice book at the end of the month. Every tool works alone. Together, they leak <strong>hours</strong>, <strong>money</strong>, and — sometimes — a tired horse who goes out one ride too many.</p>
+    <div class="punch">Longrein replaces all five with one screen.</div>
+  </div>
+</section>
+
+<!-- =========== FEATURES =========== -->
+<section id="features" class="features">
+  <div class="container">
+    <div class="eyebrow">Three things on one screen</div>
+    <h2>The only stable tool that puts horse welfare on the same screen as the schedule and the invoice.</h2>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="num">01 — Workload</div>
+        <h3>See which horse worked too much this week. Before anyone else does.</h3>
+        <p>Every horse gets a workload heatmap based on lessons, hacks, training, and turnout. The dashboard turns red before a horse gets sour or sore. Welfare and operations on the same screen — for the first time.</p>
+      </div>
+      <div class="feature-card">
+        <div class="num">02 — Schedule</div>
+        <h3>Lessons, livery, vet, farrier — one calendar, no double-bookings.</h3>
+        <p>Drag-and-drop scheduling. Recurring lessons in one tap. Clients see their bookings on their phone. The database physically prevents double-bookings — not as a check, as a guarantee. Email reminders shipping in beta; SMS shipping at public launch.</p>
+      </div>
+      <div class="feature-card">
+        <div class="num">03 — Payments</div>
+        <h3>One ledger for lessons, packs, and boarding — and a printable invoice in two clicks.</h3>
+        <p>Recurring boarding charges, lesson packs with remaining-balance tracking, single invoices. Print-ready A4 invoice and weekly schedule for the barn wall. Client balance is always live. SEPA and Stripe Checkout shipping at public launch — early-access stables get priority access.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== FOUNDER =========== -->
+<section id="founder">
+  <div class="container founder">
+    <div class="avatar">REPLACE WITH FOUNDER PHOTO</div>
+    <div class="body">
+      <div class="eyebrow">From the yard</div>
+      <h2>I run a stable in Lithuania. I built this because last winter was a mess.</h2>
+      <p>Last December I almost missed a colic call because the message lived in a WhatsApp thread three pages back. The same week I forgot to send two invoices. €380 sitting on my whiteboard, uncollected.</p>
+      <p>I love this work. I do not love what running it on five tools does to it. So I built the one I wished I had — and I am building it in public, on my own yard, with five other stables in the Baltics. If the way you run yours sounds anything like that, get on the list.</p>
+      <div class="signature">— Andreja</div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== PRICING =========== -->
+<section id="pricing" class="pricing">
+  <div class="container">
+    <div class="eyebrow">Pricing teaser</div>
+    <h2>Lock today's price. For 12 months. Even if we raise it.</h2>
+    <p class="disclaimer">Final pricing is locked at public launch. Waitlist members get the first 12 months at the launch price.</p>
+
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="tier">Starter</div>
+        <h3>For yards with up to 10 horses</h3>
+        <div class="price">€19<small> / month</small></div>
+        <p class="desc">The basics: schedule, clients, payments. For one-trainer yards starting out.</p>
+      </div>
+      <div class="price-card featured">
+        <div class="tier">Pro</div>
+        <h3>For yards with 11–40 horses</h3>
+        <div class="price">€49<small> / month</small></div>
+        <p class="desc">Everything in Starter, plus the welfare board with overdue/over-cap alerts, the client portal, multi-trainer access, and email reminders. SMS reminders ship at public launch.</p>
+      </div>
+      <div class="price-card">
+        <div class="tier">Premium</div>
+        <h3>For yards with 41+ horses</h3>
+        <div class="price">€99<small> / month</small></div>
+        <p class="desc">Everything in Pro, plus team roles, advanced reporting, and priority support.</p>
+      </div>
+    </div>
+    <p class="annual-note">Annual: save 15%. Yearly billing fits how stables actually pay.</p>
+  </div>
+</section>
+
+<!-- =========== FAQ =========== -->
+<section>
+  <div class="container">
+    <div class="eyebrow">Five questions</div>
+    <h2>The things stable owners ask before they sign anything.</h2>
+
+    <div class="faq-list">
+      <div class="faq-item">
+        <h4>When does Longrein launch?</h4>
+        <p>Public beta opens in autumn 2026. Waitlist members get access first, and lock in the launch price for 12 months.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Is my data safe?</h4>
+        <p>Yes. EU-hosted (Frankfurt). GDPR-compliant from day one. One click to export everything as a CSV. One click to delete everything if you ever leave. Your data is yours.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Will it work on my phone?</h4>
+        <p>Yes — that is where most of it is designed for. Trainers check in lessons in the arena from the phone. Clients see schedules and pay invoices on theirs. The desktop is the back office; the phone is the workplace.</p>
+      </div>
+      <div class="faq-item">
+        <h4>What if I run a small backyard yard with three horses?</h4>
+        <p>Longrein is built for stables with 15–40 horses. If yours is smaller, the Starter plan still works — but the product is most useful once you have at least one trainer who is not you.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Can I see it before I commit?</h4>
+        <p>Yes. Get on the waitlist and you'll receive a 90-second tour and a 1-on-1 onboarding call with the founder for the first 50 customers. After that, it's a 14-day free trial — no card.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========== FINAL CTA =========== -->
+<section class="final-cta">
+  <div class="container">
+    <h2>Stop running your stable on <span class="accent">WhatsApp.</span></h2>
+    <p>Get on the list. 200+ European stables already in.<br>Lithuania, Latvia, Estonia, Poland, Germany.</p>
+    <form class="capture js-waitlist-form" data-source="footer">
+      <input type="email" name="email" placeholder="your@email.com" required aria-label="Your email" />
+      <input type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;height:0;width:0;opacity:0;" />
+      <button type="submit">Join the waitlist →</button>
+    </form>
+    <p class="footnote">Free at launch · No card · Founder reads every reply</p>
+  </div>
+</section>
+
+<!-- =========== FOOTER =========== -->
+<footer class="site">
+  <div class="container row">
+    <div class="left">
+      <svg width="22" height="16" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
+        <g fill="none" stroke="#1E3A2A" stroke-width="13" stroke-linecap="round">
+          <path d="M30 100 L30 50 Q30 25 60 25 L120 25 Q150 25 150 50 L150 100" />
+        </g>
+        <circle cx="44" cy="70" r="5" fill="#B5793E" />
+        <circle cx="136" cy="70" r="5" fill="#B5793E" />
+      </svg>
+      <span class="word">Longrein<span class="dot">.</span></span>
+      <span style="margin-left:14px;">Made in the saddle. Built for the back office.</span>
+    </div>
+    <div class="right">
+      <a href="mailto:hello@longrein.eu">hello@longrein.eu</a>
+      <span>·</span>
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <span>·</span>
+      <span>EN | LT</span>
+    </div>
+  </div>
+  <div class="container" style="margin-top:24px; color:var(--stone); font-size:12px;">
+    © 2026 Longrein · Vilnius, Lithuania
+  </div>
+</footer>
+
+<script>
+  // Wire every .js-waitlist-form to /api/waitlist. Hero + footer share
+  // the same handler. Submits JSON, swallows duplicates as success,
+  // shows inline message instead of an alert popup.
+  (function () {
+    var forms = document.querySelectorAll(".js-waitlist-form");
+    forms.forEach(function (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var btn = form.querySelector("button");
+        var input = form.querySelector('input[name="email"]');
+        var honeypot = form.querySelector('input[name="company"]');
+        var msg = form.parentElement.querySelector(".js-waitlist-msg");
+        var origLabel = btn ? btn.textContent : null;
+        if (btn) { btn.disabled = true; btn.textContent = "Adding…"; }
+
+        fetch("/api/waitlist", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email:   input ? input.value : "",
+            company: honeypot ? honeypot.value : "",
+            source:  form.dataset.source || "landing",
+          }),
+        })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+          .then(function (res) {
+            if (res.ok && res.body && res.body.ok) {
+              if (input) input.value = "";
+              if (msg) {
+                msg.textContent = "Thanks. We'll send a welcome note shortly.";
+                msg.style.display = "block";
+                msg.style.color = "#1E3A2A";
+              } else {
+                form.innerHTML = "<p style='color:#1E3A2A;font-size:14px;margin:0;'>Thanks. We'll send a welcome note shortly.</p>";
+              }
+            } else {
+              var err = (res.body && res.body.error) || "Could not save. Try again.";
+              if (msg) {
+                msg.textContent = err;
+                msg.style.display = "block";
+                msg.style.color = "#B23F1A";
+              } else {
+                alert(err);
+              }
+              if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+            }
+          })
+          .catch(function () {
+            if (msg) {
+              msg.textContent = "Network issue. Try again in a moment.";
+              msg.style.display = "block";
+              msg.style.color = "#B23F1A";
+            }
+            if (btn) { btn.disabled = false; btn.textContent = origLabel; }
+          });
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>

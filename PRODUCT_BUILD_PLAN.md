@@ -1,4 +1,6 @@
-# Stable OS — Product Build Plan
+# Longrein — Product Build Plan [historical]
+
+> **Superseded (2026-05-02):** Renamed Stable OS / Hoofbeat → **Longrein**. Live build plan = `Longrein-Readiness-Audit-2026-05-02.md`.
 
 **Versija:** 1.0 · **Sukurta:** 2026-04-26 · **Statusas:** Phase 1 in progress
 

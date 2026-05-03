@@ -1,4 +1,6 @@
-# Stable OS — 90-Day Launch & Monetization Plan
+# Longrein — 90-Day Launch & Monetization Plan (historical)
+
+> **Superseded (2026-05-02):** Doc was written under the working title "Stable OS." Final product name is **Longrein**; the live launch plan is now `Longrein-Readiness-Audit-2026-05-02.md` (3-week Founding Members sprint, free 12-month trial, no Stripe in W1–W3). References below to `stableos.lt` should read `longrein.eu`. Pricing tiers + ICP + welfare wedge all carry over.
 
 **Versija:** 1.0 · **Sukurta:** 2026-04-26 · **Tikslas:** nuo "live MVP" iki "first €1k MRR + 25 paying stables"
 

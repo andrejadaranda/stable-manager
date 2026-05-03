@@ -1,6 +1,6 @@
 // /dashboard/welfare — single-screen workload status for every horse.
 //
-// This is Hoofbeat's wedge: every other stable software treats welfare
+// This is Longrein's wedge: every other stable software treats welfare
 // as a footnote on a horse profile. Here it's a top-level dashboard.
 // Owner sees at-risk horses first (over cap → near cap → resting), with
 // a 5-bucket counter strip across the top. Filter chips narrow the

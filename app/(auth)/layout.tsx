@@ -26,7 +26,7 @@ export default function AuthLayout({
           className="text-[22px] text-navy-900 leading-none font-display"
           style={{ letterSpacing: "-0.015em" }}
         >
-          Hoofbeat<span className="text-brand-600">.</span>
+          Longrein<span className="text-brand-600">.</span>
         </span>
       </Link>
 
@@ -35,6 +35,11 @@ export default function AuthLayout({
       <p className="text-[12px] text-ink-500">
         Modern stable management. Built for the Baltics and beyond.
       </p>
+      <nav className="flex items-center gap-4 text-[11.5px] text-ink-400">
+        <Link href="/legal/terms"   className="hover:text-ink-700">Terms</Link>
+        <Link href="/legal/privacy" className="hover:text-ink-700">Privacy</Link>
+        <Link href="/legal/cookies" className="hover:text-ink-700">Cookies</Link>
+      </nav>
     </main>
   );
 }

@@ -49,10 +49,10 @@ export function CommandPalette() {
     }
     function onCustom() { setOpen(true); }
     window.addEventListener("keydown", onKey);
-    window.addEventListener("hoofbeat:open-search", onCustom);
+    window.addEventListener("longrein:open-search", onCustom);
     return () => {
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("hoofbeat:open-search", onCustom);
+      window.removeEventListener("longrein:open-search", onCustom);
     };
   }, []);
 

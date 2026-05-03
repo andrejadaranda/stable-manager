@@ -1,7 +1,7 @@
 // Dynamic 512x512 app icon. Rendered server-side via @vercel/og at
-// build time, cached aggressively. The Hoofbeat mark = an orange
-// stable-house silhouette on a navy ground — readable at 32px, dramatic
-// at 512px.
+// build time, cached aggressively. The Longrein mark = a Saddle Tan
+// stable-house silhouette on a Paddock Green ground — readable at 32px,
+// dramatic at 512px.
 
 import { ImageResponse } from "next/og";
 

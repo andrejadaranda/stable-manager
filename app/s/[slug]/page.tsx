@@ -11,7 +11,7 @@
 // What's NOT shown (privacy by default):
 //   • Clients, payments, schedules, internal notes, daily limits.
 //
-// "Powered by Hoofbeat" footer with a subtle wait-list CTA — every
+// "Powered by Longrein" footer with a subtle wait-list CTA — every
 // visitor is a potential trial conversion.
 
 import Link from "next/link";
@@ -31,11 +31,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const data = await getPublicStable(params.slug);
   if (!data.stable) return { title: "Stable not found" };
   return {
-    title:       `${data.stable.name} · Hoofbeat`,
+    title:       `${data.stable.name} · Longrein`,
     description: `See ${data.stable.name}'s lessons, horses, and price list.`,
     openGraph: {
       title:       data.stable.name,
-      description: `Lessons + horses at ${data.stable.name}. Powered by Hoofbeat.`,
+      description: `Lessons + horses at ${data.stable.name}. Powered by Longrein.`,
       type:        "website",
     },
   };
@@ -209,7 +209,7 @@ export default async function PublicStablePage({
             href="/"
             className="text-[11.5px] text-ink-500 hover:text-ink-900 inline-flex items-center gap-1.5"
           >
-            Powered by <span className="font-semibold text-navy-900">Hoofbeat<span className="text-brand-600">.</span></span>
+            Powered by <span className="font-semibold text-navy-900">Longrein<span className="text-brand-600">.</span></span>
           </Link>
         </div>
       </footer>

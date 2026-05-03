@@ -229,7 +229,7 @@ export function DayColumn({
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
     if (!editable || !onLessonDrop) return;
-    if (!e.dataTransfer.types.includes("application/x-hoofbeat-lesson")) return;
+    if (!e.dataTransfer.types.includes("application/x-longrein-lesson")) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
 
@@ -248,7 +248,7 @@ export function DayColumn({
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     if (!editable || !onLessonDrop) return;
-    const raw = e.dataTransfer.getData("application/x-hoofbeat-lesson");
+    const raw = e.dataTransfer.getData("application/x-longrein-lesson");
     if (!raw) return;
     e.preventDefault();
     setDragHover(null);
@@ -321,7 +321,7 @@ export function DayColumn({
                     const offsetWithinCard = e.clientY - rect.top;
                     e.dataTransfer.effectAllowed = "move";
                     e.dataTransfer.setData(
-                      "application/x-hoofbeat-lesson",
+                      "application/x-longrein-lesson",
                       JSON.stringify({ lessonId: p.lesson.id, offsetWithinCard }),
                     );
                   }

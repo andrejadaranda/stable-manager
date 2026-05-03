@@ -1,6 +1,8 @@
-# Stable OS — Master Document
+# Longrein — Master Document
 
-**Versija:** 1.0  ·  **Atnaujinta:** 2026-04-26  ·  **Statusas:** Live MVP
+> **Note (2026-05-02):** Working titles in this doc were "Stable OS" and later "Hoofbeat." Final product name as of 2026-05-02 is **Longrein** (`hoofbeat.eu` was unavailable). Inline references to "Stable OS," "Hoofbeat," and the placeholder domain `stableos.lt` are historical — the live brand is **Longrein** with domain `longrein.eu`. The active sprint plan lives in `Longrein-Readiness-Audit-2026-05-02.md`.
+
+**Versija:** 1.1  ·  **Atnaujinta:** 2026-05-02  ·  **Statusas:** Live MVP, prep for 10 Founding Members launch (target 2026-05-23)
 
 > Vienintelis dokumentas, kurį verta atsidaryti grįžus prie projekto po pertraukos. Apima esmę, kas padaryta, kas liko, verslo planą, technical reference ir operational runbook.
 

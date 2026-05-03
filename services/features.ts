@@ -41,7 +41,7 @@ export const DEFAULT_FEATURES: StableFeatures = {
   reminders:           true,
   agreements:          true,
   public_horse_bios:   true,
-  chat:                true,
+  chat:                false,  // Deprioritized — Founding Members use WhatsApp; flag OFF by default 2026-05-02.
   recurring_lessons:   true,
   welfare_hard_limits: true,
 };

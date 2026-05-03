@@ -1,4 +1,6 @@
-# Next Steps — Šiandien (2026-04-28)
+# Next Steps — Šiandien (2026-04-28) [historical]
+
+> **Superseded (2026-05-02):** Brand renamed Stable OS / Hoofbeat → **Longrein** on 2026-05-02. Active sprint plan = `Longrein-Readiness-Audit-2026-05-02.md` (3-week Founding Members run-up to 2026-05-23). Body below preserved as historical record.
 
 > Ką tau reikia padaryti rankomis, kad viskas, ką ką tik įsidirbom, pradėtų veikti.
 

@@ -1,4 +1,6 @@
-# Stable OS — Strategic Backlog (Apr 2026)
+# Longrein — Strategic Backlog (Apr 2026) [historical]
+
+> **Superseded (2026-05-02):** Renamed Stable OS / Hoofbeat → **Longrein**. Live sprint backlog = `Longrein-Readiness-Audit-2026-05-02.md`. The deferred-vs-built feature list below is still useful as Phase 3+ context.
 
 > Vienintelis kelias nuo dabartinio MVP iki rinkos top'ų. Sintezė iš MASTER.md, PRODUCT_BUILD_PLAN.md, LAUNCH_PLAN.md, BRAND_NAMES.md plius faktinis kodo auditas po šiandien dienos darbo (2026-04-28). Atnaujinti po kiekvienos sprintės.
 

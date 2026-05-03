@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Hoofbeat design tokens — locked brand system.
+ * Longrein design tokens — locked brand system.
  *
  * Brand strategy (2026-04-30 brand-consistency pass):
  * - `brand-*` ramp = Paddock Green family. The primary action color
@@ -15,7 +15,7 @@ import type { Config } from "tailwindcss";
  * - `alert-*` = the old warm orange ramp. Restricted to error / warning
  *   / "live now" / focus rings. Never primary action.
  *
- * Locked colors per memory file project_hoofbeat_brand:
+ * Locked colors per memory file project_longrein_brand:
  *   Paddock Green:  #1E3A2A
  *   Saddle Tan:     #B5793E
  *   Arena Cream:    #F4ECDF (close to existing surface #F8F4EE)

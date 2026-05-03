@@ -6,29 +6,30 @@
 
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { CookieBanner } from "@/components/legal/cookie-banner";
 
 export const metadata: Metadata = {
   title: {
-    default:  "Hoofbeat.",
-    template: "%s · Hoofbeat.",
+    default:  "Longrein.",
+    template: "%s · Longrein.",
   },
   description:
     "Schedule lessons, track payments, and protect your horses. Built for European riding stables.",
-  applicationName: "Hoofbeat.",
+  applicationName: "Longrein.",
   // Apple-specific PWA flags. Safari reads these when "Add to Home
   // Screen" is tapped — they make the launched app run full-screen
   // without the URL bar and use a translucent status bar in the
   // brand-orange palette.
   appleWebApp: {
     capable:    true,
-    title:      "Hoofbeat.",
+    title:      "Longrein.",
     statusBarStyle: "black-translucent",
   },
   // Open Graph + Twitter previews for shared links.
   openGraph: {
-    title:       "Hoofbeat.",
+    title:       "Longrein.",
     description: "Modern stable management. Calendar, payments, welfare, packages — one place.",
-    siteName:    "Hoofbeat.",
+    siteName:    "Longrein.",
     type:        "website",
   },
   // Manifest for Android Chrome's Add-to-Home-Screen + Lighthouse PWA
@@ -57,7 +58,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen">{children}</body>
+      <body className="min-h-screen">
+        {children}
+        <CookieBanner />
+      </body>
     </html>
   );
 }

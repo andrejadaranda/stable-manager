@@ -158,7 +158,7 @@ export function Sidebar({
             the click works without re-using a global keyboard binding. */}
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent("hoofbeat:open-search"))}
+          onClick={() => window.dispatchEvent(new CustomEvent("longrein:open-search"))}
           className="
             mx-3 mb-2 px-3 py-2 rounded-xl
             flex items-center gap-3 text-sm text-ink-500
@@ -248,7 +248,7 @@ function Brand({ small }: { small?: boolean }) {
         className={`text-navy-900 leading-none ${small ? "text-base" : "text-[19px]"} font-display`}
         style={{ letterSpacing: "-0.015em" }}
       >
-        Hoofbeat<span className="text-brand-600">.</span>
+        Longrein<span className="text-brand-600">.</span>
       </span>
     </div>
   );

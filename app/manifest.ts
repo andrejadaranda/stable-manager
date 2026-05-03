@@ -6,8 +6,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name:        "Hoofbeat — stable management",
-    short_name:  "Hoofbeat",
+    name:        "Longrein — stable management",
+    short_name:  "Longrein",
     description: "Schedule lessons, track payments, and protect your horses.",
     // Standalone = no browser chrome when launched from home screen.
     display:           "standalone",

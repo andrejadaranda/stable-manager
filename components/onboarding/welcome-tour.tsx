@@ -1,7 +1,7 @@
 "use client";
 
 // First-time welcome tour. Full-screen modal with 5 illustrated steps
-// that explain what Hoofbeat is and what to do first. Owner gets a
+// that explain what Longrein is and what to do first. Owner gets a
 // stable-setup-flavoured tour; clients see the rider-portal tour.
 //
 // On finish or skip → server action stamps profiles.onboarded_at,
@@ -22,7 +22,7 @@ type Step = {
 
 const OWNER_STEPS: Step[] = [
   {
-    title:  "Welcome to Hoofbeat.",
+    title:  "Welcome to Longrein.",
     body:   "Your stable's calendar, payments, and horse welfare on one screen. Built for European yards with 15–40 horses. Let's get you running in five short steps.",
     visual: "celebrate",
   },
