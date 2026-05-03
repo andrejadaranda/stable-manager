@@ -9,7 +9,7 @@
 import Link from "next/link";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { getWelfareSnapshot, type WelfareState, type HorseWelfareCard } from "@/services/welfare";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, HelpHint } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +65,24 @@ export default async function WelfarePage({
       <PageHeader
         title="Welfare"
         subtitle={`Workload status across every horse · week of ${snapshot.weekLabel}`}
+        actions={
+          <HelpHint
+            title="Welfare board"
+            body={
+              <>
+                <p>Five buckets per horse based on this week's lessons vs the weekly cap you set on the horse profile:</p>
+                <ul className="list-disc pl-4 space-y-0.5 mt-1">
+                  <li><strong>Over cap</strong> — at or past the weekly limit. New bookings blocked unless overridden.</li>
+                  <li><strong>Near cap</strong> — 85% of cap. Plan rest soon.</li>
+                  <li><strong>Resting</strong> — no lessons in 7+ days.</li>
+                  <li><strong>Steady</strong> — 50–85% of cap.</li>
+                  <li><strong>Light</strong> — under 50% of cap, capacity for more.</li>
+                </ul>
+                <p>Click any tile at the top to filter the list. Click any horse card to open the full profile.</p>
+              </>
+            }
+          />
+        }
       />
 
       {/* Bucket counter strip — clickable filter chips */}

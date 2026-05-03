@@ -178,6 +178,72 @@ export async function markChargePaid(
   if (pErr) throw pErr;
 }
 
+/** Stable-wide list of OUTSTANDING boarding charges across every
+ *  boarder. Drives the Settings → Boarding "Outstanding" board where
+ *  the owner sees who hasn't paid in one place and one-clicks to
+ *  mark paid (with confirm dialog so misclicks don't go through). */
+export type OutstandingBoardingRow = {
+  id:                 string;
+  horse_id:           string;
+  horse_name:         string;
+  owner_client_id:    string;
+  owner_client_name:  string;
+  period_label:       string | null;
+  period_start:       string;
+  amount:             number;
+  paid_amount:        number;
+  payment_status:     "paid" | "partial" | "unpaid";
+};
+
+export async function listOutstandingBoardingCharges(): Promise<OutstandingBoardingRow[]> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("horse_boarding_summary")
+    .select(`
+      id, period_label, period_start, amount, paid_amount, payment_status,
+      horse_id, owner_client_id,
+      horse:horses(name),
+      owner:clients!horse_boarding_charges_owner_client_id_fkey(full_name)
+    `)
+    .neq("payment_status", "paid")
+    .order("period_start", { ascending: false });
+  if (error) throw error;
+  type Row = {
+    id: string;
+    period_label: string | null;
+    period_start: string;
+    amount: number;
+    paid_amount: number;
+    payment_status: "paid" | "partial" | "unpaid";
+    horse_id: string;
+    owner_client_id: string;
+    horse:  { name: string } | { name: string }[] | null;
+    owner:  { full_name: string } | { full_name: string }[] | null;
+  };
+  function pickOne<T>(rel: T | T[] | null): T | null {
+    if (!rel) return null;
+    return Array.isArray(rel) ? (rel[0] ?? null) : rel;
+  }
+  return ((data ?? []) as Row[]).map((r) => {
+    const h = pickOne(r.horse);
+    const o = pickOne(r.owner);
+    return {
+      id:                r.id,
+      horse_id:          r.horse_id,
+      horse_name:        h?.name ?? "—",
+      owner_client_id:   r.owner_client_id,
+      owner_client_name: o?.full_name ?? "—",
+      period_label:      r.period_label,
+      period_start:      r.period_start,
+      amount:            Number(r.amount),
+      paid_amount:       Number(r.paid_amount),
+      payment_status:    r.payment_status,
+    };
+  });
+}
+
 /** Undo the paid mark by deleting payments tied to the charge. */
 export async function markChargeUnpaid(chargeId: string): Promise<void> {
   const session = await getSession();

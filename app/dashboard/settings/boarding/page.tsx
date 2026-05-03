@@ -1,7 +1,8 @@
 import { requirePageRole } from "@/lib/auth/redirects";
-import { previewBoardingForMonth } from "@/services/boarding";
+import { previewBoardingForMonth, listOutstandingBoardingCharges } from "@/services/boarding";
 import { getStableFeatures } from "@/services/features";
 import { BulkBoardingPanel } from "@/components/boarding/bulk-boarding-panel";
+import { OutstandingBoardingBoard } from "@/components/boarding/outstanding-board";
 import { FeatureDisabled } from "@/components/ui";
 
 function currentYearMonth(): string {
@@ -25,7 +26,10 @@ export default async function BoardingSettingsPage({
     ? (searchParams.period as string)
     : currentYearMonth();
 
-  const preview = await previewBoardingForMonth(period);
+  const [preview, outstanding] = await Promise.all([
+    previewBoardingForMonth(period),
+    listOutstandingBoardingCharges().catch(() => []),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,6 +43,8 @@ export default async function BoardingSettingsPage({
           the picked month, so re-running is safe.
         </p>
       </div>
+
+      <OutstandingBoardingBoard rows={outstanding} />
 
       <BulkBoardingPanel preview={preview} period={period} />
     </div>
