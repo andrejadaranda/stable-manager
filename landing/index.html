@@ -474,7 +474,7 @@
         var origLabel = btn ? btn.textContent : null;
         if (btn) { btn.disabled = true; btn.textContent = "Adding…"; }
 
-        fetch("/api/waitlist", {
+        fetch("https://app.longrein.eu/api/waitlist", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
