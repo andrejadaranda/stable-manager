@@ -160,16 +160,12 @@
   }
 
   .founder {
-    display: grid; grid-template-columns: 240px 1fr; gap: 56px;
-    align-items: start; padding: 96px 0;
+    padding: 96px 0;
+    max-width: 720px;
   }
-  .founder .avatar {
-    width: 240px; height: 280px; border-radius: 12px;
-    background: linear-gradient(135deg, var(--saddle) 0%, var(--paddock) 100%);
-    display: flex; align-items: flex-end; justify-content: center;
-    color: var(--cream); padding: 18px; font-size: 12px; letter-spacing: 0.1em;
-    text-transform: uppercase; font-weight: 600;
-    /* Replace with real photo: background: url('/founder.jpg') center/cover; */
+  .founder .body {
+    border-left: 3px solid var(--saddle);
+    padding-left: 32px;
   }
   .founder .body h2 { margin-top: 0; }
   .founder .body p { font-size: 18px; line-height: 1.6; color: #2A2520; max-width: 580px; }
@@ -266,8 +262,7 @@
     nav.top .links.mobile-cta { display: flex; gap: 0; }
     .hero { padding: 56px 0 56px; }
     .feature-grid { grid-template-columns: 1fr; }
-    .founder { grid-template-columns: 1fr; }
-    .founder .avatar { width: 100%; max-width: 320px; height: 240px; }
+    .founder .body { padding-left: 22px; border-left-width: 2px; }
     .price-grid { grid-template-columns: 1fr; }
     .capture { flex-direction: column; }
     .pain { padding: 64px 0; }
@@ -332,7 +327,7 @@
   <div class="container">
     <div class="eyebrow" style="color:var(--saddle)">The five-tool problem</div>
     <h2>Right now your stable is run on five tools that do not talk to each other.</h2>
-    <p>Excel for the schedule. WhatsApp for last-minute changes. A paper diary in the office. A trainer Messenger group. A printed invoice book at month-end.</p>
+    <p>Excel for the schedule. Messaging apps for last-minute changes. A paper diary in the office. A separate group thread for the trainers. A printed invoice book at month-end.</p>
       <p>Each one works on its own. Together they leak <strong>hours</strong>, <strong>money</strong>, and — sometimes — a tired horse who goes out for one ride too many.</p>
       <p>The cost shows up in three places: <strong>four to eight hours</strong> of admin every week, <strong>€100–300</strong> of unbilled lessons every month, and one preventable welfare incident a year that you don't see coming until the horse is already off work.</p>
     <div class="punch">Longrein replaces all five with one screen.</div>
@@ -405,14 +400,14 @@
 <!-- =========== FOUNDER =========== -->
 <section id="founder">
   <div class="container founder">
-    <div class="avatar">REPLACE WITH FOUNDER PHOTO</div>
+    
     <div class="body">
       <div class="eyebrow">From the yard</div>
-      <h2>I run a stable in Lithuania. I built this because last winter was a mess.</h2>
-      <p>Last December I almost missed a colic call because the message lived in a WhatsApp thread three pages back. The same week I forgot to send two invoices. €380 sitting on my whiteboard, uncollected.</p>
+      <h2>Built in a Lithuanian stable, because last winter was a mess.</h2>
+      <p>Last December I almost missed a colic call because the message lived in a chat thread three pages back. The same week I forgot to send two invoices. €380 sitting on my whiteboard, uncollected.</p>
       <p>I love this work. I do not love what running it on five tools does to it. So I built the one I wished I had — and I'm building it in the open, on my own yard.</p>
-        <p>If the way you run yours sounds anything like that, get on the list. — Andreja Adaranda, Trakų jojimo klubas</p>
-      <div class="signature">— Andreja</div>
+        <p>If the way you run yours sounds anything like that, get on the list.</p>
+      <div class="signature">— The Longrein Stable</div>
     </div>
   </div>
 </section>
@@ -462,7 +457,7 @@
 <!-- =========== FINAL CTA =========== -->
 <section class="final-cta">
   <div class="container">
-    <h2>Stop running your stable on <span class="accent">WhatsApp.</span></h2>
+    <h2>Stop running your stable on <span class="accent">messaging apps.</span></h2>
     <p>The list is open. Founding Members get twelve months free; waitlist gets first access at public launch with locked pricing.<br>Either way: one email, one founder, one chance to shape what stable software in Europe actually looks like.</p>
     <form class="capture js-waitlist-form" data-source="footer">
       <input type="email" name="email" placeholder="your@email.com" required aria-label="Your email" />
