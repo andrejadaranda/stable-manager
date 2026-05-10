@@ -8,7 +8,7 @@
 export const metadata = {
   title: "Terms of Service · Longrein",
   description:
-    "The contract between your stable and Longrein UAB covering your use of the Longrein platform.",
+    "The contract between your stable and Longrein covering your use of the Longrein platform.",
 };
 
 export default function TermsPage() {

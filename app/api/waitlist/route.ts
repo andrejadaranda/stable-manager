@@ -16,6 +16,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendWelcomeEmail } from "@/lib/email/welcome";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -99,7 +100,9 @@ export async function POST(req: Request) {
 
   if (error) {
     // 23505 = unique violation. Treat as success — we don't want to
-    // expose whether the email is already on the list.
+    // expose whether the email is already on the list. No welcome
+    // email here either: this address has already received one on
+    // their first signup, sending again would be spam.
     if ((error as { code?: string }).code === "23505") {
       return NextResponse.json({ ok: true }, { headers });
     }
@@ -107,6 +110,21 @@ export async function POST(req: Request) {
       { ok: false, error: "Could not save your email. Try again in a moment." },
       { status: 500, headers },
     );
+  }
+
+  // First-time signup → send welcome. Awaited (Edge runtime drops
+  // detached promises) but wrapped in try/catch so a Resend failure
+  // never blocks the signup response. The user is already in the
+  // waitlist by this point — the email is a nice-to-have, not a
+  // correctness guarantee.
+  try {
+    await sendWelcomeEmail({
+      email,
+      country:  payload.country  ?? null,
+      yardSize: payload.yard_size ?? null,
+    });
+  } catch (err) {
+    console.error("[waitlist] welcome email failed:", err);
   }
 
   return NextResponse.json({ ok: true }, { headers });
