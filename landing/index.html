@@ -4,10 +4,127 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Longrein — Run the yard. Protect the horses.</title>
-<meta name="description" content="The European stable management tool for riding schools and livery yards with 15–40 horses. Schedule lessons, send invoices, and watch horse workload — on one screen, in your language. Built by a stable owner in Lithuania.">
-<meta property="og:title" content="Longrein — Run the yard. Protect the horses.">
-<meta property="og:description" content="EU-native stable management. Made in the saddle.">
+<meta name="description" content="Stable management for European riding schools and livery yards. The schedule, the invoices, and a horse welfare board on one screen. Built in a Lithuanian stable.">
+
+<!-- Favicons -->
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+<!-- Open Graph -->
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://longrein.eu/">
+<meta property="og:title" content="Longrein — Run the yard. Protect the horses.">
+<meta property="og:description" content="Stable management for European riding schools and livery yards. Welfare, schedule, and invoices on one screen.">
+<meta property="og:image" content="https://longrein.eu/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Longrein. Run the yard. Protect the horses.">
+<meta property="og:locale" content="en_GB">
+<meta property="og:site_name" content="Longrein">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://longrein.eu/">
+<meta name="twitter:title" content="Longrein — Run the yard. Protect the horses.">
+<meta name="twitter:description" content="Stable management for European riding schools and livery yards. Welfare, schedule, and invoices on one screen.">
+<meta name="twitter:image" content="https://longrein.eu/og-image.png">
+
+<!-- Theme color (browser chrome on mobile) -->
+<meta name="theme-color" content="#1E3A2A">
+
+<!-- Schema.org structured data — helps Google + AI search understand the product -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Longrein",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "Stable management software for European riding schools and livery yards. Schedule, horse welfare workload tracking, lesson billing, and client portal in one place.",
+      "url": "https://longrein.eu",
+      "image": "https://longrein.eu/og-image.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "49",
+        "priceCurrency": "EUR",
+        "priceSpecification": {
+          "@type": "UnitPriceSpecification",
+          "price": "49",
+          "priceCurrency": "EUR",
+          "billingDuration": "P1M",
+          "unitText": "MONTH"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Longrein",
+        "url": "https://longrein.eu",
+        "logo": "https://longrein.eu/og-image.png",
+        "email": "hello@longrein.eu",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Vilnius",
+          "addressCountry": "LT"
+        },
+        "sameAs": [
+          "https://www.instagram.com/longreinapp/",
+          "https://www.linkedin.com/company/longrein/"
+        ]
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "When does Longrein launch?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Founding Members onboard now through summer 2026 (10 seats). Public beta opens autumn 2026. Waitlist members get access before public launch."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is my data safe?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. EU-hosted (Frankfurt). GDPR-compliant from day one. One click to export everything as a CSV. One click to delete everything if you ever leave. Your data is yours."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Will it work on my phone?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes — that is where most of it is designed for. Trainers check in lessons in the arena from the phone. Clients see schedules and pay invoices on theirs."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What if I run a small backyard yard with three horses?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Longrein is built for stables with 15-40 horses. If yours is smaller, the Starter plan still works — but the product is most useful once you have at least one trainer who is not you."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I see it before I commit?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Founding Member applicants get a 45-minute onboarding call with the founder before signing anything. Waitlist members get a 90-second tour by email when public beta opens, plus a free 14-day trial — no card."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -59,6 +176,8 @@
     font-size: 14px; font-weight: 600; text-decoration: none;
   }
   nav.top .cta:hover { background: var(--paddock-dark); color: var(--cream); }
+  /* Mobile-only CTA: hidden by default (desktop), shown < 800px below. */
+  nav.top .links.mobile-cta { display: none; }
 
   /* Hero */
   .hero { padding: 96px 0 80px; }
@@ -137,17 +256,35 @@
   .feature-card p { font-size: 15px; line-height: 1.55; color: #3F3527; margin: 0; }
 
   /* Founder block */
-  .founder {
-    display: grid; grid-template-columns: 240px 1fr; gap: 56px;
-    align-items: start; padding: 96px 0;
+
+  /* Founding Members */
+  .fm { padding: 80px 0; background: var(--paddock); color: var(--cream); }
+  .fm .eyebrow { color: var(--saddle); }
+  .fm h2 { color: var(--cream); font-family: var(--serif); font-weight: 600; font-size: clamp(32px, 4vw, 44px); line-height: 1.15; letter-spacing: -0.02em; max-width: 780px; margin: 14px 0 28px; }
+  .fm p { color: var(--cream); opacity: 0.92; font-size: 17px; line-height: 1.6; max-width: 720px; margin: 0 0 18px; }
+  .fm p strong { opacity: 1; color: white; }
+  .fm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 760px; margin: 36px 0; padding: 28px; background: rgba(244,236,223,0.06); border: 1px solid rgba(244,236,223,0.18); border-radius: 12px; }
+  .fm-grid .col h4 { font-family: var(--sans); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--saddle); margin: 0 0 14px; font-weight: 600; }
+  .fm-grid .col ul { list-style: none; padding: 0; margin: 0; }
+  .fm-grid .col li { padding: 6px 0; font-size: 15px; line-height: 1.5; color: var(--cream); opacity: 0.95; }
+  .fm-grid .col li::before { content: '— '; color: var(--saddle); margin-right: 4px; }
+  .fm-cta { margin-top: 28px; }
+  .fm-cta .seats { font-size: 14px; color: var(--saddle); font-weight: 600; letter-spacing: 0.04em; margin-bottom: 14px; }
+  .fm-cta a.apply { display: inline-block; background: var(--saddle); color: var(--cream); padding: 14px 26px; border-radius: 8px; font-size: 15px; font-weight: 600; text-decoration: none; transition: background 0.15s; }
+  .fm-cta a.apply:hover { background: var(--saddle-dark); color: var(--cream); }
+  .fm-cta .downsell { display: block; margin-top: 16px; font-size: 14px; color: var(--cream); opacity: 0.7; font-style: italic; }
+  .fm-cta .downsell a { color: var(--cream); text-decoration: underline; text-underline-offset: 3px; }
+  @media (max-width: 720px) {
+    .fm-grid { grid-template-columns: 1fr; gap: 18px; padding: 22px; }
   }
-  .founder .avatar {
-    width: 240px; height: 280px; border-radius: 12px;
-    background: linear-gradient(135deg, var(--saddle) 0%, var(--paddock) 100%);
-    display: flex; align-items: flex-end; justify-content: center;
-    color: var(--cream); padding: 18px; font-size: 12px; letter-spacing: 0.1em;
-    text-transform: uppercase; font-weight: 600;
-    /* Replace with real photo: background: url('/founder.jpg') center/cover; */
+
+  .founder {
+    padding: 96px 0;
+    max-width: 720px;
+  }
+  .founder .body {
+    border-left: 3px solid var(--saddle);
+    padding-left: 32px;
   }
   .founder .body h2 { margin-top: 0; }
   .founder .body p { font-size: 18px; line-height: 1.6; color: #2A2520; max-width: 580px; }
@@ -244,8 +381,7 @@
     nav.top .links.mobile-cta { display: flex; gap: 0; }
     .hero { padding: 56px 0 56px; }
     .feature-grid { grid-template-columns: 1fr; }
-    .founder { grid-template-columns: 1fr; }
-    .founder .avatar { width: 100%; max-width: 320px; height: 240px; }
+    .founder .body { padding-left: 22px; border-left-width: 2px; }
     .price-grid { grid-template-columns: 1fr; }
     .capture { flex-direction: column; }
     .pain { padding: 64px 0; }
@@ -273,8 +409,12 @@
     <div class="links">
       <a href="#features">Product</a>
       <a href="#pricing">Pricing</a>
-      <a href="#founder">For trainers</a>
+      <a href="#founding-members">Founding Members</a>
+        <a href="#founder">For trainers</a>
       <span class="lang">EN · LT</span>
+      <a href="#waitlist" class="cta">Join the waitlist</a>
+    </div>
+    <div class="links mobile-cta">
       <a href="#waitlist" class="cta">Join the waitlist</a>
     </div>
   </div>
@@ -283,9 +423,9 @@
 <!-- =========== HERO =========== -->
 <header class="hero">
   <div class="container">
-    <div class="eyebrow">EU-native · made in the saddle</div>
+    <div class="eyebrow">EU-native · built in a Lithuanian stable</div>
     <h1 class="h1">Run the yard. <span class="accent">Protect the horses.</span></h1>
-    <p class="lede">Longrein is the European stable management tool for riding schools and livery yards with 15–40 horses. Schedule lessons, send invoices, and watch horse workload — on one screen, in your language, on your phone. Built by a stable owner, in Lithuania.</p>
+    <p class="lede">Longrein is the stable management tool for European riding schools and livery yards. The schedule, the invoices, and a horse welfare board that flags an over-worked horse before you do — on one screen, on your phone, in the arena.</p>
 
     <form id="waitlist" class="capture js-waitlist-form" data-source="hero">
       <input type="email" name="email" placeholder="your@email.com" required aria-label="Your email" />
@@ -293,7 +433,7 @@
       <button type="submit">Join the waitlist →</button>
     </form>
     <p class="js-waitlist-msg" role="status" aria-live="polite" style="margin-top:8px;font-size:13px;color:#1E3A2A;display:none;"></p>
-    <p class="capture-note">Free for 14 days at launch. No card. Cancel any time. Your data is yours, exportable in one click.</p>
+    <p class="capture-note">Free for the first 12 months for ten Founding Members. Free 14-day trial when public launch opens, autumn 2026. No card.</p>
 
     <div class="proof-row">
       <span><strong>30-minute</strong> setup</span>
@@ -309,7 +449,9 @@
   <div class="container">
     <div class="eyebrow" style="color:var(--saddle)">The five-tool problem</div>
     <h2>Right now your stable is run on five tools that do not talk to each other.</h2>
-    <p>Excel for the lesson schedule. WhatsApp for last-minute changes. A paper diary in the office. A Messenger group for the trainers. A printed invoice book at the end of the month. Every tool works alone. Together, they leak <strong>hours</strong>, <strong>money</strong>, and — sometimes — a tired horse who goes out one ride too many.</p>
+    <p>Excel for the schedule. Messaging apps for last-minute changes. A paper diary in the office. A separate group thread for the trainers. A printed invoice book at month-end.</p>
+      <p>Each one works on its own. Together they leak <strong>hours</strong>, <strong>money</strong>, and — sometimes — a tired horse who goes out for one ride too many.</p>
+      <p>The cost shows up in three places: <strong>four to eight hours</strong> of admin every week, <strong>€100–300</strong> of unbilled lessons every month, and one preventable welfare incident a year that you don't see coming until the horse is already off work.</p>
     <div class="punch">Longrein replaces all five with one screen.</div>
   </div>
 </section>
@@ -324,18 +466,55 @@
       <div class="feature-card">
         <div class="num">01 — Workload</div>
         <h3>See which horse worked too much this week. Before anyone else does.</h3>
-        <p>Every horse gets a workload heatmap based on lessons, hacks, training, and turnout. The dashboard turns red before a horse gets sour or sore. Welfare and operations on the same screen — for the first time.</p>
+        <p>Every horse has a workload heatmap and a weekly cap you set. The dashboard shows you who's near cap, who's over, who's been resting too long — at a glance, before you book the next lesson. No other stable software puts this on the front page. We did, because it's the question that matters most at 5am.</p>
       </div>
       <div class="feature-card">
         <div class="num">02 — Schedule</div>
         <h3>Lessons, livery, vet, farrier — one calendar, no double-bookings.</h3>
-        <p>Drag-and-drop scheduling. Recurring lessons in one tap. Clients see their bookings on their phone. The database physically prevents double-bookings — not as a check, as a guarantee. Email reminders shipping in beta; SMS shipping at public launch.</p>
+        <p>Drag-and-drop calendar across week and day views. Owners see everything; trainers see their lessons; clients see their own. Print this week's schedule and tape it to the tack room wall in two clicks. The database physically prevents a horse or trainer from being booked into two lessons at once. Not as a check the app runs — as a guarantee the schema enforces.</p>
       </div>
       <div class="feature-card">
         <div class="num">03 — Payments</div>
         <h3>One ledger for lessons, packs, and boarding — and a printable invoice in two clicks.</h3>
-        <p>Recurring boarding charges, lesson packs with remaining-balance tracking, single invoices. Print-ready A4 invoice and weekly schedule for the barn wall. Client balance is always live. SEPA and Stripe Checkout shipping at public launch — early-access stables get priority access.</p>
+        <p>Lesson packages with remaining-balance tracking. Recurring boarding charges generated in one click for every horse. Per-client account summaries that show exactly what's outstanding. Payments are recorded by you when they arrive — cash, transfer, card. Self-pay through the client portal is on the roadmap for public launch.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- =========== FOUNDING MEMBERS =========== -->
+<section id="founding-members" class="fm">
+  <div class="container">
+    <div class="eyebrow">Founding Members · 10 seats · closing when filled</div>
+    <h2>Ten European stables, twelve months free, one founder on the other end of every email.</h2>
+    <p>We&rsquo;re inviting ten European riding schools and livery yards to be the first stables on Longrein. <strong>Twelve months of the full product, free.</strong> No card. No trial cliff. No upsell at month 13 — when public pricing opens, founding members keep 50% of the public rate or &euro;30/month (whichever is lower) for the lifetime of the account.</p>
+    <p>In exchange, three things: a 30-minute call once a month for the year, a short case study with your name on it when we publish in 2027, and two warm intros to other stables in your country in the first six months. That&rsquo;s the contract. One page. You can leave any time.</p>
+    <div class="fm-grid">
+      <div class="col">
+        <h4>What you get</h4>
+        <ul>
+          <li>12 months free, full plan</li>
+          <li>Direct line to the founder</li>
+          <li>50% rate after, for life</li>
+          <li>One-page contract</li>
+          <li>Cancel any time</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h4>What we get</h4>
+        <ul>
+          <li>Real reps from a real yard</li>
+          <li>Bug reports under our nose</li>
+          <li>Case study + 2 referrals</li>
+          <li>The roadmap, written by you</li>
+        </ul>
+      </div>
+    </div>
+    <div class="fm-cta">
+      <div class="seats">Ten of ten seats remaining</div>
+      <a href="mailto:hello@longrein.eu?subject=Founding%20Member%20application&body=Stable%20name%3A%0AStable%20country%3A%0AHorses%3A%0AActive%20clients%3A%0AWhy%20Longrein%3A" class="apply">Apply for a Founding Member seat &rarr;</a>
+      <span class="downsell">Not ready for a 12-month commitment? <a href="#waitlist">Get on the public waitlist instead &rarr;</a></span>
     </div>
   </div>
 </section>
@@ -343,13 +522,14 @@
 <!-- =========== FOUNDER =========== -->
 <section id="founder">
   <div class="container founder">
-    <div class="avatar">REPLACE WITH FOUNDER PHOTO</div>
+    
     <div class="body">
       <div class="eyebrow">From the yard</div>
-      <h2>I run a stable in Lithuania. I built this because last winter was a mess.</h2>
-      <p>Last December I almost missed a colic call because the message lived in a WhatsApp thread three pages back. The same week I forgot to send two invoices. €380 sitting on my whiteboard, uncollected.</p>
-      <p>I love this work. I do not love what running it on five tools does to it. So I built the one I wished I had — and I am building it in public, on my own yard, with five other stables in the Baltics. If the way you run yours sounds anything like that, get on the list.</p>
-      <div class="signature">— Andreja</div>
+      <h2>Built in a Lithuanian stable, because last winter was a mess.</h2>
+      <p>Last December I almost missed a colic call because the message lived in a chat thread three pages back. The same week I forgot to send two invoices. €380 sitting on my whiteboard, uncollected.</p>
+      <p>I love this work. I do not love what running it on five tools does to it. So I built the one I wished I had — and I'm building it in the open, on my own yard.</p>
+        <p>If the way you run yours sounds anything like that, get on the list.</p>
+      <div class="signature">— The Longrein Stable</div>
     </div>
   </div>
 </section>
@@ -357,31 +537,11 @@
 <!-- =========== PRICING =========== -->
 <section id="pricing" class="pricing">
   <div class="container">
-    <div class="eyebrow">Pricing teaser</div>
-    <h2>Lock today's price. For 12 months. Even if we raise it.</h2>
-    <p class="disclaimer">Final pricing is locked at public launch. Waitlist members get the first 12 months at the launch price.</p>
-
-    <div class="price-grid">
-      <div class="price-card">
-        <div class="tier">Starter</div>
-        <h3>For yards with up to 10 horses</h3>
-        <div class="price">€19<small> / month</small></div>
-        <p class="desc">The basics: schedule, clients, payments. For one-trainer yards starting out.</p>
-      </div>
-      <div class="price-card featured">
-        <div class="tier">Pro</div>
-        <h3>For yards with 11–40 horses</h3>
-        <div class="price">€49<small> / month</small></div>
-        <p class="desc">Everything in Starter, plus the welfare board with overdue/over-cap alerts, the client portal, multi-trainer access, and email reminders. SMS reminders ship at public launch.</p>
-      </div>
-      <div class="price-card">
-        <div class="tier">Premium</div>
-        <h3>For yards with 41+ horses</h3>
-        <div class="price">€99<small> / month</small></div>
-        <p class="desc">Everything in Pro, plus team roles, advanced reporting, and priority support.</p>
-      </div>
-    </div>
-    <p class="annual-note">Annual: save 15%. Yearly billing fits how stables actually pay.</p>
+    <div class="eyebrow">When public launch opens</div>
+      <h2>Per-horse pricing. No feature gates. Pay for the size of your yard.</h2>
+      <p>Longrein opens to the public in autumn 2026 with one plan, priced per horse, with a floor and a ceiling. Every feature is in every account — no Pro tier locking the welfare board out of small yards.</p>
+      <p>Pricing locks at public launch. <strong>Waitlist members keep launch pricing for twelve months</strong> even if we raise it. <strong>Founding members keep their rate for the lifetime of the account</strong> &mdash; capped at &euro;30/month or 50% of the public price, whichever is lower.</p>
+      <p class="annual-note">One plan. Every feature. No upsell.</p>
   </div>
 </section>
 
@@ -394,7 +554,7 @@
     <div class="faq-list">
       <div class="faq-item">
         <h4>When does Longrein launch?</h4>
-        <p>Public beta opens in autumn 2026. Waitlist members get access first, and lock in the launch price for 12 months.</p>
+        <p>Founding Members onboard now through summer 2026 (10 seats). Public beta opens autumn 2026. Waitlist members get access before public launch.</p>
       </div>
       <div class="faq-item">
         <h4>Is my data safe?</h4>
@@ -410,7 +570,7 @@
       </div>
       <div class="faq-item">
         <h4>Can I see it before I commit?</h4>
-        <p>Yes. Get on the waitlist and you'll receive a 90-second tour and a 1-on-1 onboarding call with the founder for the first 50 customers. After that, it's a 14-day free trial — no card.</p>
+        <p>Yes. Founding Member applicants get a 45-minute onboarding call with the founder before signing anything. Waitlist members get a 90-second tour by email when public beta opens, plus a free 14-day trial — no card.</p>
       </div>
     </div>
   </div>
@@ -419,14 +579,14 @@
 <!-- =========== FINAL CTA =========== -->
 <section class="final-cta">
   <div class="container">
-    <h2>Stop running your stable on <span class="accent">WhatsApp.</span></h2>
-    <p>Get on the list. 200+ European stables already in.<br>Lithuania, Latvia, Estonia, Poland, Germany.</p>
+    <h2>Stop running your stable on <span class="accent">messaging apps.</span></h2>
+    <p>The list is open. Founding Members get twelve months free; waitlist gets first access at public launch with locked pricing.<br>Either way: one email, one founder, one chance to shape what stable software in Europe actually looks like.</p>
     <form class="capture js-waitlist-form" data-source="footer">
       <input type="email" name="email" placeholder="your@email.com" required aria-label="Your email" />
       <input type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-10000px;height:0;width:0;opacity:0;" />
       <button type="submit">Join the waitlist →</button>
     </form>
-    <p class="footnote">Free at launch · No card · Founder reads every reply</p>
+    <p class="footnote">Built in Lithuania · Hosted in Frankfurt · Founder reads every reply</p>
   </div>
 </section>
 
@@ -447,8 +607,8 @@
     <div class="right">
       <a href="mailto:hello@longrein.eu">hello@longrein.eu</a>
       <span>·</span>
-      <a href="#">Privacy</a>
-      <a href="#">Terms</a>
+      <a href="/legal/privacy">Privacy</a>
+      <a href="/legal/terms">Terms</a>
       <span>·</span>
       <span>EN | LT</span>
     </div>
@@ -515,6 +675,59 @@
             if (btn) { btn.disabled = false; btn.textContent = origLabel; }
           });
       });
+    });
+  })();
+</script>
+
+
+<!-- Cookie consent (GDPR) -->
+<div id="consent-banner" class="consent-banner" role="dialog" aria-label="Cookie consent" aria-live="polite">
+  <p>We use privacy-friendly analytics to understand how this page is used. No cookies, no cross-site tracking. <a href="/legal/cookies" target="_blank" rel="noopener">Learn more</a>.</p>
+  <div class="actions">
+    <button class="decline" type="button" data-consent="decline">Decline</button>
+    <button class="accept" type="button" data-consent="accept">Accept</button>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var STORAGE_KEY = 'longrein_consent_v1';
+    var banner = document.getElementById('consent-banner');
+    var stored = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch(e) {}
+
+    function loadAnalytics() {
+      // Plausible — privacy-first, no cookies, EU-friendly
+      var s1 = document.createElement('script');
+      s1.defer = true;
+      s1.setAttribute('data-domain', 'longrein.eu');
+      s1.src = 'https://plausible.io/js/script.js';
+      document.head.appendChild(s1);
+
+      // Vercel Analytics (Web Analytics)
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+      var s2 = document.createElement('script');
+      s2.defer = true;
+      s2.src = '/_vercel/insights/script.js';
+      document.head.appendChild(s2);
+    }
+
+    if (stored === 'accept') {
+      loadAnalytics();
+    } else if (stored === 'decline') {
+      // never show again
+    } else {
+      // first visit — show banner
+      banner.classList.add('show');
+    }
+
+    banner.addEventListener('click', function(e){
+      var btn = e.target.closest('button[data-consent]');
+      if (!btn) return;
+      var choice = btn.getAttribute('data-consent');
+      try { localStorage.setItem(STORAGE_KEY, choice); } catch(e) {}
+      banner.classList.remove('show');
+      if (choice === 'accept') loadAnalytics();
     });
   })();
 </script>

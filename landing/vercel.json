@@ -1,0 +1,51 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/demo",
+      "destination": "https://cal.eu/longrein/demo",
+      "permanent": true
+    },
+    {
+      "source": "/founding",
+      "destination": "/#founding-members",
+      "permanent": false
+    },
+    {
+      "source": "/customers",
+      "destination": "/#founding-members",
+      "permanent": false
+    },
+    {
+      "source": "/legal",
+      "destination": "https://app.longrein.eu/legal",
+      "permanent": false
+    },
+    {
+      "source": "/legal/privacy",
+      "destination": "https://app.longrein.eu/legal/privacy",
+      "permanent": false
+    },
+    {
+      "source": "/legal/terms",
+      "destination": "https://app.longrein.eu/legal/terms",
+      "permanent": false
+    },
+    {
+      "source": "/legal/cookies",
+      "destination": "https://app.longrein.eu/legal/cookies",
+      "permanent": false
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" }
+      ]
+    }
+  ]
+}

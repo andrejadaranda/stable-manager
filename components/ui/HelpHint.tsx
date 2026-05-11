@@ -57,8 +57,9 @@ export function HelpHint({
         <div
           role="dialog"
           className="
-            absolute right-0 top-full mt-2 z-30
-            w-80 max-w-[calc(100vw-2rem)]
+            absolute top-full mt-2 z-30
+            left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-0
+            w-[calc(100vw-2rem)] md:w-80
             bg-white rounded-xl shadow-lift ring-1 ring-ink-100
             p-4 text-left
           "

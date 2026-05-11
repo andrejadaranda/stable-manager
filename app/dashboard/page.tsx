@@ -1,7 +1,7 @@
 // /dashboard — premium overview home page (Navy + Orange refresh).
 //
 // Layout (desktop):
-//   1. Greeting hero with serif "Labas, {name}"
+//   1. Greeting hero with serif "Hi, {name}"
 //   2. KPI ring panel (utilization / collection / horse health) — right column
 //   3. Today's lessons card — left, top
 //   4. Active horses snapshot + Revenue dark hero card — left, bottom row
