@@ -67,16 +67,15 @@ export function LogSessionForm({
       action={formAction}
       className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4"
     >
-      {/* Horse ----------------------------------------------------- */}
+      {/* Horse (optional — log now, assign the horse later) -------- */}
       <label className="md:col-span-4 block">
-        <span className="block text-xs font-medium text-ink-700 mb-1">Horse</span>
+        <span className="block text-xs font-medium text-ink-700 mb-1">Horse (optional)</span>
         <select
           name="horse_id"
-          required
           defaultValue={last.horse_id ?? ""}
           className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 focus:outline-none focus:shadow-focus"
         >
-          <option value="" disabled>Select…</option>
+          <option value="">No horse yet — assign later</option>
           {horses.map((h) => (
             <option key={h.id} value={h.id}>{h.name}</option>
           ))}

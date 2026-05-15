@@ -73,7 +73,10 @@ export async function listMySessions(limit = 50): Promise<SessionWithLabels[]> {
 
 // ---------- create ---------------------------------------------------------
 export async function createSession(input: {
-  horseId: string;
+  /** The horse ridden. Optional — a session can be logged before the
+   *  horse is recorded ("assign later"). When null/empty, the session
+   *  simply isn't attributed to any horse timeline yet. */
+  horseId?: string | null;
   riderClientId?: string;
   riderProfileId?: string;
   riderNameFreeform?: string;
@@ -95,12 +98,14 @@ export async function createSession(input: {
     throw new Error("MISSING_RIDER");
   }
 
+  const horseId = input.horseId && input.horseId.trim() ? input.horseId.trim() : null;
+
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("sessions")
     .insert({
       stable_id:           ctx.stableId,
-      horse_id:            input.horseId,
+      horse_id:            horseId,
       rider_client_id:     input.riderClientId      ?? null,
       rider_profile_id:    input.riderProfileId     ?? null,
       rider_name_freeform: input.riderNameFreeform  ?? null,

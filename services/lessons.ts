@@ -7,7 +7,10 @@ import { getSession, requireRole } from "@/lib/auth/session";
 import { getHorseWorkloadStatus } from "@/services/horses";
 
 export type CreateLessonInput = {
-  horseId: string;
+  /** The horse for this lesson. Optional — a lesson can be booked
+   *  before the horse is assigned ("TBD horse"). When null/empty, the
+   *  double-booking preflight and welfare cap check are both skipped. */
+  horseId?: string | null;
   clientId: string;
   trainerId: string;   // profiles.id of the trainer
   startsAt: string;    // ISO timestamp
@@ -101,30 +104,38 @@ export async function createLesson(input: CreateLessonInput) {
 
   const supabase = createSupabaseServerClient();
 
-  // Friendly preflight against the exclusion constraint.
-  const { data: free } = await supabase.rpc("check_horse_available", {
-    p_horse_id: input.horseId,
-    p_starts_at: input.startsAt,
-    p_ends_at: input.endsAt,
-    p_exclude_lesson: null,
-  });
-  if (free === false) throw new Error("HORSE_DOUBLE_BOOKED");
-
-  // Welfare check: would adding this lesson push the horse over its
-  // daily or weekly cap? horse_is_overworked() returns the *current*
-  // counts on the supplied date, so we compare with-this-lesson-added.
+  // Normalise: empty string from a form select means "no horse yet".
+  const horseId = input.horseId && input.horseId.trim() ? input.horseId.trim() : null;
   const reason = (input.overLimitReason ?? "").trim();
-  if (!reason) {
-    const status = await getHorseWorkloadStatus(
-      input.horseId,
-      input.startsAt.slice(0, 10),
-    );
-    // After-this-lesson counts: existing + 1.
-    if (status.dailyCount + 1 > status.dailyLimit) {
-      throw new Error("HORSE_OVER_DAILY_LIMIT");
-    }
-    if (status.weeklyCount + 1 > status.weeklyLimit) {
-      throw new Error("HORSE_OVER_WEEKLY_LIMIT");
+
+  // Horse-specific checks only run when a horse is assigned. A
+  // TBD-horse lesson can't double-book or overwork a horse that
+  // isn't picked yet — both checks are skipped.
+  if (horseId) {
+    // Friendly preflight against the exclusion constraint.
+    const { data: free } = await supabase.rpc("check_horse_available", {
+      p_horse_id: horseId,
+      p_starts_at: input.startsAt,
+      p_ends_at: input.endsAt,
+      p_exclude_lesson: null,
+    });
+    if (free === false) throw new Error("HORSE_DOUBLE_BOOKED");
+
+    // Welfare check: would adding this lesson push the horse over its
+    // daily or weekly cap? horse_is_overworked() returns the *current*
+    // counts on the supplied date, so we compare with-this-lesson-added.
+    if (!reason) {
+      const status = await getHorseWorkloadStatus(
+        horseId,
+        input.startsAt.slice(0, 10),
+      );
+      // After-this-lesson counts: existing + 1.
+      if (status.dailyCount + 1 > status.dailyLimit) {
+        throw new Error("HORSE_OVER_DAILY_LIMIT");
+      }
+      if (status.weeklyCount + 1 > status.weeklyLimit) {
+        throw new Error("HORSE_OVER_WEEKLY_LIMIT");
+      }
     }
   }
 
@@ -148,7 +159,7 @@ export async function createLesson(input: CreateLessonInput) {
     .from("lessons")
     .insert({
       stable_id: session.stableId,         // RLS WITH CHECK validates this
-      horse_id: input.horseId,
+      horse_id: horseId,                   // null = TBD horse, assigned later
       client_id: input.clientId,
       trainer_id: input.trainerId,
       starts_at: input.startsAt,
@@ -229,9 +240,12 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
         .select("horse_id")
         .eq("id", lessonId)
         .maybeSingle();
-      if (existing) {
+      // Only check horse availability when the lesson actually has a
+      // horse — a TBD-horse lesson can't double-book anything.
+      const exHorseId = (existing as { horse_id: string | null } | null)?.horse_id ?? null;
+      if (existing && exHorseId) {
         const { data: free } = await supabase.rpc("check_horse_available", {
-          p_horse_id:        (existing as { horse_id: string }).horse_id,
+          p_horse_id:        exHorseId,
           p_starts_at:       input.startsAt,
           p_ends_at:         input.endsAt,
           p_exclude_lesson:  lessonId,
@@ -253,10 +267,12 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
         .eq("id", lessonId)
         .maybeSingle();
       if (existing) {
-        const ex = existing as { horse_id: string; starts_at: string };
+        const ex = existing as { horse_id: string | null; starts_at: string };
         const oldDay = ex.starts_at.slice(0, 10);
         const newDay = input.startsAt.slice(0, 10);
-        if (oldDay !== newDay) {
+        // Welfare load only applies to lessons that have a horse. A
+        // TBD-horse lesson carries no workload to re-check on move.
+        if (ex.horse_id && oldDay !== newDay) {
           const status = await getHorseWorkloadStatus(ex.horse_id, newDay);
           // The horse_is_overworked counts already include this lesson
           // on the OLD day, not the new one — so adding +1 to the new

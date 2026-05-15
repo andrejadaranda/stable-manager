@@ -80,8 +80,10 @@ export async function createLessonAction(
   }
 
   // Field-level validation -----------------------------------------------
-  if (!horseId || !clientId || !trainerId || !startsAt || !endsAt) {
-    return { error: "All fields except price and notes are required.", success: false };
+  // horse_id is optional — a lesson can be booked before the horse is
+  // assigned ("TBD horse"). Client, trainer, and times are required.
+  if (!clientId || !trainerId || !startsAt || !endsAt) {
+    return { error: "Client, trainer, and times are required.", success: false };
   }
 
   const startMs = Date.parse(startsAt);

@@ -360,7 +360,7 @@ export function CreateLessonForm({
               + Add new client
             </button>
           )}
-          <Select label="Horse"   name="horse_id"   required value={horseId}  onChange={setHorseId}  options={horses.map((h) => ({ id: h.id, label: h.name }))} placeholder="Select…" />
+          <Select label="Horse (optional)" name="horse_id" value={horseId} onChange={setHorseId} options={horses.map((h) => ({ id: h.id, label: h.name }))} placeholder="No horse yet — assign later" />
           <Select label="Trainer" name="trainer_id" required value={trainerId} onChange={setTrainerId} options={trainers.map((t) => ({ id: t.id, label: `${t.full_name ?? "(no name)"} (${t.role})` }))} placeholder="Select…" />
 
           {services.length > 0 && (

@@ -286,6 +286,7 @@ export function CalendarShell({
             // 15-min mark in the future (or 09:00 if the day is in the past).
             setSlot(seedSlotForDay(dayKey));
           }}
+          onSlotCreate={handleCreateAt}
           editable={editable}
         />
       </div>

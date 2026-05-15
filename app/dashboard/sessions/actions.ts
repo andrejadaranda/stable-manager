@@ -27,7 +27,8 @@ export async function createSessionAction(
   const ratingRaw        = String(formData.get("rating") ?? "").trim();
   const startedAtRaw     = String(formData.get("started_at") ?? "").trim();
 
-  if (!horseId) return { error: "Pick a horse.", success: false };
+  // horse_id is optional — a session can be logged before the horse is
+  // recorded ("assign later"). Rider + duration + type are required.
   if (!SESSION_TYPES.includes(typeRaw as SessionType)) {
     return { error: "Invalid session type.", success: false };
   }
@@ -62,7 +63,7 @@ export async function createSessionAction(
 
   try {
     await createSession({
-      horseId,
+      horseId: horseId || null,
       riderClientId,
       riderNameFreeform: riderNameRaw || undefined,
       durationMinutes: duration,
@@ -80,7 +81,7 @@ export async function createSessionAction(
   }
 
   revalidatePath("/dashboard/sessions");
-  revalidatePath(`/dashboard/horses/${horseId}`);
+  if (horseId) revalidatePath(`/dashboard/horses/${horseId}`);
   revalidatePath("/dashboard");
   return { error: null, success: true };
 }
