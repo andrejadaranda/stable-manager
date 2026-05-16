@@ -22,7 +22,7 @@ The single feature I'd love to show you: workload tracking per horse, with daily
 
 Looking at your stable's [Instagram / website / Facebook page], I'd guess [specific observation: "Lina is your main lesson horse — she's worth protecting from over-bookings" / "you run lessons 6 days a week which is exactly the use case we built around"]. Could be a good fit.
 
-A 45-min call to show you? Cal.com link: [longrein.eu/demo](https://longrein.eu/demo)
+A 30-min call to show you? Cal.com link: [longrein.eu/demo](https://longrein.eu/demo)
 
 Or just reply with a date.
 
@@ -51,7 +51,7 @@ Three things I think you'd care about specifically:
 
 We onboard one stable per business day in May–June. First 10 to confirm get the slots.
 
-A 45-min call? [longrein.eu/demo](https://longrein.eu/demo) or reply with a date.
+A 30-min call? [longrein.eu/demo](https://longrein.eu/demo) or reply with a date.
 
 — Andreja
 Founder · Longrein
@@ -79,7 +79,7 @@ Three pieces I think a yard your size cares about:
 
 Founding-member terms: 12 months free, 50% of public price for the life of the account after, no card to start, one-page contract, two-way exit any time.
 
-If even one piece of that solves a problem you currently solve with email, a 45-min call would be useful for both of us. [longrein.eu/demo](https://longrein.eu/demo) — or reply with a Tuesday or Thursday afternoon.
+If even one piece of that solves a problem you currently solve with email, a 30-min call would be useful for both of us. [longrein.eu/demo](https://longrein.eu/demo) — or reply with a Tuesday or Thursday afternoon.
 
 — Andreja
 Founder · Longrein
@@ -106,7 +106,7 @@ The pitch in 4 lines:
 
 We're signing up one stable per business day during May–June. If you want to look without a call first: [app.longrein.eu](https://app.longrein.eu) — sign up takes a minute, no card.
 
-Or 45 min on a call — [longrein.eu/demo](https://longrein.eu/demo).
+Or 30 min on a call — [longrein.eu/demo](https://longrein.eu/demo).
 
 Reply or ignore — both fine.
 
