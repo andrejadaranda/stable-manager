@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <style>
+      .bg { fill: #F4ECDF; }
+      .eyebrow { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 22px; fill: #6E6760; letter-spacing: 0.20em; text-transform: uppercase; font-weight: 600; }
+      .time { font-family: Georgia, "Times New Roman", serif; font-weight: 600; font-size: 240px; fill: #1E3A2A; letter-spacing: -0.04em; }
+      .accent-dot { fill: #B5793E; }
+      .body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 30px; fill: #1B1B1B; line-height: 1.55; }
+      .dash { fill: #B5793E; font-weight: 700; }
+      .wordmark { font-family: Georgia, "Times New Roman", serif; font-size: 38px; fill: #1E3A2A; letter-spacing: -0.01em; font-weight: 600; }
+      .wordmark-dot { fill: #B5793E; }
+      .footer-meta { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size: 20px; fill: #6E6760; letter-spacing: 0.06em; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1080" height="1080"/>
+
+  <!-- Top eyebrow -->
+  <text class="eyebrow" x="80" y="130">Stable morning</text>
+
+  <!-- Centerpiece: big time, alone -->
+  <text class="time" x="80" y="340">5:47</text>
+  <text class="time" x="80" y="500" font-size="64" font-weight="400" font-style="italic">in the morning.</text>
+
+  <!-- 3 message lines, with consistent dash markers, plenty of white space -->
+  <g transform="translate(80, 630)">
+    <text class="dash" x="0" y="0">—</text>
+    <text class="body" x="50" y="0">Lara isn't coming. Can Aušra take her slot?</text>
+  </g>
+
+  <g transform="translate(80, 705)">
+    <text class="dash" x="0" y="0">—</text>
+    <text class="body" x="50" y="0">Bay gelding may have hurt his leg last night.</text>
+  </g>
+
+  <g transform="translate(80, 780)">
+    <text class="dash" x="0" y="0">—</text>
+    <text class="body" x="50" y="0">Forgot the kids' tournament price list.</text>
+  </g>
+
+  <!-- Divider line -->
+  <line x1="80" y1="870" x2="280" y2="870" stroke="#1E3A2A" stroke-width="2" opacity="0.3"/>
+
+  <!-- Bottom: wordmark + meta -->
+  <text class="wordmark" x="80" y="950">Longrein<tspan class="wordmark-dot">.</tspan></text>
+  <text class="footer-meta" x="80" y="985">Stable management in one place.</text>
+  <text class="footer-meta" x="80" y="1015" fill="#1E3A2A" font-weight="600">longrein.eu</text>
+</svg>

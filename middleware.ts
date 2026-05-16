@@ -25,17 +25,23 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Gate the app — anything under (dashboard) requires auth.
+  // Gate the app — anything under /dashboard requires auth.
   const path = request.nextUrl.pathname;
   const isProtected = path.startsWith("/dashboard");
-  const isAuthRoute = path.startsWith("/login") || path.startsWith("/signup");
+  const isLoginOrSignup = path.startsWith("/login") || path.startsWith("/signup");
+
+  // /auth/* (callback, check-email, error) must be reachable in any session
+  // state. The confirmation link IS visited while signed-out, but the
+  // confirmation flow may also need to run for an already-signed-in user
+  // (e.g. switching email) — so never redirect away from /auth/*.
+  const isAuthFlow = path.startsWith("/auth/");
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
-  if (isAuthRoute && user) {
+  if (isLoginOrSignup && user && !isAuthFlow) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
