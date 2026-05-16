@@ -17,28 +17,37 @@
 
 ---
 
-### 1. What you get
+### 1. What you pay, what you get
 
-1.1 **12 months of Longrein at no cost**, starting on the Effective date and ending on **[date + 365 days]** ("Free Period").
+1.1 **One-time setup fee: €299.** Paid by SEPA bank transfer (or Stripe link, whichever you prefer) within 7 days of signing this agreement. Covers the founder-led onboarding in 1.3 below. **Money back in the first 30 days** if Longrein turns out not to be the right fit for your yard.
 
-1.2 **All current features**, including: calendar and scheduling, horse and client management, welfare module (over-cap, near-cap, resting buckets), session log, boarding charges, lesson payments, expenses, per-horse profitability, client portal, audit log, CSV export, team roles.
+1.2 **12 months of Longrein at no SaaS cost**, starting on the Effective date and ending on **[date + 365 days]** ("Free SaaS Period"). No card on file. No auto-renewal trap. No upsell at month 13.
 
-1.3 **Founder-led onboarding** — six scheduled touchpoints in your first 12 months:
+1.3 **Founder-led onboarding** — this is what the €299 buys:
 
 | When | What |
 |---|---|
-| Day 0 | 45-min Zoom onboarding |
+| Before Day 0 | I import your existing data (Excel, paper, prior SaaS) into your Longrein account |
+| Day 0 | 60-min Zoom onboarding — walk through your account configured to your yard |
+| Day 1 → Day 30 | Direct line to me (email + WhatsApp), 24h weekday response |
 | Day 7 | Written check-in + reply |
 | Day 14 | Adoption check + WhatsApp template |
 | Day 30 | 20-min Zoom review |
+
+1.4 **Continuing founder touchpoints** during the Free SaaS Period:
+
+| When | What |
+|---|---|
 | Month 6 | 45-min Zoom review + impact 1-pager |
 | Month 12 | Renewal call |
 
-1.4 **Direct line to me** (Andreja) — your messages get a response within 24 hours on weekdays. WhatsApp, email, or Zoom.
+1.5 **All current features**, included from Day 0: calendar and scheduling, horse and client management, welfare module (over-cap, near-cap, resting buckets), session log, boarding charges, lesson payments, expenses, per-horse profitability, client portal, audit log, CSV export, team roles.
 
-1.5 **Locked pricing for life** — at month 13, your account moves to **€30/month flat**, regardless of how many horses or features you use, for as long as your account stays active. This is **50% of public price**, and the cap holds even if Longrein's public price increases.
+1.6 **Direct line to me** (Andreja) — your messages get a response within 24 hours on weekdays for the full 12 months. WhatsApp, email, or Zoom.
 
-1.6 **Your data, exportable any time** — Settings → Backup → CSV export gives you everything (horses, clients, lessons, payments, expenses). Even if you cancel, you keep 90 days of read-only access to download a final export.
+1.7 **Locked pricing for life after the Free SaaS Period** — at month 13, your account moves to **the lower of (a) 50% of the public Longrein rate, or (b) €25/month flat**, for as long as your account stays active. This cap holds even if Longrein's public price increases.
+
+1.8 **Your data, exportable any time** — Settings → Backup → CSV export gives you everything (horses, clients, lessons, payments, expenses). Even if you cancel, you keep 90 days of read-only access to download a final export.
 
 ---
 
@@ -62,7 +71,7 @@
 
 3.2 **I will not surprise you.** Pricing, terms, and onboarding cadence are locked by this document. If I change something significant, you get 30 days written notice and the option to cancel and export.
 
-3.3 **If Longrein closes** — for any reason — you get 90 days notice, an export of all your data in CSV format, and a refund of any paid period (not applicable during the Free Period).
+3.3 **If Longrein closes** — for any reason — you get 90 days notice, an export of all your data in CSV format, and a pro-rated refund of any SaaS fees paid after the Free SaaS Period. The €299 setup fee is non-refundable after the first 30 days (the work has been delivered by then).
 
 3.4 **No lock-in tactics.** No auto-renewal traps. No "downgrade only by phone." No held-hostage data. You can leave at any time, before or after the Free Period.
 
@@ -76,7 +85,7 @@
 
 4.3 **GDPR:** I am the data controller for your account data. Sub-processors: Supabase (EU-Ireland), Vercel (EU-Frankfurt), Resend (EU-Ireland). Standard EU DPA available on request to `hello@longrein.eu`.
 
-4.4 **Liability cap:** during the Free Period, Longrein's liability to you is capped at €100. After the Free Period, capped at the prior 12 months of fees paid. Nothing in this clause excludes liability for fraud or willful misconduct.
+4.4 **Liability cap:** Longrein's liability to you is capped at the greater of (a) €299 (the setup fee paid), or (b) the prior 12 months of SaaS fees paid after the Free SaaS Period. Nothing in this clause excludes liability for fraud or willful misconduct.
 
 4.5 **This document supersedes** any prior emails, calls, or marketing materials regarding pricing or terms. The published Terms of Service at `longrein.eu/legal/terms` apply for any topic not covered here; if there's conflict, this document wins for the duration of your founding-member status.
 
@@ -142,11 +151,25 @@ Reply: "Of course — I'd want mine to do the same. Anything specific they push 
 
 This is a green flag. Stables with lawyers tend to be the well-run ones. Add 7 days to your timeline.
 
+### If they push back on the €299 setup fee
+
+Don't drop the fee. The €299 isn't a discount lever — it's the price of the founder-led setup which is the part that delivers value upfront. If they can't justify €299 to be onboarded personally by the founder, they can't justify the working relationship the FM cohort is built on.
+
+Two acceptable responses:
+
+1. **Split the payment.** "I can split the €299 into two: €149 at signature, €150 at Day 30. Total stays the same." This is the only price concession to make.
+
+2. **Lean on the money-back.** Remind them: 30-day money back. Full price, full access, full onboarding. If after 30 days it isn't working, full refund. Reduces the perceived risk dramatically.
+
+If they still won't pay €299, reply:
+
+> Got it — the €299 is what makes this real for both sides. Stables that won't justify it tend to not justify their own ops time either, and the founding-member program is built around stables that take this seriously. Want me to put you on the regular waitlist for autumn 2026 instead?
+
 ### If they ask to extend free period beyond 12 months
 
 Don't. The boundary is what makes the offer credible. Reply:
 
-> The 12 months free is calibrated against the 2 referrals + 1 case study. Pushing it longer changes the math on both sides. I'd rather lock it as-is now and revisit pricing transparently at month 12 if circumstances need it.
+> The 12 months free SaaS is calibrated against the €299 setup + 2 referrals + 1 case study. Pushing it longer changes the math on both sides. I'd rather lock it as-is now and revisit pricing transparently at month 12 if circumstances need it.
 
 ### If they ask for white-label / co-branding
 
