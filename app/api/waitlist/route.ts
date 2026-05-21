@@ -75,10 +75,46 @@ export async function POST(req: Request) {
   }
 
   const email = (payload.email ?? "").trim().toLowerCase();
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+
+  // Tightened input validation — length cap blocks oversized payloads and
+  // obviously-malformed values without hitting the database.
+  if (
+    !email
+    || email.length > 254 // RFC 5321 max email length
+    || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)
+  ) {
     return NextResponse.json(
       { ok: false, error: "Please enter a valid email." },
       { status: 400, headers },
+    );
+  }
+
+  // Reject obviously disposable / throwaway domains. Not exhaustive —
+  // serious bot deterrence belongs at the edge (Upstash Ratelimit or
+  // Cloudflare Turnstile, both planned for M2). This is the lightest
+  // defence that still filters 80% of low-effort signup spam.
+  const DISPOSABLE_DOMAINS = new Set([
+    "mailinator.com", "guerrillamail.com", "10minutemail.com",
+    "tempmail.com", "throwaway.email", "trashmail.com",
+    "yopmail.com", "fakeinbox.com", "getnada.com",
+  ]);
+  const emailDomain = email.split("@")[1] ?? "";
+  if (DISPOSABLE_DOMAINS.has(emailDomain)) {
+    // Silent success — don't tell the bot why we rejected.
+    return NextResponse.json({ ok: true }, { headers });
+  }
+
+  // Payload size guard — reject anything over 4KB. Legitimate signups
+  // are <1KB; oversized payloads are bot or malformed.
+  const payloadSize =
+    (payload.email?.length ?? 0)
+    + (payload.source?.length ?? 0)
+    + (payload.country?.length ?? 0)
+    + (payload.yard_size?.length ?? 0);
+  if (payloadSize > 4096) {
+    return NextResponse.json(
+      { ok: false, error: "Request too large." },
+      { status: 413, headers },
     );
   }
 
