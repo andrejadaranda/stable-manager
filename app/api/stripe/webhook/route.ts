@@ -257,9 +257,22 @@ async function syncSubscription(
     return;
   }
 
-  const priceId = sub.items.data[0]?.price.id ?? null;
-  const plan    = priceIdToPlan(priceId);
-  const status  = forcedStatus ?? mapStripeStatus(sub.status);
+  // In the Stripe 2026-04-22.dahlia API, current_period_start/end moved off
+  // the Subscription root and onto each Subscription Item. We have a single
+  // line item per subscription (one plan per stable), so reading item[0] is
+  // safe; the optional chain guards against the empty-items edge case that
+  // would only show up in malformed test events.
+  const firstItem = sub.items.data[0];
+  const priceId   = firstItem?.price.id ?? null;
+  const plan      = priceIdToPlan(priceId);
+  const status    = forcedStatus ?? mapStripeStatus(sub.status);
+
+  const periodStartIso = firstItem?.current_period_start
+    ? new Date(firstItem.current_period_start * 1000).toISOString()
+    : null;
+  const periodEndIso = firstItem?.current_period_end
+    ? new Date(firstItem.current_period_end * 1000).toISOString()
+    : null;
 
   // Upsert the canonical subscription row. The stable already has one
   // from the migration-16 trigger, so this is normally an update.
@@ -272,8 +285,8 @@ async function syncSubscription(
         stripe_price_id:        priceId,
         plan,
         status,
-        current_period_start:   new Date(sub.current_period_start * 1000).toISOString(),
-        current_period_end:     new Date(sub.current_period_end   * 1000).toISOString(),
+        current_period_start:   periodStartIso,
+        current_period_end:     periodEndIso,
         cancel_at:              sub.cancel_at      ? new Date(sub.cancel_at      * 1000).toISOString() : null,
         cancelled_at:           sub.canceled_at    ? new Date(sub.canceled_at    * 1000).toISOString() : null,
       },
@@ -281,13 +294,13 @@ async function syncSubscription(
     );
 
   // Mirror plan + trial_ends_at onto stables for fast UI reads.
+  // (Re-uses periodEndIso computed above — same Dahlia API path through the
+  // first subscription item.)
   await supabase
     .from("stables")
     .update({
       plan,
-      trial_ends_at: status === "trialing"
-        ? new Date(sub.current_period_end * 1000).toISOString()
-        : null,
+      trial_ends_at: status === "trialing" ? periodEndIso : null,
     })
     .eq("id", stable.id);
 }
