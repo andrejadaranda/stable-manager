@@ -205,6 +205,73 @@ export async function resendConfirmationAction(
 }
 
 // ---------------------------------------------------------------
+// Forgot password — request a reset email
+// ---------------------------------------------------------------
+// Triggers Supabase's password-recovery email via Resend SMTP. The link
+// in the email lands the user at /reset-password with a short-lived
+// recovery session, which the reset-password page completes with a new
+// password.
+//
+// Security: we ALWAYS return the same "sent" response — we never reveal
+// whether the email exists in our system. This is the standard pattern
+// for password reset flows; a leaky reset endpoint is a free user
+// enumeration oracle.
+// ---------------------------------------------------------------
+export async function requestPasswordResetAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { error: "Email is required.", email };
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteOrigin()}/reset-password`,
+  });
+
+  // Quietly log non-rate-limit errors but never expose them to the
+  // caller — see comment above for why.
+  if (error && !error.message.toLowerCase().includes("rate")) {
+    console.warn("[forgot-password]", error.message);
+  }
+  if (error && error.message.toLowerCase().includes("rate")) {
+    return { error: mapAuthError(error.message).error, email };
+  }
+
+  redirect(`/forgot-password?sent=${encodeURIComponent(email)}`);
+}
+
+// ---------------------------------------------------------------
+// Update password — complete a recovery
+// ---------------------------------------------------------------
+// Called from /reset-password after the user lands from a recovery link.
+// The Supabase session at this point is in "recovery" mode and the only
+// thing it's authorised for is updating the password.
+// ---------------------------------------------------------------
+export async function updatePasswordAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const password = String(formData.get("password") ?? "");
+  const confirm  = String(formData.get("confirm_password") ?? "");
+
+  if (password.length < 8) {
+    return { error: "Password must be at least 8 characters." };
+  }
+  if (password !== confirm) {
+    return { error: "Passwords don't match." };
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { error: mapAuthError(error.message).error };
+  }
+
+  redirect("/dashboard");
+}
+
+// ---------------------------------------------------------------
 // Logout
 // ---------------------------------------------------------------
 export async function logoutAction() {
