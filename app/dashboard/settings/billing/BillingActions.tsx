@@ -41,7 +41,7 @@ export function BillingActions({ kind, label }: Props) {
         type="button"
         onClick={onClick}
         disabled={busy}
-        className="inline-flex w-fit items-center gap-2 rounded-full bg-ink-900 px-6 py-3 text-sm font-medium text-cream hover:bg-ink-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+        className="inline-flex w-fit items-center gap-2 rounded-full bg-brand-700 px-6 py-3 text-sm font-medium text-surface hover:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
       >
         {busy ? "Opening…" : (label ?? defaultLabel)}
       </button>
