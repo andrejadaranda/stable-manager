@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createClientAction,
@@ -8,6 +8,8 @@ import {
 } from "@/app/dashboard/clients/actions";
 
 const createClientInitialState: CreateClientState = { error: null, success: false };
+
+type ReminderPrefValue = "none" | "email" | "sms" | "both";
 
 export function CreateClientPanel() {
   const [open, setOpen] = useState(false);
@@ -28,6 +30,29 @@ function CreateClientForm({ onClose }: { onClose: () => void }) {
   const [state, formAction] = useFormState<CreateClientState, FormData>(
     createClientAction, createClientInitialState,
   );
+
+  // Track email/phone/reminder choice locally so we can:
+  //  (1) disable email/sms options when the contact channel isn't filled
+  //  (2) surface a helpful hint instead of letting the server bounce the form
+  // The server still re-validates — this is purely UX scaffolding.
+  const [email, setEmail]               = useState("");
+  const [phone, setPhone]               = useState("");
+  const [reminderPref, setReminderPref] = useState<ReminderPrefValue>("none");
+
+  const hasEmail = email.trim().length > 0;
+  const hasPhone = phone.trim().length > 0;
+
+  const reminderHint = useMemo(() => {
+    if (reminderPref === "email" && !hasEmail)
+      return "Add an email above to enable email reminders.";
+    if (reminderPref === "sms" && !hasPhone)
+      return "Add a phone number above to enable SMS reminders.";
+    if (reminderPref === "both" && (!hasEmail || !hasPhone))
+      return "Both channels selected — fill in email AND phone above.";
+    if (reminderPref === "sms" || reminderPref === "both")
+      return "SMS dispatch goes live with the June update — preference is saved now.";
+    return null;
+  }, [reminderPref, hasEmail, hasPhone]);
 
   useEffect(() => {
     if (state.success) onClose();
@@ -64,8 +89,56 @@ function CreateClientForm({ onClose }: { onClose: () => void }) {
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-3 flex flex-col gap-3.5">
           <Field label="Full name" name="full_name" type="text" required />
-          <Field label="Phone (optional)" name="phone" type="tel" />
-          <Field label="Email (optional)" name="email" type="email" />
+          <Field
+            label="Phone (optional)"
+            name="phone"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.currentTarget.value)}
+          />
+          <Field
+            label="Email (optional)"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.currentTarget.value)}
+          />
+
+          {/* Reminder preference — captured now so when SMS dispatch ships
+              in #34 we can fire reminders without re-prompting each client. */}
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-neutral-700">
+              Lesson reminders
+            </span>
+            <select
+              name="reminder_pref"
+              value={reminderPref}
+              onChange={(e) =>
+                setReminderPref(e.currentTarget.value as ReminderPrefValue)
+              }
+              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+            >
+              <option value="none">Don&apos;t send reminders</option>
+              <option value="email" disabled={!hasEmail}>
+                Email {hasEmail ? "" : "(add email first)"}
+              </option>
+              <option value="sms" disabled={!hasPhone}>
+                SMS {hasPhone ? "(coming June)" : "(add phone first)"}
+              </option>
+              <option
+                value="both"
+                disabled={!hasEmail || !hasPhone}
+              >
+                Email + SMS{" "}
+                {!hasEmail || !hasPhone ? "(add both contacts first)" : ""}
+              </option>
+            </select>
+            {reminderHint && (
+              <span className="text-xs text-neutral-500 mt-0.5">
+                {reminderHint}
+              </span>
+            )}
+          </label>
 
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-neutral-700">Skill level</span>

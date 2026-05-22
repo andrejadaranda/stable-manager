@@ -8,6 +8,10 @@ import { getSession, requireRole } from "@/lib/auth/session";
 
 export type SkillLevel = "beginner" | "intermediate" | "advanced" | "pro";
 
+/** Lesson-reminder channel preference per client.
+ *  Captured at client-creation time; cron-driven dispatch lands in #34. */
+export type ReminderPref = "none" | "email" | "sms" | "both";
+
 export type ClientRow = {
   id: string;
   stable_id: string;
@@ -28,6 +32,8 @@ export type ClientRow = {
   /** True when client is purely a horse-owner (boarder), not a rider.
    *  Drives Clients-page segmentation + skips skill-level requirement. */
   is_horse_owner_only: boolean;
+  /** How (if at all) the client wants to be reminded about upcoming lessons. */
+  reminder_pref: ReminderPref;
   created_at: string;
   updated_at: string;
 };
@@ -102,6 +108,7 @@ export async function createClient(input: {
   active?: boolean;
   defaultLessonPrice?: number;
   notes?: string;
+  reminderPref?: ReminderPref;
 }) {
   const session = await getSession();
   requireRole(session, "owner", "employee");
@@ -118,6 +125,7 @@ export async function createClient(input: {
       skill_level: input.skillLevel ?? null,
       active: input.active ?? true,
       notes: input.notes ?? null,
+      reminder_pref: input.reminderPref ?? "none",
     })
     .select()
     .single();
@@ -137,6 +145,7 @@ export type UpdateClientInput = {
   emergencyContactPhone?:    string | null;
   emergencyContactRelation?: string | null;
   isHorseOwnerOnly?:         boolean;
+  reminderPref?:             ReminderPref;
 };
 
 export async function updateClient(id: string, input: UpdateClientInput) {
@@ -155,6 +164,7 @@ export async function updateClient(id: string, input: UpdateClientInput) {
   if (input.emergencyContactPhone    !== undefined) update.emergency_contact_phone    = input.emergencyContactPhone;
   if (input.emergencyContactRelation !== undefined) update.emergency_contact_relation = input.emergencyContactRelation;
   if (input.isHorseOwnerOnly         !== undefined) update.is_horse_owner_only        = input.isHorseOwnerOnly;
+  if (input.reminderPref             !== undefined) update.reminder_pref              = input.reminderPref;
 
   const { data, error } = await supabase
     .from("clients")

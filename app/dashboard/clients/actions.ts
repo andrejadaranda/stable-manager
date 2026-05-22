@@ -1,24 +1,31 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient, updateClient, type SkillLevel } from "@/services/clients";
+import {
+  createClient,
+  updateClient,
+  type SkillLevel,
+  type ReminderPref,
+} from "@/services/clients";
 
 export type CreateClientState = { error: string | null; success: boolean };
 
 const initial: CreateClientState = { error: null, success: false };
 
 const SKILL_LEVELS: SkillLevel[] = ["beginner", "intermediate", "advanced", "pro"];
+const REMINDER_PREFS: ReminderPref[] = ["none", "email", "sms", "both"];
 
 export async function createClientAction(
   _prev: CreateClientState,
   formData: FormData,
 ): Promise<CreateClientState> {
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  const email    = String(formData.get("email") ?? "").trim();
-  const phone    = String(formData.get("phone") ?? "").trim();
-  const skill    = String(formData.get("skill_level") ?? "");
-  const status   = String(formData.get("status") ?? "active");
-  const notes    = String(formData.get("notes") ?? "").trim();
+  const fullName     = String(formData.get("full_name") ?? "").trim();
+  const email        = String(formData.get("email") ?? "").trim();
+  const phone        = String(formData.get("phone") ?? "").trim();
+  const skill        = String(formData.get("skill_level") ?? "");
+  const status       = String(formData.get("status") ?? "active");
+  const notes        = String(formData.get("notes") ?? "").trim();
+  const reminderRaw  = String(formData.get("reminder_pref") ?? "none");
 
   if (!fullName) return { error: "Full name is required.", success: false };
 
@@ -34,6 +41,29 @@ export async function createClientAction(
     return { error: "Email looks invalid.", success: false };
   }
 
+  // Reminder preference: validate enum + enforce channel availability.
+  // Email path requires an email. SMS path requires a phone AND is
+  // post-launch (cron lands in #34) — we still store the preference so
+  // that when SMS goes live we can start firing reminders immediately
+  // for clients who opted in at signup time.
+  if (!REMINDER_PREFS.includes(reminderRaw as ReminderPref)) {
+    return { error: "Invalid reminder preference.", success: false };
+  }
+  const reminderPref = reminderRaw as ReminderPref;
+
+  if ((reminderPref === "email" || reminderPref === "both") && !email) {
+    return {
+      error: "Email reminder selected but no email provided.",
+      success: false,
+    };
+  }
+  if ((reminderPref === "sms" || reminderPref === "both") && !phone) {
+    return {
+      error: "SMS reminder selected but no phone provided.",
+      success: false,
+    };
+  }
+
   try {
     await createClient({
       fullName,
@@ -42,6 +72,7 @@ export async function createClientAction(
       skillLevel,
       active: status === "active",
       notes: notes || undefined,
+      reminderPref,
     });
   } catch (err: any) {
     const message = err?.message ?? "";
@@ -74,6 +105,13 @@ export async function updateClientAction(
   const ecPhone    = String(formData.get("emergency_contact_phone") ?? "").trim();
   const ecRelation = String(formData.get("emergency_contact_relation") ?? "").trim();
   const horseOwnerOnly = formData.get("is_horse_owner_only") === "true";
+  // Reminder preference is optional on update — only included when the
+  // edit form actually submits it, so legacy forms still work.
+  const reminderRaw = formData.get("reminder_pref");
+  const reminderPref =
+    reminderRaw === null
+      ? undefined
+      : (String(reminderRaw) as ReminderPref);
 
   if (!id)        return { error: "Missing client id.", success: false };
   if (!fullName)  return { error: "Full name is required.", success: false };
@@ -88,6 +126,24 @@ export async function updateClientAction(
   if (email && !email.includes("@"))
     return { error: "Email looks invalid.", success: false };
 
+  if (reminderPref !== undefined) {
+    if (!REMINDER_PREFS.includes(reminderPref)) {
+      return { error: "Invalid reminder preference.", success: false };
+    }
+    if ((reminderPref === "email" || reminderPref === "both") && !email) {
+      return {
+        error: "Email reminder selected but no email provided.",
+        success: false,
+      };
+    }
+    if ((reminderPref === "sms" || reminderPref === "both") && !phone) {
+      return {
+        error: "SMS reminder selected but no phone provided.",
+        success: false,
+      };
+    }
+  }
+
   try {
     await updateClient(id, {
       fullName,
@@ -100,6 +156,7 @@ export async function updateClientAction(
       emergencyContactPhone:    ecPhone    === "" ? null : ecPhone,
       emergencyContactRelation: ecRelation === "" ? null : ecRelation,
       isHorseOwnerOnly:         horseOwnerOnly,
+      reminderPref,
     });
   } catch (err: any) {
     const message = err?.message ?? "";
