@@ -131,6 +131,15 @@ export async function POST() {
     // Allow the user to enter a tax ID if they're a business (Lithuania,
     // EU VAT, etc.). Optional from their end, but legal-clean for invoices.
     tax_id_collection: { enabled: true },
+    // Required by Stripe whenever tax_id_collection is enabled AND we're
+    // reusing an existing customer. Without `customer_update[name]=auto`
+    // Stripe returns:
+    //   "Tax ID collection requires updating business name on the customer.
+    //    To enable tax ID collection for an existing customer, please set
+    //    'customer_update[name]' to 'auto'."
+    // Setting it to `auto` lets the Checkout Session write the business name
+    // the user enters back to the Stripe customer record.
+    customer_update: { name: "auto" },
     // EU compliance — let the user choose currency display + locale.
     // Stripe auto-detects from billing address; this just controls the
     // initial page language.
