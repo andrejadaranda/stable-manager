@@ -5,7 +5,8 @@
 // (no full-screen overlay — health adds are less frequent).
 
 import { useEffect, useRef, useState } from "react";
-import { useActionState } from "react";
+// React 18: useFormState from react-dom (renamed to useActionState in React 19).
+import { useFormState } from "react-dom";
 import {
   createHealthRecordAction,
   type CreateHealthState,
@@ -68,7 +69,7 @@ function AddHealthRecordForm({
   horseId: string;
   onDone: () => void;
 }) {
-  const [state, formAction] = useActionState(createHealthRecordAction, initial);
+  const [state, formAction] = useFormState(createHealthRecordAction, initial);
   const [kind, setKind] = useState<keyof typeof KIND_LABEL>("vaccination");
 
   useEffect(() => {

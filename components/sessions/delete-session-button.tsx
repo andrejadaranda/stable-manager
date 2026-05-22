@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+// React 18: useFormState from react-dom (renamed to useActionState in React 19).
+import { useFormState, useFormStatus } from "react-dom";
 import {
   deleteSessionAction,
   type DeleteSessionState,
@@ -10,7 +10,7 @@ import {
 const initialState: DeleteSessionState = { error: null, success: false };
 
 export function DeleteSessionButton({ sessionId }: { sessionId: string }) {
-  const [state, formAction] = useActionState(deleteSessionAction, initialState);
+  const [state, formAction] = useFormState(deleteSessionAction, initialState);
 
   return (
     <form action={formAction}>

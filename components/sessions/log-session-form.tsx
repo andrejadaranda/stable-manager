@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+// React 18 (installed): useFormState lives in react-dom. React 19 renamed
+// it to useActionState (in react). Same signature; we use useFormState
+// until we bump to React 19.
+import { useFormState, useFormStatus } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 import {
   createSessionAction,
@@ -32,7 +34,7 @@ export function LogSessionForm({
   horses: HorseOpt[];
   clients: ClientOpt[];
 }) {
-  const [state, formAction] = useActionState(createSessionAction, initialState);
+  const [state, formAction] = useFormState(createSessionAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const [last, setLast] = useState<LastPick>({});
 

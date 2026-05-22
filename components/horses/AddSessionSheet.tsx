@@ -8,7 +8,8 @@
 // we don't fork a new action, we just build a thinner UI for it.
 
 import { useEffect, useRef, useState } from "react";
-import { useActionState } from "react";
+// React 18: useFormState from react-dom (renamed to useActionState in React 19).
+import { useFormState } from "react-dom";
 import {
   createSessionAction,
   type CreateSessionState,
@@ -85,7 +86,7 @@ function AddSessionSheet({
   clients: ClientOpt[];
   onClose: () => void;
 }) {
-  const [state, formAction] = useActionState(createSessionAction, initialState);
+  const [state, formAction] = useFormState(createSessionAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
   // Close after successful save — also triggers parent revalidate via
