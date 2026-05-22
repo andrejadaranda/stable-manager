@@ -6,7 +6,7 @@
 //   * Fully English copy.
 //   * 15-min step on datetime-local inputs.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   updateLessonAction,
@@ -432,8 +432,17 @@ export function EditLessonDialog({
 }
 
 // Tiny side panel: "Mark paid" / "Mark unpaid" quick actions.
-// Each is its own <form> so the action stays distinct from the main
-// edit form's save action.
+//
+// BUGFIX 2026-05-22: this component is rendered INSIDE the parent
+// <form id="edit-lesson-form"> (line 164). HTML forbids nested <form>
+// elements; browsers silently drop the inner form, so submit clicks
+// on the inner buttons would bubble to the outer form (or do nothing).
+// User-visible symptom: "Mark paid" did nothing on mobile (and desktop).
+//
+// Fix: drop the inner <form> entirely. Use plain <button type="button">
+// that programmatically builds FormData and dispatches the server-action
+// reducer via useTransition. This works correctly while sitting inside
+// the parent form because no nested <form> element is emitted.
 function PaidQuickActions({
   lessonId,
   isPaid,
@@ -447,30 +456,43 @@ function PaidQuickActions({
   paidAction: (formData: FormData) => void;
   unpaidAction: (formData: FormData) => void;
 }) {
+  const [pending, startTransition] = useTransition();
   if (priceIsZero) return null;
+
+  function handleMarkPaid() {
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    fd.set("method",    "cash");
+    startTransition(() => paidAction(fd));
+  }
+
+  function handleMarkUnpaid() {
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    startTransition(() => unpaidAction(fd));
+  }
 
   if (isPaid) {
     return (
-      <form action={unpaidAction}>
-        <input type="hidden" name="lesson_id" value={lessonId} />
-        <UnpaidSubmit />
-      </form>
+      <button
+        type="button"
+        onClick={handleMarkUnpaid}
+        disabled={pending}
+        className="
+          h-10 px-3.5 rounded-xl text-xs font-medium whitespace-nowrap
+          border border-ink-200 bg-white text-ink-700 hover:bg-ink-100/60
+          disabled:opacity-50 disabled:cursor-not-allowed
+          transition-colors
+        "
+      >
+        {pending ? "Reverting…" : "Mark unpaid"}
+      </button>
     );
   }
   return (
-    <form action={paidAction}>
-      <input type="hidden" name="lesson_id" value={lessonId} />
-      <input type="hidden" name="method"    value="cash"    />
-      <PaidSubmit />
-    </form>
-  );
-}
-
-function PaidSubmit() {
-  const { pending } = useFormStatus();
-  return (
     <button
-      type="submit"
+      type="button"
+      onClick={handleMarkPaid}
       disabled={pending}
       className="
         h-10 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap
@@ -480,24 +502,6 @@ function PaidSubmit() {
       "
     >
       {pending ? "Marking…" : "Mark paid"}
-    </button>
-  );
-}
-
-function UnpaidSubmit() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="
-        h-10 px-3.5 rounded-xl text-xs font-medium whitespace-nowrap
-        border border-ink-200 bg-white text-ink-700 hover:bg-ink-100/60
-        disabled:opacity-50 disabled:cursor-not-allowed
-        transition-colors
-      "
-    >
-      {pending ? "Reverting…" : "Mark unpaid"}
     </button>
   );
 }
