@@ -139,7 +139,10 @@ export async function POST() {
     //    'customer_update[name]' to 'auto'."
     // Setting it to `auto` lets the Checkout Session write the business name
     // the user enters back to the Stripe customer record.
-    customer_update: { name: "auto" },
+    customer_update: { name: "auto", address: "auto" },
+    // Also collect the billing address — required by Stripe when tax_id_collection
+    // is enabled, and useful for invoice display + EU VAT compliance.
+    billing_address_collection: "auto",
     // EU compliance — let the user choose currency display + locale.
     // Stripe auto-detects from billing address; this just controls the
     // initial page language.
