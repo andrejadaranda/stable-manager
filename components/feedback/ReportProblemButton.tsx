@@ -63,15 +63,29 @@ export function ReportProblemButton() {
 
   return (
     <>
-      {/* Floating button — only rendered when modal is closed */}
+      {/* Floating button — only rendered when modal is closed.
+         Mobile (< sm = 640px): icon-only, smaller, anchored bottom-left to
+         avoid covering primary FAB-style CTAs (Create lesson, Save changes,
+         etc.) which are typically bottom-right on mobile pages. Adds
+         safe-area-inset-bottom for iOS home indicator.
+         Desktop (≥ sm): full pill with label, bottom-right as before. */}
       {!open && (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-brand-700 hover:bg-brand-600 text-surface px-4 py-2.5 text-sm font-medium shadow-lift transition-colors"
+          className="
+            fixed z-40 rounded-full bg-brand-700 hover:bg-brand-600 text-surface
+            shadow-lift transition-colors inline-flex items-center justify-center gap-2
+            font-medium
+            bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3
+            h-11 w-11 text-base
+            sm:bottom-5 sm:right-5 sm:left-auto sm:h-auto sm:w-auto sm:px-4 sm:py-2.5 sm:text-sm
+          "
           aria-label="Report a problem"
+          title="Report a problem"
         >
-          <span aria-hidden>💬</span> Report a problem
+          <span aria-hidden>💬</span>
+          <span className="hidden sm:inline">Report a problem</span>
         </button>
       )}
 

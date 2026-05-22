@@ -46,6 +46,65 @@ export async function middleware(request: NextRequest) {
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
+
+  // -----------------------------------------------------------------
+  // Subscription gate — block /dashboard/* (except billing) for users
+  // whose stable has no active subscription.
+  //
+  // Rationale: without this, a signed-up user could use the entire app
+  // without ever entering a card — free-loophole. The /dashboard/settings/billing
+  // page itself must be reachable, otherwise they cannot fix the gating.
+  //
+  // Status whitelist:
+  //   - 'trialing'  → 14-day card-required trial in progress
+  //   - 'active'    → paying (or Founding 15 manual-billed)
+  //
+  // Status block-list (anything not in whitelist):
+  //   - 'past_due', 'unpaid', 'cancelled', 'incomplete' → redirect to billing
+  //   - missing row → redirect to billing (shouldn't happen post-signup, but
+  //     belt-and-braces)
+  //
+  // We intentionally do NOT call /api/* here — that's where the billing
+  // status comes FROM. Write-protection on API routes is a separate concern
+  // (see #LAYER-4 in the launch-readiness notes); this layer just prevents
+  // browsing the app UI without a valid subscription.
+  // -----------------------------------------------------------------
+  const isDashboard = path.startsWith("/dashboard");
+  const isBillingPage = path.startsWith("/dashboard/settings/billing");
+  if (isDashboard && !isBillingPage && user) {
+    // Look up the user's stable_id via their profile, then check subscription.
+    // Two queries instead of one join because Supabase ssr client doesn't
+    // play nicely with nested selects on RLS-protected views from middleware.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("stable_id")
+      .eq("auth_user_id", user.id)
+      .maybeSingle();
+
+    if (!profile?.stable_id) {
+      // User without a profile — shouldn't happen, but if it does, send them
+      // to billing where they'll either complete signup or see a clear error.
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard/settings/billing";
+      url.searchParams.set("gated", "no-profile");
+      return NextResponse.redirect(url);
+    }
+
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("stable_id", profile.stable_id)
+      .maybeSingle();
+
+    const allowed = sub?.status === "trialing" || sub?.status === "active";
+    if (!allowed) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard/settings/billing";
+      url.searchParams.set("gated", sub?.status ?? "no-subscription");
+      return NextResponse.redirect(url);
+    }
+  }
+
   return response;
 }
 
