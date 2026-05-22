@@ -54,30 +54,70 @@ export function HelpHint({
         ?
       </button>
       {open && (
-        <div
-          role="dialog"
-          className="
-            absolute top-full mt-2 z-30
-            left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-0
-            w-[calc(100vw-2rem)] md:w-80
-            bg-white rounded-xl shadow-lift ring-1 ring-ink-100
-            p-4 text-left
-          "
-        >
-          <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-brand-700 mb-1.5">
-            {title}
-          </p>
-          <div className="text-[12.5px] text-ink-700 leading-relaxed space-y-2">
-            {body}
-          </div>
-          <button
-            type="button"
+        <>
+          {/* Mobile: full-width bottom sheet + backdrop. The previous
+             absolutely-positioned popover overflowed off the left edge
+             of the viewport whenever the "?" sat near the left margin
+             (which is most page headings on mobile). Bottom sheet
+             sidesteps all anchoring math and matches native mobile UX. */}
+          <div
+            className="md:hidden fixed inset-0 z-30 bg-black/30"
             onClick={() => setOpen(false)}
-            className="mt-3 text-[11.5px] text-ink-500 hover:text-ink-900"
+            aria-hidden
+          />
+          <div
+            role="dialog"
+            className="
+              md:hidden fixed z-40
+              left-0 right-0 bottom-0
+              bg-white rounded-t-2xl shadow-lift ring-1 ring-ink-100
+              p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]
+              max-h-[80vh] overflow-y-auto
+              text-left
+            "
           >
-            Got it →
-          </button>
-        </div>
+            <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-brand-700 mb-1.5">
+              {title}
+            </p>
+            <div className="text-[13px] text-ink-700 leading-relaxed space-y-2">
+              {body}
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-4 w-full rounded-xl bg-brand-700 hover:bg-brand-600 text-white text-sm font-medium py-2.5"
+            >
+              Got it
+            </button>
+          </div>
+
+          {/* Desktop: inline popover anchored to the trigger as before. */}
+          <div
+            role="dialog"
+            className="
+              hidden md:block
+              absolute top-full mt-2 z-30
+              left-auto right-0
+              w-80
+              bg-white rounded-xl shadow-lift ring-1 ring-ink-100
+              p-4 text-left
+            "
+          >
+            <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-brand-700 mb-1.5">
+              {title}
+            </p>
+            <div className="text-[12.5px] text-ink-700 leading-relaxed space-y-2">
+              {body}
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-3 text-[11.5px] text-ink-500 hover:text-ink-900"
+            >
+              Got it →
+            </button>
+          </div>
+        </>
       )}
     </div>
   );

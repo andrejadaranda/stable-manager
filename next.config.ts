@@ -32,6 +32,9 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Preserve React strict-mode behaviour (was previously in next.config.js,
+  // which is now deleted — Next loads .ts in preference to .js).
+  reactStrictMode: true,
   experimental: {
     typedRoutes: true,
   },

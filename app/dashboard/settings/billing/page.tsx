@@ -187,7 +187,7 @@ export default async function BillingSettingsPage({
         />
         <div className="p-6 flex flex-col gap-3 text-sm text-ink-700 leading-relaxed">
           <p>
-            Founding Members pay <strong>€15 per month for life</strong> after a
+            Founding Members pay <strong>€25 per month, locked for life</strong> after a
             one-time <strong>€299 onboarding</strong> with the founder — 12 months
             free before the first charge.
           </p>
