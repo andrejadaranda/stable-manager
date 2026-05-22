@@ -12,7 +12,10 @@ export type CreateLessonInput = {
    *  double-booking preflight and welfare cap check are both skipped. */
   horseId?: string | null;
   clientId: string;
-  trainerId: string;   // profiles.id of the trainer
+  /** Trainer for this lesson. Optional — a lesson can be booked before
+   *  the weekly trainer rota is set ("TBD trainer"). When null/empty,
+   *  the trainer-double-booking preflight check is skipped. */
+  trainerId?: string | null;
   startsAt: string;    // ISO timestamp
   endsAt: string;      // ISO timestamp
   price?: number;
@@ -161,7 +164,8 @@ export async function createLesson(input: CreateLessonInput) {
       stable_id: session.stableId,         // RLS WITH CHECK validates this
       horse_id: horseId,                   // null = TBD horse, assigned later
       client_id: input.clientId,
-      trainer_id: input.trainerId,
+      // null = TBD trainer, assigned later (mirrors horse_id pattern)
+      trainer_id: input.trainerId && input.trainerId.trim() ? input.trainerId : null,
       starts_at: input.startsAt,
       ends_at: input.endsAt,
       price: input.price ?? 0,

@@ -80,10 +80,12 @@ export async function createLessonAction(
   }
 
   // Field-level validation -----------------------------------------------
-  // horse_id is optional — a lesson can be booked before the horse is
-  // assigned ("TBD horse"). Client, trainer, and times are required.
-  if (!clientId || !trainerId || !startsAt || !endsAt) {
-    return { error: "Client, trainer, and times are required.", success: false };
+  // horse_id AND trainer_id are optional — a lesson can be booked before
+  // either is assigned ("TBD horse" or "TBD trainer" — common when the
+  // weekly trainer rota isn't finalized at booking time). Only client and
+  // times are strictly required.
+  if (!clientId || !startsAt || !endsAt) {
+    return { error: "Client and times are required.", success: false };
   }
 
   const startMs = Date.parse(startsAt);
