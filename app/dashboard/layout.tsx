@@ -9,6 +9,7 @@ import { isUserOnboarded } from "@/services/onboardingTour";
 import { getOwnProfile } from "@/services/account";
 import { WelcomeTour } from "@/components/onboarding/welcome-tour";
 import { CommandPalette } from "@/components/search/command-palette";
+import { ReportProblemButton } from "@/components/feedback/ReportProblemButton";
 
 export default async function DashboardLayout({
   children,
@@ -53,6 +54,12 @@ export default async function DashboardLayout({
 
       {/* Cmd+K global search palette. Hidden until shortcut/triggered. */}
       <CommandPalette />
+
+      {/* Founding 15 launch insurance — floating "Report a problem" button.
+          Bottom-right pill, single click → modal → email lands in
+          hello@longrein.eu (or FEEDBACK_TO_EMAIL override). Always visible
+          to signed-in users; not rendered on marketing/login pages. */}
+      <ReportProblemButton />
     </div>
   );
 }
