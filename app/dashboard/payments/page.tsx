@@ -4,6 +4,7 @@ import { listClients } from "@/services/clients";
 import { getCalendar } from "@/services/lessons";
 import { PaymentList } from "@/components/payments/payment-list";
 import { CreatePaymentPanel } from "@/components/payments/create-payment-form";
+import { ExportPdfButton } from "@/components/payments/export-pdf-button";
 import { PageHeader } from "@/components/ui";
 
 export default async function PaymentsPage() {
@@ -27,10 +28,13 @@ export default async function PaymentsPage() {
         title="Payments"
         subtitle="Cash, card, and transfers received from clients."
         actions={
-          <CreatePaymentPanel
-            clients={clients ?? []}
-            lessons={lessons ?? []}
-          />
+          <div className="flex items-center gap-2">
+            <ExportPdfButton basePath="/dashboard/payments/export" />
+            <CreatePaymentPanel
+              clients={clients ?? []}
+              lessons={lessons ?? []}
+            />
+          </div>
         }
       />
       <PaymentList payments={payments} showClientName />
