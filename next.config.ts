@@ -35,9 +35,8 @@ const nextConfig: NextConfig = {
   // Preserve React strict-mode behaviour (was previously in next.config.js,
   // which is now deleted — Next loads .ts in preference to .js).
   reactStrictMode: true,
-  experimental: {
-    typedRoutes: true,
-  },
+  // typedRoutes disabled — see matching comment in next.config.js.
+  // experimental: { typedRoutes: true },
   images: {
     remotePatterns: [
       // Allow Supabase Storage public URLs

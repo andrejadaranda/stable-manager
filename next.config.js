@@ -38,9 +38,13 @@ const SECURITY_HEADERS = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    typedRoutes: true,
-  },
+  // typedRoutes was enabled but kept breaking the build on dynamic
+  // href={string} patterns in shared components (FilterChip, sidebar,
+  // settings layout, etc). The experimental flag costs us prod deploys
+  // without enough type-safety upside to justify retro-fixing every
+  // Link site under launch pressure. Revisit post-launch with a
+  // coordinated Route<>typed-href migration if we want it back on.
+  // experimental: { typedRoutes: true },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co" },
