@@ -195,9 +195,12 @@ export async function GET(req: Request) {
       console.error("[cron/reminders] log insert failed:", logErr);
     }
 
-    if (status === "sent" || status === "delivered") results.sent += 1;
-    else if (status === "skipped")                    results.skipped += 1;
-    else                                              results.failed += 1;
+    // Provider-side "delivered" status would arrive via webhook, not from
+    // this synchronous send call — so we only ever set "sent" here. The
+    // success bucket also catches any future "delivered" rows by name.
+    if (status === "sent")        results.sent += 1;
+    else if (status === "skipped") results.skipped += 1;
+    else                           results.failed += 1;
   }
 
   return NextResponse.json({ ok: true, ...results, window: { from: winFrom.toISOString(), to: winTo.toISOString() } });
