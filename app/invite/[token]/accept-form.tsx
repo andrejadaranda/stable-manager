@@ -40,6 +40,15 @@ export function AcceptInviteForm({
       />
 
       <Field
+        label="Phone number"
+        name="phone"
+        type="tel"
+        required
+        autoComplete="tel"
+        helper="Your trainer uses this to text you reminders and reach you about lessons."
+      />
+
+      <Field
         label="Set password"
         name="password"
         type="password"

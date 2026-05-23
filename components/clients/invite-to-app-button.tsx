@@ -5,12 +5,17 @@ import { sendInviteAction, type InviteActionState } from "@/app/dashboard/client
 
 type Props = {
   clientId: string;
-  /** True when the client is already linked to a portal account.
-   *  In that case we don't render the button — there's nothing to invite. */
+  /** True when the client is already linked to a portal account in
+   *  THIS stable. We hide the button entirely. */
   hasPortalAccount: boolean;
+  /** True when the client's email/phone already belongs to a Longrein
+   *  auth.user / profile ANY stable. We hide the button entirely —
+   *  inviting would just 500 on createUser, or surprise the person
+   *  with a cross-stable link. */
+  hasLongreinAccount?: boolean;
   /** True when there's an in-flight (unused, unexpired, unrevoked) invite.
-   *  We surface "Invite sent" instead of "Invite to app" — and the click
-   *  re-sends to the same email (revokes the old link, mints a new one). */
+   *  We surface "Resend invite" instead of "Invite to app" — and the click
+   *  re-emits to the same email (revokes the old link, mints a new one). */
   hasPendingInvite: boolean;
   /** Used for the "no email" guard so we can show a friendly error
    *  instead of bouncing to the server. */
@@ -34,6 +39,7 @@ type Props = {
 export function InviteToAppButton({
   clientId,
   hasPortalAccount,
+  hasLongreinAccount = false,
   hasPendingInvite,
   hasEmail,
   compact = false,
@@ -42,7 +48,24 @@ export function InviteToAppButton({
   const [result, setResult]           = useState<InviteActionState | null>(null);
   const [copyStatus, setCopyStatus]   = useState<"idle" | "copied">("idle");
 
+  // Same-stable link OR any-stable account → no invite button. The
+  // tiny "Has account" pill explains why for the cross-stable case
+  // (vs same-stable link which is implicit because they show up as
+  // already-linked elsewhere in the UI).
   if (hasPortalAccount) return null;
+  if (hasLongreinAccount) {
+    const pillStyle = compact
+      ? "text-[10px] px-1.5 py-0.5"
+      : "text-xs px-2 py-1";
+    return (
+      <span
+        className={`${pillStyle} rounded border border-neutral-200 bg-neutral-50 text-neutral-500 whitespace-nowrap`}
+        title="This person's email or phone already has a Longrein account."
+      >
+        Has account
+      </span>
+    );
+  }
 
   function sendInvite() {
     if (!hasEmail) {

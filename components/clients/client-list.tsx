@@ -113,6 +113,7 @@ export function ClientList({
                 <InviteToAppButton
                   clientId={c.id}
                   hasPortalAccount={Boolean(c.profile_id)}
+                  hasLongreinAccount={c.has_longrein_account}
                   hasPendingInvite={c.has_pending_invite}
                   hasEmail={Boolean(c.email)}
                   compact
@@ -124,6 +125,7 @@ export function ClientList({
                 <InviteToAppButton
                   clientId={c.id}
                   hasPortalAccount={Boolean(c.profile_id)}
+                  hasLongreinAccount={c.has_longrein_account}
                   hasPendingInvite={c.has_pending_invite}
                   hasEmail={Boolean(c.email)}
                   compact

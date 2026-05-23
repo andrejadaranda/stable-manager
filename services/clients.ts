@@ -44,6 +44,12 @@ export type ClientWithUpcomingCount = ClientRow & {
    *  row exists for this client. Used to render "Resend invite" instead
    *  of "Invite to app" on the client list. */
   has_pending_invite: boolean;
+  /** True when the client's email OR phone already belongs to a Longrein
+   *  auth.user / profile anywhere in the system (any stable). In that
+   *  case we hide the Invite button entirely — the person already has
+   *  an account they should sign in with, not be re-invited into a new
+   *  one. Owner-only field; employees always see false. */
+  has_longrein_account: boolean;
 };
 
 // ------- list -------------------------------------------------------------
@@ -59,10 +65,13 @@ export async function listClients(opts?: { activeOnly?: boolean }): Promise<Clie
   return (data ?? []) as ClientRow[];
 }
 
-// List + count of upcoming scheduled lessons + pending-invite flag.
-// Three queries instead of one aggregate — keeps each query simple and
-// the joins manageable. Used by the clients index page (owner only —
-// pending invites are owner-scoped per RLS).
+// List + count of upcoming scheduled lessons + pending-invite flag +
+// cross-stable existing-Longrein-account flag.
+// Multiple parallel queries rather than one aggregate — each one is
+// simple, well-indexed, and the joins are easier to reason about.
+// Owner-only fields (has_pending_invite, has_longrein_account)
+// default to false for employees, who can't read client_invitations
+// or call the existing-account RPC.
 export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcomingCount[]> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
@@ -105,11 +114,43 @@ export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcoming
     pending.add(r.client_id);
   }
 
-  return ((clientsRes.data ?? []) as ClientRow[]).map((c) => ({
-    ...c,
-    upcoming_count:      counts.get(c.id) ?? 0,
-    has_pending_invite:  pending.has(c.id),
-  }));
+  const clientRows = (clientsRes.data ?? []) as ClientRow[];
+
+  // Cross-stable account-existence probe — owners only. We collect every
+  // unique email/phone from the roster (skipping already-linked clients
+  // since their portal status is already known), then hit the SECURITY
+  // DEFINER RPC in a single round-trip. Skipped entirely for employees.
+  let matchedEmails = new Set<string>();
+  let matchedPhones = new Set<string>();
+  if (session.role === "owner") {
+    const emails: string[] = [];
+    const phones: string[] = [];
+    for (const c of clientRows) {
+      if (c.profile_id) continue;  // already linked — no need to probe
+      if (c.email) emails.push(c.email);
+      if (c.phone) phones.push(c.phone);
+    }
+    if (emails.length > 0 || phones.length > 0) {
+      // Lazy import to avoid a service<->service dependency cycle
+      // (clients.ts ← invitations.ts ← clients.ts via getClient).
+      const { findExistingLongreinAccounts } = await import("@/services/invitations");
+      const matches = await findExistingLongreinAccounts({ emails, phones })
+        .catch(() => ({ matchedEmails: new Set<string>(), matchedPhones: new Set<string>() }));
+      matchedEmails = matches.matchedEmails;
+      matchedPhones = matches.matchedPhones;
+    }
+  }
+
+  return clientRows.map((c) => {
+    const emailHit = c.email ? matchedEmails.has(c.email.toLowerCase()) : false;
+    const phoneHit = c.phone ? matchedPhones.has(c.phone) : false;
+    return {
+      ...c,
+      upcoming_count:        counts.get(c.id) ?? 0,
+      has_pending_invite:    pending.has(c.id),
+      has_longrein_account:  emailHit || phoneHit,
+    };
+  });
 }
 
 // ------- get one ---------------------------------------------------------

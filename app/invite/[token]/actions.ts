@@ -37,11 +37,16 @@ export async function acceptInviteAction(
   const password = String(formData.get("password") ?? "");
   const confirm  = String(formData.get("confirm") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
+  const phone    = String(formData.get("phone") ?? "").trim();
 
   if (!token)               return { error: "Missing invite token." };
   if (password.length < 8)  return { error: "Password must be at least 8 characters." };
   if (password !== confirm) return { error: "Passwords don't match." };
   if (!fullName)            return { error: "Please confirm your full name." };
+  // Phone is required so the trainer can call/SMS — matches the
+  // owner-side requirement to capture phone for SMS reminders (#34).
+  if (!phone)               return { error: "Please add a phone number so your trainer can reach you." };
+  if (phone.length < 5)     return { error: "Phone number looks too short." };
 
   // Step 1 — revalidate token. If it expired between page render and
   // form submit, we want a clear error rather than a half-created user.
@@ -77,6 +82,7 @@ export async function acceptInviteAction(
       token,
       created.user.id,
       fullName,
+      phone,
     );
     if (!profileId) {
       // Invite was consumed/expired in a race after our re-check.

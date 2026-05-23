@@ -41,6 +41,13 @@ export type InvitationLookup = {
   expires_at:  string;
 };
 
+/** Result of findExistingLongreinAccounts — sets of contact strings
+ *  that are already attached to a Longrein auth.user / profile. */
+export type ExistingAccountMatches = {
+  matchedEmails: Set<string>;
+  matchedPhones: Set<string>;
+};
+
 /**
  * Generate a fresh URL-safe random token. 32 bytes ≈ 43 base64url chars.
  * Crypto-grade entropy — anyone who guesses this gets in, so we don't
@@ -236,6 +243,57 @@ export async function revokeInvitation(invitationId: string): Promise<void> {
 }
 
 // =================================================================
+// CROSS-STABLE ACCOUNT PROBE
+//
+// Bulk check: which of these emails/phones already belong to a
+// Longrein auth.user (any stable)? Used by the client list to hide
+// the "Invite to app" button for clients who already have an account
+// — otherwise the invite would 500 ("email already registered") or
+// surprise the owner with a cross-stable link suggestion.
+//
+// Returns sets so the caller can do O(1) membership checks per row.
+// Owner-only; the RPC re-asserts the role server-side.
+// =================================================================
+export async function findExistingLongreinAccounts(input: {
+  emails: string[];
+  phones: string[];
+}): Promise<ExistingAccountMatches> {
+  const emails = Array.from(
+    new Set(
+      input.emails
+        .filter(Boolean)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e.includes("@")),
+    ),
+  );
+  const phones = Array.from(
+    new Set(input.phones.filter(Boolean).map((p) => p.trim())),
+  );
+
+  if (emails.length === 0 && phones.length === 0) {
+    return { matchedEmails: new Set(), matchedPhones: new Set() };
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase.rpc(
+    "check_existing_longrein_accounts",
+    { p_emails: emails, p_phones: phones },
+  );
+  if (error) throw error;
+
+  const matchedEmails = new Set<string>();
+  const matchedPhones = new Set<string>();
+  for (const row of (data ?? []) as Array<{
+    matched_email: string | null;
+    matched_phone: string | null;
+  }>) {
+    if (row.matched_email) matchedEmails.add(row.matched_email.toLowerCase());
+    if (row.matched_phone) matchedPhones.add(row.matched_phone);
+  }
+  return { matchedEmails, matchedPhones };
+}
+
+// =================================================================
 // LOOKUP — anonymous-callable, used by /invite/[token] accept page.
 // Backed by the SECURITY DEFINER RPC — does NOT go through RLS.
 // =================================================================
@@ -267,12 +325,16 @@ export async function acceptInviteAndCreateProfile(
   token: string,
   authUserId: string,
   fullName: string,
+  /** Optional phone — written to profiles.phone always and to
+   *  clients.phone when the owner left that field blank. NULL is fine. */
+  phone?: string | null,
 ): Promise<string | null> {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase.rpc("accept_client_invitation", {
     p_token:        token,
     p_auth_user_id: authUserId,
     p_full_name:    fullName,
+    p_phone:        phone && phone.trim() ? phone.trim() : null,
   });
   if (error) throw error;
   return data ? String(data) : null;
