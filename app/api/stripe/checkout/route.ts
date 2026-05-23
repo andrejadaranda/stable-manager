@@ -123,6 +123,29 @@ export async function POST() {
     subscription_data: {
       trial_period_days: 14,
       metadata: { stable_id: stable.id },
+      // Surfaces on every invoice line + receipt as a human-readable
+      // subscription description. Without this, Stripe falls back to
+      // the bare product nickname ("Pro plan"), which reads cold next
+      // to the rest of our brand. Includes the stable name so the
+      // owner can tell which subscription this invoice belongs to
+      // when they manage multiple stables in the same Stripe account.
+      description: `Longrein — equestrian stable management for ${stable.name}`,
+    },
+    // Optional invoice memo + footer that shows under the line items on
+    // every recurring invoice. Branding-light; the rest (logo, colour,
+    // sender name) lives in Stripe Dashboard → Settings → Branding +
+    // Settings → Invoice template. See docs/STRIPE-INVOICE-BRANDING.md.
+    invoice_creation: undefined, // subscription mode auto-creates; here for symmetry
+    // Custom_text appears on the Checkout page itself, not the invoice,
+    // but it warms up the brand voice before the user sees the receipt.
+    custom_text: {
+      submit:               { message: "You'll only be charged after the 14-day trial." },
+      terms_of_service_acceptance: {
+        message: "By starting your trial you agree to the Longrein [Terms](https://longrein.eu/terms) and [Privacy Policy](https://longrein.eu/privacy).",
+      },
+    },
+    consent_collection: {
+      terms_of_service: "required",
     },
     payment_method_collection: "always",  // Card REQUIRED at signup.
     success_url: `${APP_URL}/dashboard/settings/billing?started=true&session_id={CHECKOUT_SESSION_ID}`,
