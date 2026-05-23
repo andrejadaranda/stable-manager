@@ -107,8 +107,24 @@ function AcceptDialog({
     if (state.success) onClose();
   }, [state.success, onClose]);
 
-  const defaultDate = requestedStart.slice(0, 10);
-  const defaultTime = requestedStart.slice(11, 16);
+  // Convert UTC ISO from DB → Europe/Vilnius wall-clock for the date/time
+  // inputs, so the owner sees "16:00" if the client wrote "16:00 Lithuania
+  // time" — not whatever UTC offset the server stored it at.
+  const vilniusISO = (() => {
+    const d = new Date(requestedStart);
+    const parts = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Europe/Vilnius",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit",
+    }).formatToParts(d);
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    return {
+      date: `${get("year")}-${get("month")}-${get("day")}`,
+      time: `${get("hour")}:${get("minute")}`,
+    };
+  })();
+  const defaultDate = vilniusISO.date;
+  const defaultTime = vilniusISO.time;
 
   return (
     <form

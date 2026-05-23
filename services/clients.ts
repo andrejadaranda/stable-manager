@@ -60,9 +60,19 @@ export async function listClients(opts?: { activeOnly?: boolean }): Promise<Clie
   const supabase = createSupabaseServerClient();
   let q = supabase.from("clients").select("*").order("full_name");
   if (opts?.activeOnly) q = q.eq("active", true);
-  const { data, error } = await q;
-  if (error) throw error;
-  return (data ?? []) as ClientRow[];
+  const [clientsRes, ownedRes] = await Promise.all([
+    q,
+    supabase.from("horses").select("owner_client_id").not("owner_client_id", "is", null),
+  ]);
+  if (clientsRes.error) throw clientsRes.error;
+  if (ownedRes.error)   throw ownedRes.error;
+  const horseOwners = new Set<string>(
+    ((ownedRes.data ?? []) as Array<{ owner_client_id: string }>).map((r) => r.owner_client_id),
+  );
+  return ((clientsRes.data ?? []) as Array<Omit<ClientRow, "is_horse_owner_only">>).map((c) => ({
+    ...c,
+    is_horse_owner_only: horseOwners.has(c.id),
+  }));
 }
 
 // List + count of upcoming scheduled lessons + pending-invite flag +
@@ -91,7 +101,7 @@ export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcoming
           .gt("expires_at", now)
       : Promise.resolve({ data: [] as { client_id: string }[], error: null });
 
-  const [clientsRes, lessonsRes, invitesRes] = await Promise.all([
+  const [clientsRes, lessonsRes, invitesRes, ownedHorsesRes] = await Promise.all([
     supabase.from("clients").select("*").order("full_name"),
     supabase
       .from("lessons")
@@ -99,10 +109,22 @@ export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcoming
       .gte("starts_at", now)
       .eq("status", "scheduled"),
     invitesPromise,
+    // Derive horse-owner status from horses.owner_client_id rather than
+    // a dedicated flag — keeps the source of truth in one place.
+    supabase
+      .from("horses")
+      .select("owner_client_id")
+      .not("owner_client_id", "is", null),
   ]);
-  if (clientsRes.error)  throw clientsRes.error;
-  if (lessonsRes.error)  throw lessonsRes.error;
-  if (invitesRes.error)  throw invitesRes.error;
+  if (clientsRes.error)      throw clientsRes.error;
+  if (lessonsRes.error)      throw lessonsRes.error;
+  if (invitesRes.error)      throw invitesRes.error;
+  if (ownedHorsesRes.error)  throw ownedHorsesRes.error;
+
+  const horseOwnerIds = new Set<string>();
+  for (const h of (ownedHorsesRes.data ?? []) as Array<{ owner_client_id: string }>) {
+    if (h.owner_client_id) horseOwnerIds.add(h.owner_client_id);
+  }
 
   const counts = new Map<string, number>();
   for (const l of (lessonsRes.data ?? []) as Array<{ client_id: string }>) {
@@ -146,6 +168,9 @@ export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcoming
     const phoneHit = c.phone ? matchedPhones.has(c.phone) : false;
     return {
       ...c,
+      // Derived flag — true when at least one horse references this client
+      // as its owner. Pages segment riders vs horse-owners off this.
+      is_horse_owner_only:   horseOwnerIds.has(c.id),
       upcoming_count:        counts.get(c.id) ?? 0,
       has_pending_invite:    pending.has(c.id),
       has_longrein_account:  emailHit || phoneHit,
@@ -159,13 +184,17 @@ export async function getClient(id: string): Promise<ClientRow | null> {
   requireRole(session, "owner", "employee");
 
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("clients")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw error;
-  return (data as ClientRow) ?? null;
+  const [clientRes, ownsRes] = await Promise.all([
+    supabase.from("clients").select("*").eq("id", id).maybeSingle(),
+    supabase.from("horses").select("id").eq("owner_client_id", id).limit(1),
+  ]);
+  if (clientRes.error) throw clientRes.error;
+  if (!clientRes.data) return null;
+  const ownsAtLeastOne = !ownsRes.error && (ownsRes.data?.length ?? 0) > 0;
+  return {
+    ...(clientRes.data as Omit<ClientRow, "is_horse_owner_only">),
+    is_horse_owner_only: ownsAtLeastOne,
+  };
 }
 
 // ------- create ----------------------------------------------------------
@@ -232,7 +261,8 @@ export async function updateClient(id: string, input: UpdateClientInput) {
   if (input.emergencyContactName     !== undefined) update.emergency_contact_name     = input.emergencyContactName;
   if (input.emergencyContactPhone    !== undefined) update.emergency_contact_phone    = input.emergencyContactPhone;
   if (input.emergencyContactRelation !== undefined) update.emergency_contact_relation = input.emergencyContactRelation;
-  if (input.isHorseOwnerOnly         !== undefined) update.is_horse_owner_only        = input.isHorseOwnerOnly;
+  // is_horse_owner_only is now derived from horses.owner_client_id and not
+  // stored on clients — accept the flag for API compatibility but drop it.
   if (input.reminderPref             !== undefined) update.reminder_pref              = input.reminderPref;
 
   const { data, error } = await supabase

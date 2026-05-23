@@ -36,7 +36,16 @@ export async function acceptLessonRequestAction(
   if (!trainerId) return { ...initial, error: "Pick a trainer." };
   if (!date || !time) return { ...initial, error: "Pick date and time." };
 
-  const startsAt = new Date(`${date}T${time}:00`).toISOString();
+  // Owner-side same Vilnius-wall-clock → UTC conversion as the client form
+  // submit action — see app/dashboard/my-lessons/request-actions.ts header.
+  const asUtc      = new Date(`${date}T${time}:00Z`);
+  const vilniusStr = asUtc.toLocaleString("sv-SE", {
+    timeZone: "Europe/Vilnius",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const offsetMs = new Date(vilniusStr.replace(" ", "T") + "Z").getTime() - asUtc.getTime();
+  const startsAt = new Date(asUtc.getTime() - offsetMs).toISOString();
   if (!Number.isFinite(new Date(startsAt).getTime())) {
     return { ...initial, error: "Invalid date / time." };
   }

@@ -41,11 +41,22 @@ export async function submitLessonRequestAction(
   if (!/^\d{2}:\d{2}$/.test(time))
                        return { ...initial, error: "Invalid time." };
 
-  // Build ISO timestamp in the user's local TZ (browser submitted Y-M-D + HH:MM).
-  // We treat the value as local-time and let Postgres store it as the same
-  // wall-clock instant in the stable's effective TZ. For Lithuania (UTC+3 EEST
-  // / UTC+2 EET) this matches user expectations.
-  const requestedStart = new Date(`${date}T${time}:00`).toISOString();
+  // The client typed wall-clock time in their stable's local TZ
+  // (Europe/Vilnius — EEST/EET, DST-aware). We can't use
+  // `new Date(local-string)` because that interprets it as the SERVER's
+  // local TZ — Vercel runs UTC and would silently shift by 2-3 hours.
+  // Compute the actual UTC instant for the given Vilnius wall-clock:
+  //   1) parse the string as if it were UTC,
+  //   2) ask what Vilnius reads off that UTC moment,
+  //   3) the delta is Vilnius's offset, subtract it.
+  const asUtc      = new Date(`${date}T${time}:00Z`);
+  const vilniusStr = asUtc.toLocaleString("sv-SE", {
+    timeZone: "Europe/Vilnius",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const offsetMs = new Date(vilniusStr.replace(" ", "T") + "Z").getTime() - asUtc.getTime();
+  const requestedStart = new Date(asUtc.getTime() - offsetMs).toISOString();
   const startMs = new Date(requestedStart).getTime();
   if (!Number.isFinite(startMs) || startMs < Date.now() - 5 * 60 * 1000) {
     return { ...initial, error: "Pick a future date and time." };

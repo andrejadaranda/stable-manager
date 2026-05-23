@@ -40,8 +40,14 @@ export async function getSmartSuggestions(): Promise<Suggestion[]> {
   const [horsesRes, lessonsRes] = await Promise.all([
     supabase
       .from("horses")
+      // Boarder horses (client-owned with available_for_lessons=false)
+      // are not part of the lesson rotation — they should NOT trip the
+      // "idle 14+ days" or "over weekly cap" welfare rules. Filter them
+      // out at source so all suggestions are scoped to lesson-eligible
+      // stable inventory only.
       .select("id, name, weekly_lesson_limit, active")
-      .eq("active", true),
+      .eq("active", true)
+      .or("owner_client_id.is.null,available_for_lessons.is.true"),
     supabase
       .from("lessons")
       .select("horse_id, starts_at")
