@@ -49,9 +49,9 @@ export async function listLessonRequestsForClient(): Promise<LessonRequestWithCo
     .limit(50);
 
   if (error) throw error;
-  return ((data ?? []) as Array<LessonRequestRow & {
-    horse:             { name: string } | null;
-    preferred_trainer: { full_name: string } | null;
+  return (((data ?? []) as unknown) as Array<LessonRequestRow & {
+    horse:             { name: string } | { name: string }[] | null;
+    preferred_trainer: { full_name: string } | { full_name: string }[] | null;
   }>).map(flattenContext);
 }
 
@@ -83,10 +83,10 @@ export async function listLessonRequestsForOwner(opts?: {
   const { data, error } = await q;
   if (error) throw error;
 
-  return ((data ?? []) as Array<LessonRequestRow & {
-    horse:             { name: string } | null;
-    preferred_trainer: { full_name: string } | null;
-    requester:         { full_name: string } | null;
+  return (((data ?? []) as unknown) as Array<LessonRequestRow & {
+    horse:             { name: string } | { name: string }[] | null;
+    preferred_trainer: { full_name: string } | { full_name: string }[] | null;
+    requester:         { full_name: string } | { full_name: string }[] | null;
   }>).map(flattenContext);
 }
 
@@ -212,11 +212,20 @@ export async function declineLessonRequest(requestId: string, reason?: string | 
 // LESSON_STATUS_LABEL re-exported from lessonRequests.types.ts at the top
 // so server- and client-side imports stay aligned.
 
+type Joined<T> = T | T[] | null | undefined;
+function pick<T>(v: Joined<T>): T | null {
+  if (!v) return null;
+  return Array.isArray(v) ? (v[0] ?? null) : v;
+}
+
 function flattenContext(r: LessonRequestRow & {
-  horse?:             { name: string } | null;
-  preferred_trainer?: { full_name: string } | null;
-  requester?:         { full_name: string } | null;
+  horse?:             Joined<{ name: string }>;
+  preferred_trainer?: Joined<{ full_name: string }>;
+  requester?:         Joined<{ full_name: string }>;
 }): LessonRequestWithContext {
+  const horse = pick(r.horse);
+  const trainer = pick(r.preferred_trainer);
+  const requester = pick(r.requester);
   return {
     id:                     r.id,
     stable_id:              r.stable_id,
@@ -233,8 +242,8 @@ function flattenContext(r: LessonRequestRow & {
     responded_at:           r.responded_at,
     created_at:             r.created_at,
     updated_at:             r.updated_at,
-    horse_name:             r.horse?.name ?? null,
-    preferred_trainer_name: r.preferred_trainer?.full_name ?? null,
-    requester_name:         r.requester?.full_name ?? null,
+    horse_name:             horse?.name ?? null,
+    preferred_trainer_name: trainer?.full_name ?? null,
+    requester_name:         requester?.full_name ?? null,
   };
 }

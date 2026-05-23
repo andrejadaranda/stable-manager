@@ -73,19 +73,26 @@ export async function listMyHorses(): Promise<MyHorseSummary[]> {
     .not("horse_id", "is", null);
 
   if (lessonsRes.error) throw lessonsRes.error;
-  const riddenById = new Map<string, MyHorseSummary>();
-  for (const r of (lessonsRes.data ?? []) as Array<{
+  // Supabase types FK joins as arrays even when the relationship is 1:1;
+  // cast through `unknown` then collapse the array case to the first row.
+  type LessonRow = {
     horse_id: string;
-    horse: { id: string; name: string; breed: string | null; date_of_birth: string | null; active: boolean } | null;
-  }>) {
-    if (!r.horse || ownedIds.has(r.horse_id)) continue;  // owner row wins
+    horse:
+      | { id: string; name: string; breed: string | null; date_of_birth: string | null; active: boolean }
+      | { id: string; name: string; breed: string | null; date_of_birth: string | null; active: boolean }[]
+      | null;
+  };
+  const riddenById = new Map<string, MyHorseSummary>();
+  for (const r of ((lessonsRes.data ?? []) as unknown) as LessonRow[]) {
+    const horse = Array.isArray(r.horse) ? (r.horse[0] ?? null) : r.horse;
+    if (!horse || ownedIds.has(r.horse_id)) continue;  // owner row wins
     if (riddenById.has(r.horse_id)) continue;
     riddenById.set(r.horse_id, {
-      id:                r.horse.id,
-      name:              r.horse.name,
-      breed:             r.horse.breed,
-      date_of_birth:     r.horse.date_of_birth,
-      active:            r.horse.active,
+      id:                horse.id,
+      name:              horse.name,
+      breed:             horse.breed,
+      date_of_birth:     horse.date_of_birth,
+      active:            horse.active,
       relationship:      "rider",
       sessions_visible:  0,
       last_session_at:   null,

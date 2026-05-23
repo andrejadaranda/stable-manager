@@ -95,10 +95,16 @@ export async function listCareRequestsForOwner(opts?: {
   const { data, error } = await q;
   if (error) throw error;
 
-  return ((data ?? []) as Array<CareRequestRow & {
-    horse:     { name: string } | null;
-    requester: { full_name: string } | null;
-  }>).map((r) => ({
+  // Supabase types FK joins as arrays even when 1:1 — cast through unknown
+  // and unwrap the single element below.
+  type Row = CareRequestRow & {
+    horse:     { name: string } | { name: string }[] | null;
+    requester: { full_name: string } | { full_name: string }[] | null;
+  };
+  return (((data ?? []) as unknown) as Row[]).map((r) => {
+    const horse     = Array.isArray(r.horse)     ? (r.horse[0]     ?? null) : r.horse;
+    const requester = Array.isArray(r.requester) ? (r.requester[0] ?? null) : r.requester;
+    return ({
     id:                  r.id,
     stable_id:           r.stable_id,
     horse_id:            r.horse_id,
@@ -114,9 +120,10 @@ export async function listCareRequestsForOwner(opts?: {
     scheduled_for:       r.scheduled_for,
     created_at:          r.created_at,
     updated_at:          r.updated_at,
-    horse_name:          r.horse?.name ?? "—",
-    requester_name:      r.requester?.full_name ?? null,
-  }));
+    horse_name:          horse?.name ?? "—",
+    requester_name:      requester?.full_name ?? null,
+  });
+  });
 }
 
 /** Fast count for owner dashboard widget — just open (actionable) requests. */
