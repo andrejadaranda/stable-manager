@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { getClient, type SkillLevel } from "@/services/clients";
 import { getClientLessons, type ClientLessonRow } from "@/services/lessons";
-import { getClientBalance } from "@/services/payments";
+import { getClientBalance, listClientOwedItems } from "@/services/payments";
 import { listClientPackages } from "@/services/packages";
 import { listChargesForClient } from "@/services/boarding";
 import { listClientAgreements } from "@/services/agreements";
@@ -14,6 +14,7 @@ import { PackagePanel } from "@/components/clients/package-panel";
 import { ClientBoardingSection } from "@/components/clients/client-boarding-section";
 import { AgreementsPanel } from "@/components/clients/agreements-panel";
 import { ChargesPanel } from "@/components/clients/charges-panel";
+import { OwesBreakdown } from "@/components/clients/owes-breakdown";
 
 const SKILL_LABEL: Record<SkillLevel, string> = {
   beginner: "Beginner",
@@ -42,11 +43,17 @@ export default async function ClientDetailPage({
     listClientCharges(params.id),
   ]);
 
-  // Owner-only: payment balance. Service throws FORBIDDEN for employees,
-  // so we just don't call it for them.
+  // Owner-only: payment balance + owes breakdown. Both services throw
+  // FORBIDDEN for employees, so we just don't call them for non-owners.
+  // The breakdown is the per-line explanation behind the balance — only
+  // worth fetching when the client actually owes money (balance < 0).
   let balance: number | null = null;
+  let owedItems: Awaited<ReturnType<typeof listClientOwedItems>> = [];
   if (session.role === "owner") {
     balance = await getClientBalance(params.id);
+    if (balance !== null && balance < 0) {
+      owedItems = await listClientOwedItems(params.id);
+    }
   }
 
   const initial = client.full_name?.[0]?.toUpperCase() ?? "?";
@@ -141,30 +148,44 @@ export default async function ClientDetailPage({
       )}
 
       {session.role === "owner" && (
-        <section className="bg-white rounded-2xl shadow-soft p-5 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h2 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-ink-500">
-              Balance
-            </h2>
-            <div className="mt-2">
-              <BalanceLine balance={balance} />
+        <>
+          <section className="bg-white rounded-2xl shadow-soft p-5 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-ink-500">
+                Balance
+              </h2>
+              <div className="mt-2">
+                <BalanceLine balance={balance} />
+              </div>
             </div>
-          </div>
-          <Link
-            href={`/dashboard/clients/${client.id}/invoice`}
-            className="
-              h-10 px-4 rounded-xl text-sm font-medium
-              text-brand-700 bg-brand-50 hover:bg-brand-100
-              transition-colors inline-flex items-center gap-1.5
-            "
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
-              <path d="M14 2v6h6M9 13h6M9 17h4" />
-            </svg>
-            Print invoice
-          </Link>
-        </section>
+            <Link
+              href={`/dashboard/clients/${client.id}/invoice`}
+              className="
+                h-10 px-4 rounded-xl text-sm font-medium
+                text-brand-700 bg-brand-50 hover:bg-brand-100
+                transition-colors inline-flex items-center gap-1.5
+              "
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
+                <path d="M14 2v6h6M9 13h6M9 17h4" />
+              </svg>
+              Print invoice
+            </Link>
+          </section>
+
+          {/* Owes breakdown — only rendered when the client actually
+              owes money. We pass the balance as the source-of-truth so
+              the panel can flag any divergence (typically a credit/
+              prepayment on the account). */}
+          {balance !== null && balance < 0 && (
+            <OwesBreakdown
+              clientId={client.id}
+              items={owedItems}
+              totalOwedFromBalance={Math.abs(balance)}
+            />
+          )}
+        </>
       )}
 
       <PackagePanel

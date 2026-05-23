@@ -102,6 +102,213 @@ export async function listPayments(opts?: {
   return (data ?? []) as unknown as PaymentRow[];
 }
 
+// =================================================================
+// Owes breakdown — what the client actually owes for, line by line.
+//
+// Aggregates three kinds of outstanding items into one chronologically
+// sorted list so the owner can see "why does this person owe X?" at a
+// glance and tap a single Mark paid button per line:
+//
+//   1. Unpaid lessons        — lessons with status in ('completed','no_show'),
+//                              positive price, NOT package-covered, and
+//                              SUM(payments.amount) < price.
+//   2. Unpaid misc charges   — client_charge_summary.payment_status != 'paid'
+//   3. Unpaid boarding fees  — horse_boarding_summary.payment_status != 'paid'
+//
+// The shape is intentionally flat (one item per row) instead of grouped
+// per kind so the UI can render a single timeline. Each entry carries
+// enough metadata that the inline action knows which service to call.
+//
+// Owner-only — feeds the client detail page. Client portal already has
+// its own dedicated views for lessons / boarding / charges separately.
+// =================================================================
+export type OwedItem =
+  | {
+      kind: "lesson";
+      id: string;
+      /** Display label — e.g. "12 Mar · Tornado · Cash lesson". */
+      label: string;
+      /** Lesson date, used for sorting + display. */
+      occurredAt: string;
+      /** Charge total in EUR. */
+      amount: number;
+      /** Already paid against this item. Lessons can be partially paid. */
+      paid: number;
+      /** amount - paid, never negative. */
+      owed: number;
+      /** Optional secondary line (horse, notes). */
+      sub: string | null;
+    }
+  | {
+      kind: "charge";
+      id: string;
+      label: string;
+      occurredAt: string;
+      amount: number;
+      paid: number;
+      owed: number;
+      sub: string | null;
+    }
+  | {
+      kind: "boarding";
+      id: string;
+      label: string;
+      occurredAt: string;
+      amount: number;
+      paid: number;
+      owed: number;
+      sub: string | null;
+    };
+
+const CHARGE_KIND_LABELS: Record<string, string> = {
+  farrier:        "Farrier",
+  equipment:      "Equipment",
+  supplement:     "Supplement",
+  vet_copay:      "Vet co-pay",
+  transport:      "Transport",
+  training_extra: "Extra training",
+  other:          "Other",
+};
+
+export async function listClientOwedItems(clientId: string): Promise<OwedItem[]> {
+  const session = await getSession();
+  requireRole(session, "owner");
+
+  const supabase = createSupabaseServerClient();
+
+  // Three parallel queries — every kind is filtered server-side to its
+  // unpaid subset so we don't drag the full history over the wire.
+  const [lessonsRes, chargesRes, boardingRes] = await Promise.all([
+    // Lessons: status in completed/no_show, price > 0, no package, plus
+    // joined payments to compute paid-so-far client-side (Postgres
+    // doesn't let us filter on a derived aggregate in the SELECT).
+    supabase
+      .from("lessons")
+      .select(
+        `
+        id, starts_at, price, package_id, status,
+        horse:horses(name),
+        payments(amount)
+        `,
+      )
+      .eq("client_id", clientId)
+      .in("status", ["completed", "no_show"])
+      .gt("price", 0)
+      .is("package_id", null)
+      .order("starts_at", { ascending: true }),
+
+    supabase
+      .from("client_charge_summary")
+      .select("id, kind, custom_label, incurred_on, amount, paid_amount, payment_status, notes")
+      .eq("client_id", clientId)
+      .neq("payment_status", "paid")
+      .order("incurred_on", { ascending: true }),
+
+    supabase
+      .from("horse_boarding_summary")
+      .select("id, horse_id, period_start, period_label, amount, paid_amount, payment_status")
+      .eq("owner_client_id", clientId)
+      .neq("payment_status", "paid")
+      .order("period_start", { ascending: true }),
+  ]);
+
+  if (lessonsRes.error)  throw lessonsRes.error;
+  if (chargesRes.error)  throw chargesRes.error;
+  if (boardingRes.error) throw boardingRes.error;
+
+  const items: OwedItem[] = [];
+
+  for (const row of (lessonsRes.data ?? []) as Array<{
+    id: string;
+    starts_at: string;
+    price: number | string;
+    status: string;
+    horse: { name: string } | { name: string }[] | null;
+    payments: { amount: number | string }[] | null;
+  }>) {
+    const price = Number(row.price);
+    const paid  = (row.payments ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
+    const owed  = Math.max(0, price - paid);
+    if (owed <= 0) continue;  // safety: filter out fully-paid rows
+
+    // Supabase returns joined single-row relations as an object in
+    // some shapes and an array in others depending on the FK type;
+    // normalise both.
+    const horseName =
+      Array.isArray(row.horse) ? row.horse[0]?.name ?? null : row.horse?.name ?? null;
+
+    const date = row.starts_at.slice(0, 10);
+    items.push({
+      kind: "lesson",
+      id:   row.id,
+      label: row.status === "no_show" ? "Lesson (no-show)" : "Lesson",
+      occurredAt: row.starts_at,
+      amount: price,
+      paid,
+      owed,
+      sub: horseName ? `${horseName} · ${date}` : date,
+    });
+  }
+
+  for (const row of (chargesRes.data ?? []) as Array<{
+    id: string;
+    kind: string;
+    custom_label: string | null;
+    incurred_on: string;
+    amount: number | string;
+    paid_amount: number | string;
+    notes: string | null;
+  }>) {
+    const amount = Number(row.amount);
+    const paid   = Number(row.paid_amount);
+    const owed   = Math.max(0, amount - paid);
+    if (owed <= 0) continue;
+    const label =
+      row.custom_label?.trim() ||
+      CHARGE_KIND_LABELS[row.kind] ||
+      "Charge";
+    items.push({
+      kind: "charge",
+      id:   row.id,
+      label,
+      occurredAt: row.incurred_on,
+      amount,
+      paid,
+      owed,
+      sub: row.notes ?? null,
+    });
+  }
+
+  for (const row of (boardingRes.data ?? []) as Array<{
+    id: string;
+    horse_id: string;
+    period_start: string;
+    period_label: string | null;
+    amount: number | string;
+    paid_amount: number | string;
+  }>) {
+    const amount = Number(row.amount);
+    const paid   = Number(row.paid_amount);
+    const owed   = Math.max(0, amount - paid);
+    if (owed <= 0) continue;
+    items.push({
+      kind: "boarding",
+      id:   row.id,
+      label: `Boarding · ${row.period_label ?? row.period_start.slice(0, 7)}`,
+      occurredAt: row.period_start,
+      amount,
+      paid,
+      owed,
+      sub: null,
+    });
+  }
+
+  // Oldest first — surfaces the most overdue items at the top so the
+  // owner can chase them or collect cash on the spot during a visit.
+  items.sort((a, b) => a.occurredAt.localeCompare(b.occurredAt));
+  return items;
+}
+
 // Computed balance via RPC.
 // Owner: any client in the stable. Client: own only. Employee: blocked.
 export async function getClientBalance(clientId: string) {
