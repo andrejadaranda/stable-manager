@@ -68,11 +68,30 @@ function CreateExpenseForm({
             className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
           >
             <option value="" disabled>Select…</option>
-            <option value="feed">Feed</option>
-            <option value="vet">Vet</option>
-            <option value="farrier">Farrier</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="staff">Staff</option>
+            <optgroup label="Feed & bedding">
+              <option value="feed">Feed (concentrate)</option>
+              <option value="hay">Hay / grass</option>
+              <option value="bedding">Bedding (straw, shavings)</option>
+              <option value="supplements">Supplements (vitamins, joint, hoof)</option>
+            </optgroup>
+            <optgroup label="Health & care">
+              <option value="vet">Vet</option>
+              <option value="farrier">Farrier</option>
+            </optgroup>
+            <optgroup label="Gear & equipment">
+              <option value="tack">Tack (saddles, bridles, blankets)</option>
+              <option value="equipment">Equipment (yard tools, machinery)</option>
+              <option value="repair">Repair (something broke)</option>
+              <option value="maintenance">Maintenance (routine upkeep)</option>
+            </optgroup>
+            <optgroup label="Business">
+              <option value="insurance">Insurance</option>
+              <option value="competition">Competition entry / stabling</option>
+              <option value="transport">Transport (trailer fuel, haulers)</option>
+              <option value="utilities">Utilities (electricity, water)</option>
+              <option value="registration">Registration / federation fees</option>
+              <option value="staff">Staff (wages, contractors)</option>
+            </optgroup>
             <option value="other">Other</option>
           </select>
         </label>

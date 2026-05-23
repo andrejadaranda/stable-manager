@@ -118,9 +118,9 @@ export default async function HorseDetailPage({
   } else if (tab === "goals") {
     tabContent = (
       <ComingSoonTab
-        title="Goals & progress"
-        body="Long-term goals for this horse plus a per-rider training arc."
-        availability="Phase 3"
+        title="Goals & progress — coming June"
+        body="Long-term goals per horse and per-rider training arcs ship in the June update. For now keep goals in the horse's Notes field — they'll migrate over when this tab launches."
+        availability="Not yet available"
       />
     );
   } else if (tab === "media") {

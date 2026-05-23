@@ -18,7 +18,7 @@ import Link from "next/link";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { listPayments } from "@/services/payments";
 import { getOwnStable } from "@/services/stables";
-import { AutoPrint } from "@/components/print/auto-print";
+import { AutoPrint, PrintButton } from "@/components/print/auto-print";
 
 type Search = {
   from?: string;  // YYYY-MM-DD inclusive
@@ -66,12 +66,7 @@ export default async function PaymentsExportPage({
         >
           ← Back to Payments
         </Link>
-        <button
-          onClick={() => typeof window !== "undefined" && window.print()}
-          className="rounded-md bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-800"
-        >
-          Print / Save as PDF
-        </button>
+        <PrintButton />
       </div>
 
       <div className="mx-auto max-w-4xl px-8 py-10 print:py-6">

@@ -1,9 +1,11 @@
 // Global search service. Powers Cmd+K. Searches horses + clients +
 // lessons (upcoming + recent), all in parallel, RLS-scoped by Supabase.
 //
-// Strategy: simple ilike on name fields. Results capped at ~5 per
-// type so the palette stays snappy and uncluttered. Server-side so
-// we don't ship the row data to the client until it's needed.
+// Strategy: ilike `%q%` for "contains" partial match, plus accent
+// folding via the `unaccent` extension on BOTH the query and column
+// values. Without unaccent, a Lithuanian user typing "zir" never
+// matched "Žirgas" — they thought search only worked on whole words.
+// Results capped at ~5 per type so the palette stays snappy.
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
@@ -24,30 +26,19 @@ export async function search(query: string): Promise<SearchHit[]> {
   if (!session) return [];
 
   const supabase = createSupabaseServerClient();
-  const like = `%${q.replace(/[%_]/g, "\\$&")}%`;
   const isStaff = session.role === "owner" || session.role === "employee";
 
-  // Run sub-queries in parallel; any failure -> empty list for that
-  // category, so a partial outage doesn't kill the palette.
+  // Hand off to an accent-folded RPC instead of PostgREST .or() — we
+  // can't easily call unaccent() through .ilike, and an RPC keeps the
+  // query plan + diacritic-folding logic in one place. The RPC returns
+  // shape compatible with the existing per-table loops below.
   const [horsesRes, clientsRes, lessonsRes] = await Promise.all([
-    supabase
-      .from("horses")
-      .select("id, name, breed")
-      .or(`name.ilike.${like},breed.ilike.${like}`)
-      .limit(5),
+    supabase.rpc("search_horses",  { p_q: q, p_limit: 5 }),
     isStaff
-      ? supabase
-          .from("clients")
-          .select("id, full_name, email, phone")
-          .or(`full_name.ilike.${like},email.ilike.${like},phone.ilike.${like}`)
-          .limit(5)
+      ? supabase.rpc("search_clients", { p_q: q, p_limit: 5 })
       : Promise.resolve({ data: null, error: null } as { data: null; error: null }),
     isStaff
-      ? supabase
-          .from("lessons")
-          .select("id, starts_at, horses!inner(name), clients!inner(full_name)")
-          .or(`name.ilike.${like}`, { foreignTable: "horses" })
-          .limit(5)
+      ? supabase.rpc("search_lessons", { p_q: q, p_limit: 5 })
       : Promise.resolve({ data: null, error: null } as { data: null; error: null }),
   ]);
 
@@ -77,11 +68,11 @@ export async function search(query: string): Promise<SearchHit[]> {
     for (const l of (lessonsRes.data ?? []) as Array<{
       id: string;
       starts_at: string;
-      horses: { name: string } | { name: string }[] | null;
-      clients: { full_name: string } | { full_name: string }[] | null;
+      horse_name: string | null;
+      client_name: string | null;
     }>) {
-      const horseName  = pickName(l.horses);
-      const clientName = pickFullName(l.clients);
+      const horseName  = l.horse_name  ?? "";
+      const clientName = l.client_name ?? "";
       const d = new Date(l.starts_at);
       out.push({
         id:       l.id,

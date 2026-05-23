@@ -32,7 +32,11 @@ export async function listTrainers() {
   return data ?? [];
 }
 
-// Owner-only: list every member of this stable with their auth email.
+// Owner-only: list every STAFF member of this stable with their auth
+// email. Clients are intentionally excluded — they get their own
+// dedicated Clients page (with the inline Invite-to-App flow in #44),
+// and mixing them into the Team page made it noisy + confused the
+// "this page is for the people who work at the stable" mental model.
 // Uses the admin client (server-side only) to look up emails — RLS on
 // profiles already scopes to the caller's stable.
 export async function listMembers(): Promise<Member[]> {
@@ -43,6 +47,7 @@ export async function listMembers(): Promise<Member[]> {
   const { data, error } = await supabase
     .from("profiles")
     .select("id, full_name, role, auth_user_id, created_at")
+    .in("role", ["owner", "employee"])
     .order("role")
     .order("full_name");
   if (error) throw error;

@@ -9,9 +9,20 @@ const initial: AddExpenseState = { error: null, success: false };
 
 const CATEGORIES: ExpenseCategory[] = [
   "feed",
+  "hay",
+  "bedding",
+  "supplements",
   "vet",
   "farrier",
+  "tack",
+  "equipment",
+  "repair",
   "maintenance",
+  "insurance",
+  "competition",
+  "transport",
+  "utilities",
+  "registration",
   "staff",
   "other",
 ];

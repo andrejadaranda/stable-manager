@@ -8,7 +8,7 @@ import Link from "next/link";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { listExpenses, type ExpenseCategory } from "@/services/expenses";
 import { getOwnStable } from "@/services/stables";
-import { AutoPrint } from "@/components/print/auto-print";
+import { AutoPrint, PrintButton } from "@/components/print/auto-print";
 
 type Search = {
   from?: string;  // YYYY-MM-DD inclusive
@@ -16,12 +16,23 @@ type Search = {
 };
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
-  feed:        "Feed",
-  vet:         "Vet",
-  farrier:     "Farrier",
-  maintenance: "Maintenance",
-  staff:       "Staff",
-  other:       "Other",
+  feed:         "Feed",
+  hay:          "Hay",
+  bedding:      "Bedding",
+  supplements:  "Supplements",
+  vet:          "Vet",
+  farrier:      "Farrier",
+  tack:         "Tack",
+  equipment:    "Equipment",
+  repair:       "Repair",
+  maintenance:  "Maintenance",
+  insurance:    "Insurance",
+  competition:  "Competition",
+  transport:    "Transport",
+  utilities:    "Utilities",
+  registration: "Registration",
+  staff:        "Staff",
+  other:        "Other",
 };
 
 export default async function ExpensesExportPage({
@@ -62,12 +73,7 @@ export default async function ExpensesExportPage({
         >
           ← Back to Expenses
         </Link>
-        <button
-          onClick={() => typeof window !== "undefined" && window.print()}
-          className="rounded-md bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-800"
-        >
-          Print / Save as PDF
-        </button>
+        <PrintButton />
       </div>
 
       <div className="mx-auto max-w-4xl px-8 py-10 print:py-6">

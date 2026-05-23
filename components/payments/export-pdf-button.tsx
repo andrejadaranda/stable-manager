@@ -71,10 +71,26 @@ export function ExportPdfButton({
           {/* Backdrop closes the popover when clicking outside */}
           <div
             onClick={() => setOpen(false)}
-            className="fixed inset-0 z-20"
+            className="fixed inset-0 z-20 sm:bg-transparent bg-black/30"
             aria-hidden="true"
           />
-          <div className="absolute right-0 top-full mt-2 z-30 w-72 rounded-md border border-neutral-200 bg-white shadow-lg p-4 flex flex-col gap-3">
+          {/* Positioning:
+              * Mobile (<sm): bottom-anchored sheet that fills the screen
+                width with safe gutters — the previous absolute right-0
+                popover slid off-screen left when the button sat near
+                the left edge of the viewport.
+              * Desktop (sm+): tight popover anchored to the button. */}
+          <div
+            className="
+              fixed sm:absolute z-30
+              bottom-0 sm:bottom-auto sm:top-full
+              left-2 right-2 sm:left-auto sm:right-0
+              mb-2 sm:mb-0 sm:mt-2
+              sm:w-72
+              rounded-md border border-neutral-200 bg-white shadow-lg p-4 flex flex-col gap-3
+              pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4
+            "
+          >
             <p className="text-xs text-neutral-500">
               Pick a date range. The report opens in a new tab and the print
               dialog appears automatically — pick &quot;Save as PDF&quot;.

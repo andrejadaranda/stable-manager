@@ -5,9 +5,20 @@ import { getSession, requireRole } from "@/lib/auth/session";
 
 export type ExpenseCategory =
   | "feed"
+  | "hay"            // grass / hay specifically — usually a separate budget line from concentrate feed
+  | "bedding"        // straw, shavings, peat
+  | "supplements"    // vitamins, joint, hoof, electrolytes
   | "vet"
   | "farrier"
-  | "maintenance"
+  | "tack"           // saddles, bridles, girths, blankets
+  | "equipment"      // arena rakes, mucking forks, anything not tack
+  | "repair"         // a thing broke (fence, gate, water trough, machinery)
+  | "maintenance"    // routine upkeep that isn't a discrete repair
+  | "insurance"      // horse insurance, public liability, vehicle, premises
+  | "competition"    // entry fees, stabling at shows
+  | "transport"      // trailer fuel, hauler invoices
+  | "utilities"      // electricity, water, internet at the yard
+  | "registration"   // FEI / national federation / breed society fees
   | "staff"
   | "other";
 
