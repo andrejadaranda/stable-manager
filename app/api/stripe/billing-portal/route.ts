@@ -61,10 +61,41 @@ export async function POST() {
     );
   }
 
-  const portal = await stripeServerClient.billingPortal.sessions.create({
-    customer:   stable.stripe_customer_id,
-    return_url: `${APP_URL}/dashboard/settings/billing`,
-  });
+  // Wrap the Stripe call so a missing/misconfigured Customer Portal
+  // (the most common first-time prod failure) surfaces as a clear
+  // message instead of a generic 500. Stripe requires the portal to
+  // be saved at Dashboard → Settings → Billing → Customer portal
+  // before this endpoint can mint sessions.
+  try {
+    const portal = await stripeServerClient.billingPortal.sessions.create({
+      customer:   stable.stripe_customer_id,
+      return_url: `${APP_URL}/dashboard/settings/billing`,
+    });
+    return NextResponse.json({ ok: true, url: portal.url });
+  } catch (err: any) {
+    const message = err?.message ?? "Unknown Stripe error";
+    const code    = err?.code ?? err?.raw?.code ?? null;
+    console.error("[billing-portal] Stripe error:", { code, message });
 
-  return NextResponse.json({ ok: true, url: portal.url });
+    // Stripe surfaces an unconfigured portal as a 400 with a specific
+    // copy. Detect it and give the owner an actionable hint.
+    if (
+      code === "billing_portal_not_configured" ||
+      /No configuration provided|default configuration has not been created/i.test(message)
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Stripe Customer Portal isn't activated yet — open Stripe Dashboard → Settings → Billing → Customer portal, save the defaults, and try again.",
+        },
+        { status: 503 },
+      );
+    }
+
+    return NextResponse.json(
+      { ok: false, error: `Could not open billing portal: ${message}` },
+      { status: 502 },
+    );
+  }
 }

@@ -213,14 +213,19 @@ export function DayAgenda({
         )}
       </div>
 
-      {/* FAB --------------------------------------------------- */}
+      {/* FAB ----------------------------------------------------
+          Pinned bottom-right. iOS safe-area math keeps it clear of
+          the home indicator on notched iPhones, and the Report a
+          Problem widget intentionally sits bottom-LEFT on mobile
+          so the two never collide. */}
       {editable && (
         <button
           type="button"
           onClick={onCreate}
           aria-label="New lesson"
           className="
-            fixed bottom-6 right-6 z-30
+            fixed right-4 sm:right-6 z-30
+            bottom-[max(1.5rem,calc(env(safe-area-inset-bottom)+0.75rem))]
             h-14 w-14 rounded-full
             bg-brand-600 text-white text-2xl font-medium leading-none
             shadow-lift hover:bg-brand-700 active:bg-brand-800

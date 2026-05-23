@@ -45,20 +45,33 @@ function EditClientDialog({
   return (
     <form
       action={formAction}
-      className="fixed inset-0 z-30 flex items-start justify-center pt-8 md:pt-16 bg-black/40 backdrop-blur-sm overflow-y-auto"
+      // Mobile: full-screen sheet so Save changes (sticky footer) is
+      // always reachable above the iOS home indicator + browser chrome.
+      // Desktop: centered modal as before.
+      className="fixed inset-0 z-30 flex items-stretch sm:items-start sm:justify-center sm:pt-16 bg-black/40 backdrop-blur-sm"
     >
-      <div className="bg-white rounded-xl shadow-xl border border-neutral-200 p-6 w-full max-w-md flex flex-col gap-3.5 max-h-[calc(100vh-4rem)] overflow-y-auto my-auto">
-        <div className="flex items-center justify-between">
+      <div
+        className="
+          bg-white border border-neutral-200 flex flex-col w-full
+          h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-5rem)]
+          sm:rounded-xl sm:shadow-xl sm:max-w-md
+        "
+      >
+        {/* Header — sticky on mobile so the close X stays reachable */}
+        <div className="flex items-center justify-between px-5 sm:px-6 pt-5 sm:pt-6 pb-3 border-b border-neutral-100 sm:border-0 shrink-0">
           <h2 className="text-lg font-semibold">Edit client</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-neutral-500 hover:text-neutral-900"
+            className="text-sm text-neutral-500 hover:text-neutral-900 px-2 py-1"
+            aria-label="Close"
           >
             ✕
           </button>
         </div>
 
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-3 flex flex-col gap-3.5">
         <input type="hidden" name="client_id" value={client.id} />
 
         <Field label="Full name" name="full_name" type="text" required defaultValue={client.full_name} />
@@ -131,12 +144,24 @@ function EditClientDialog({
           <Field label="Relationship" name="emergency_contact_relation" type="text" defaultValue={client.emergency_contact_relation ?? ""} placeholder="spouse, parent, friend…" />
         </fieldset>
 
-        <Submit />
-        {state.error && (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-            {state.error}
-          </p>
-        )}
+          {state.error && (
+            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              {state.error}
+            </p>
+          )}
+        </div>
+
+        {/* Sticky footer with Save changes — always thumb-reachable on
+            mobile. safe-area-inset-bottom keeps it above the iOS home bar. */}
+        <div
+          className="
+            shrink-0 border-t border-neutral-100 sm:border-0
+            px-5 sm:px-6 py-3 sm:py-2 sm:pb-6
+            pb-[max(0.75rem,env(safe-area-inset-bottom))]
+          "
+        >
+          <Submit />
+        </div>
       </div>
     </form>
   );
@@ -163,7 +188,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
-      className="mt-2 rounded-md bg-neutral-900 text-white py-2.5 text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full sm:w-auto rounded-md bg-neutral-900 text-white py-3 sm:py-2.5 px-4 text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {pending ? "Saving…" : "Save changes"}
     </button>

@@ -51,6 +51,165 @@ export async function getOwnStable(): Promise<OwnStableRow | null> {
   return data as OwnStableRow;
 }
 
+// =================================================================
+// Activity summary — role-aware "what have you done lately?" panel
+// surfaced on /dashboard/settings/profile.
+//
+// The shape adapts to who's asking:
+//   * owner / employee — lessons led, sessions logged, total minutes
+//     ridden/coached, distinct horses + clients touched.
+//   * client           — lessons taken, distinct horses ridden,
+//                        upcoming bookings, total minutes in saddle.
+//
+// All counts are over the trailing 365 days. Rationale: long enough
+// to be motivating for newer Founding 15 stables (rarely flat-zero
+// in a year), short enough that an old account doesn't see lifetime
+// numbers that no longer reflect current usage.
+//
+// Numbers come straight from RLS-scoped queries — no SECURITY DEFINER
+// needed because every caller can only see their own data anyway.
+// =================================================================
+export type StaffActivity = {
+  kind:            "staff";
+  windowDays:      number;
+  lessonsLed:      number;
+  sessionsLogged:  number;
+  minutesCoached:  number;
+  distinctHorses:  number;
+  distinctClients: number;
+  upcomingLessons: number;
+};
+
+export type ClientActivity = {
+  kind:            "client";
+  windowDays:      number;
+  lessonsTaken:    number;
+  distinctHorses:  number;
+  minutesRidden:   number;
+  upcomingLessons: number;
+};
+
+export type ActivitySummary = StaffActivity | ClientActivity;
+
+export async function getOwnActivityStats(): Promise<ActivitySummary> {
+  const session = await getSession();
+  const supabase = createSupabaseServerClient();
+
+  const windowDays = 365;
+  const since = new Date(Date.now() - windowDays * 86_400_000).toISOString();
+  const now   = new Date().toISOString();
+
+  if (session.role === "client") {
+    // Lessons attended in the last year + upcoming. RLS already narrows
+    // lessons to "client_id = me", so no extra WHERE on client_id needed.
+    const [completedRes, upcomingRes] = await Promise.all([
+      supabase
+        .from("lessons")
+        .select("id, horse_id, starts_at, ends_at, status")
+        .gte("starts_at", since)
+        .lt("starts_at", now)
+        .in("status", ["completed", "no_show"]),
+      supabase
+        .from("lessons")
+        .select("id", { count: "exact", head: true })
+        .gte("starts_at", now)
+        .eq("status", "scheduled"),
+    ]);
+
+    const rows = (completedRes.data ?? []) as Array<{
+      id: string; horse_id: string | null; starts_at: string; ends_at: string; status: string;
+    }>;
+    const horseIds = new Set<string>();
+    let minutes = 0;
+    let lessonsTaken = 0;
+    for (const r of rows) {
+      if (r.status !== "completed") continue;
+      lessonsTaken += 1;
+      if (r.horse_id) horseIds.add(r.horse_id);
+      const m = Math.max(
+        0,
+        Math.round((Date.parse(r.ends_at) - Date.parse(r.starts_at)) / 60_000),
+      );
+      minutes += m;
+    }
+
+    return {
+      kind:            "client",
+      windowDays,
+      lessonsTaken,
+      distinctHorses:  horseIds.size,
+      minutesRidden:   minutes,
+      upcomingLessons: upcomingRes.count ?? 0,
+    };
+  }
+
+  // Staff (owner + employee): lessons where they're the trainer + their
+  // own coached sessions log + roll-up over the past year.
+  const [lessonsRes, sessionsRes, upcomingRes] = await Promise.all([
+    supabase
+      .from("lessons")
+      .select("id, horse_id, client_id, starts_at, ends_at, status")
+      .eq("trainer_id", session.userId)
+      .gte("starts_at", since)
+      .lt("starts_at", now)
+      .in("status", ["completed", "no_show"]),
+    supabase
+      .from("sessions")
+      .select("id, started_at, duration_minutes, horse_id, rider_client_id")
+      .eq("trainer_id", session.userId)
+      .gte("started_at", since),
+    supabase
+      .from("lessons")
+      .select("id", { count: "exact", head: true })
+      .eq("trainer_id", session.userId)
+      .gte("starts_at", now)
+      .eq("status", "scheduled"),
+  ]);
+
+  const lessonRows = (lessonsRes.data ?? []) as Array<{
+    id: string; horse_id: string | null; client_id: string | null;
+    starts_at: string; ends_at: string; status: string;
+  }>;
+  const sessionRows = (sessionsRes.data ?? []) as Array<{
+    id: string; started_at: string; duration_minutes: number | null;
+    horse_id: string | null; rider_client_id: string | null;
+  }>;
+
+  const horseIds  = new Set<string>();
+  const clientIds = new Set<string>();
+  let lessonsLed = 0;
+  let minutes    = 0;
+
+  for (const r of lessonRows) {
+    if (r.status !== "completed") continue;
+    lessonsLed += 1;
+    if (r.horse_id)  horseIds.add(r.horse_id);
+    if (r.client_id) clientIds.add(r.client_id);
+    minutes += Math.max(
+      0,
+      Math.round((Date.parse(r.ends_at) - Date.parse(r.starts_at)) / 60_000),
+    );
+  }
+  for (const s of sessionRows) {
+    if (s.horse_id)        horseIds.add(s.horse_id);
+    if (s.rider_client_id) clientIds.add(s.rider_client_id);
+    if (s.duration_minutes && s.duration_minutes > 0) {
+      minutes += s.duration_minutes;
+    }
+  }
+
+  return {
+    kind:            "staff",
+    windowDays,
+    lessonsLed,
+    sessionsLogged:  sessionRows.length,
+    minutesCoached:  minutes,
+    distinctHorses:  horseIds.size,
+    distinctClients: clientIds.size,
+    upcomingLessons: upcomingRes.count ?? 0,
+  };
+}
+
 export async function updateOwnProfile(input: {
   fullName?: string;
   photoUrl?: string | null;
