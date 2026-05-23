@@ -10,21 +10,26 @@ import {
   type CareRequestStatus,
 } from "@/services/careRequests";
 
-const ALLOWED: CareRequestStatus[] = ["acknowledged", "scheduled", "done", "declined"];
+type RespondStatus = Exclude<CareRequestStatus, "pending">;
+const ALLOWED: RespondStatus[] = ["acknowledged", "scheduled", "done", "declined"];
+
+function isAllowedStatus(s: string): s is RespondStatus {
+  return (ALLOWED as string[]).includes(s);
+}
 
 export async function respondCareRequestAction(formData: FormData): Promise<void> {
   const requestId    = String(formData.get("request_id") ?? "");
-  const status       = String(formData.get("status") ?? "") as CareRequestStatus;
+  const statusRaw    = String(formData.get("status") ?? "");
   const response     = String(formData.get("response") ?? "");
   const scheduledFor = String(formData.get("scheduled_for") ?? "");
 
   if (!requestId)                  return;
-  if (!ALLOWED.includes(status))   return;
+  if (!isAllowedStatus(statusRaw)) return;
 
   try {
     await respondToCareRequest({
       requestId,
-      status,
+      status:       statusRaw,
       response:     response.length > 0 ? response : null,
       scheduledFor: scheduledFor || null,
     });
