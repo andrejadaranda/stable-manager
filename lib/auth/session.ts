@@ -6,12 +6,14 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type Role = "owner" | "employee" | "client";
+export type AccountType = "business" | "personal";
 
 export type SessionContext = {
   authUserId: string;       // auth.users.id (Supabase Auth)
   userId: string;           // profiles.id
   stableId: string;
   role: Role;
+  accountType: AccountType; // business = stable with clients; personal = solo B2C
   clientId: string | null;  // clients.id, only set when role='client' and portal-linked
 };
 
@@ -23,7 +25,7 @@ export async function getSession(): Promise<SessionContext> {
 
   const { data: profile, error: e2 } = await supabase
     .from("profiles")
-    .select("id, stable_id, role")
+    .select("id, stable_id, role, stable:stables(account_type)")
     .eq("auth_user_id", user.id)
     .single();
   if (e2 || !profile) throw new Error("USER_HAS_NO_STABLE");
@@ -38,11 +40,18 @@ export async function getSession(): Promise<SessionContext> {
     clientId = client?.id ?? null;
   }
 
+  // Supabase serialises 1:1 FK joins inconsistently — unwrap defensively.
+  const stableJoin = Array.isArray((profile as { stable?: unknown }).stable)
+    ? (profile as { stable: Array<{ account_type?: AccountType }> }).stable[0]
+    : (profile as { stable?: { account_type?: AccountType } }).stable;
+  const accountType: AccountType = (stableJoin?.account_type as AccountType) ?? "business";
+
   return {
     authUserId: user.id,
     userId: profile.id,
     stableId: profile.stable_id,
     role: profile.role as Role,
+    accountType,
     clientId,
   };
 }

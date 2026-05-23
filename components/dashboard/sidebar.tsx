@@ -16,6 +16,18 @@ type Item = {
   feature?: FeatureKey;
 };
 
+// Personal (B2C) owners get a trimmed nav — no clients, no inbox,
+// no payments collected from other clients, no team. Just their own
+// horses, calendar, sessions, expenses.
+const PERSONAL_NAV: Item[] = [
+  { href: "/dashboard",          label: "Overview",  icon: <IconHome /> },
+  { href: "/dashboard/calendar", label: "Calendar",  icon: <IconCal />  },
+  { href: "/dashboard/horses",   label: "My horses", icon: <IconHorse /> },
+  { href: "/dashboard/sessions", label: "Sessions",  icon: <IconActivity />, feature: "sessions" },
+  { href: "/dashboard/welfare",  label: "Welfare",   icon: <IconHeart /> },
+  { href: "/dashboard/expenses", label: "Expenses",  icon: <IconReceipt /> },
+];
+
 const NAV: Record<Role, Item[]> = {
   owner: [
     { href: "/dashboard",               label: "Overview",      icon: <IconHome /> },
@@ -57,18 +69,24 @@ const ROLE_LABEL: Record<Role, string> = {
 
 export function Sidebar({
   role,
+  accountType = "business",
   email,
   features,
   photoUrl,
 }: {
   role: Role;
+  /** Personal accounts get a trimmed nav (no clients, inbox, team). */
+  accountType?: "business" | "personal";
   email: string;
   features: StableFeatures;
   photoUrl?: string | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const items = NAV[role].filter((it) => !it.feature || features[it.feature]);
+  // Personal (B2C) owners short-circuit the role NAV — they're technically
+  // "owner" of a personal stable but should only see the solo-mode menu.
+  const baseItems = accountType === "personal" && role === "owner" ? PERSONAL_NAV : NAV[role];
+  const items = baseItems.filter((it) => !it.feature || features[it.feature]);
 
   useEffect(() => { setOpen(false); }, [pathname]);
 

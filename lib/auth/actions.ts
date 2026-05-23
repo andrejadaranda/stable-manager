@@ -173,6 +173,67 @@ export async function signupOwnerAction(
 }
 
 // ---------------------------------------------------------------
+// Personal (B2C) signup — €9/€15 single-user account
+// ---------------------------------------------------------------
+// No stable, no clients, no staff — the user manages their own horses
+// only. /auth/callback sees `account_type=personal` in user_metadata and
+// calls provision_personal_account RPC instead of provision_stable.
+// ---------------------------------------------------------------
+export async function signupPersonalAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const email     = String(formData.get("email") ?? "").trim();
+  const password  = String(formData.get("password") ?? "");
+  const fullName  = String(formData.get("full_name") ?? "").trim();
+  const planTier  = String(formData.get("plan_tier") ?? "mini");
+
+  if (!email || !password || !fullName) {
+    return { error: "All fields are required.", email };
+  }
+  if (password.length < 8) {
+    return { error: "Password must be at least 8 characters.", email };
+  }
+  if (planTier !== "mini" && planTier !== "plus") {
+    return { error: "Pick a plan (Mini or Plus).", email };
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { data, error: signUpError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${siteOrigin()}/auth/callback`,
+      data: {
+        account_type:        "personal",
+        full_name:           fullName,
+        personal_plan_tier:  planTier,
+      },
+    },
+  });
+
+  if (signUpError) {
+    const mapped = mapAuthError(signUpError.message);
+    return { error: mapped.error, code: mapped.code ?? null, email };
+  }
+
+  if (!data.session) {
+    redirect(`/auth/check-email?email=${encodeURIComponent(email)}`);
+  }
+
+  // Email-confirmation OFF — provision immediately.
+  const { error: provisionError } = await supabase.rpc("provision_personal_account", {
+    p_full_name: fullName,
+    p_plan_tier: planTier,
+  });
+  if (provisionError) {
+    return { error: provisionError.message, email };
+  }
+
+  redirect("/dashboard");
+}
+
+// ---------------------------------------------------------------
 // Resend confirmation
 // ---------------------------------------------------------------
 // Re-trigger the Supabase confirmation email. Used from /auth/check-email

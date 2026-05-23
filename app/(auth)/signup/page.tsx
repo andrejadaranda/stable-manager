@@ -37,12 +37,11 @@ export default function SignupLandingPage() {
           tone="secondary"
         />
         <Card
-          href="#personal-coming-soon"
+          href="/signup/personal"
           title="Personal account"
-          body="For private horse owners without a stable. Log your own sessions, vet visits, expenses, and goals. €9/mo for up to 2 horses · €15/mo for up to 5. Coming soon."
-          cta="Coming soon"
-          tone="muted"
-          disabled
+          body="For private horse owners without a stable. Log your own sessions, vet visits, expenses, and goals. €9/mo for up to 2 horses · €15/mo for up to 5."
+          cta="Create personal account →"
+          tone="secondary"
         />
       </div>
 

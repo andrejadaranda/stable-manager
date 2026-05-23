@@ -36,6 +36,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen md:flex">
       <Sidebar
         role={session.role}
+        accountType={session.accountType}
         email={user?.email ?? ""}
         features={features}
         photoUrl={ownProfile?.photo_url ?? null}

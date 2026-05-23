@@ -76,11 +76,26 @@ export async function GET(request: NextRequest) {
     if (!profile) {
       // First confirmation — finish the signup that started before the email.
       const meta = (user.user_metadata ?? {}) as {
+        account_type?: "personal" | "business";
         stable_name?: string;
         stable_slug?: string;
         full_name?: string;
+        personal_plan_tier?: "mini" | "plus";
       };
-      if (meta.stable_name && meta.stable_slug && meta.full_name) {
+      if (meta.account_type === "personal" && meta.full_name && meta.personal_plan_tier) {
+        const { error: provisionError } = await supabase.rpc(
+          "provision_personal_account",
+          {
+            p_full_name: meta.full_name,
+            p_plan_tier: meta.personal_plan_tier,
+          },
+        );
+        if (provisionError) {
+          return NextResponse.redirect(
+            buildErrorUrl(url, provisionError.message),
+          );
+        }
+      } else if (meta.stable_name && meta.stable_slug && meta.full_name) {
         const { error: provisionError } = await supabase.rpc(
           "provision_stable",
           {
