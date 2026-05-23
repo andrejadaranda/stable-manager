@@ -18,6 +18,7 @@ import { getSession } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EditMyHorseButton } from "@/components/myHorses/edit-my-horse-dialog";
 import { NewCareRequestButton } from "@/components/careRequests/new-care-request-button";
+import { RequestLessonButton } from "@/components/lessonRequests/request-lesson-button";
 import {
   listCareRequestsForHorse,
   CARE_TYPE_LABEL,
@@ -149,16 +150,24 @@ export default async function MyHorseDetailPage({
                 {[h.breed, age && `${age}y`].filter(Boolean).join(" · ") || "—"}
               </p>
             </div>
-            {isOwner && (
-              <EditMyHorseButton
-                horseId={h.id}
-                initialName={h.name}
-                initialBreed={h.breed}
-                initialDob={h.date_of_birth}
-                initialNotes={h.notes}
-                initialPublicBio={h.public_bio}
+            <div className="flex items-center gap-2 shrink-0 pb-1">
+              <RequestLessonButton
+                horses={[{ id: h.id, name: h.name }]}
+                presetHorseId={h.id}
+                variant="outline"
+                label="Request a lesson"
               />
-            )}
+              {isOwner && (
+                <EditMyHorseButton
+                  horseId={h.id}
+                  initialName={h.name}
+                  initialBreed={h.breed}
+                  initialDob={h.date_of_birth}
+                  initialNotes={h.notes}
+                  initialPublicBio={h.public_bio}
+                />
+              )}
+            </div>
           </div>
 
           {/* Public bio — shown to BOTH owner and rider; owner edits via

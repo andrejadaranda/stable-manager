@@ -3,6 +3,15 @@ import { getCalendar } from "@/services/lessons";
 import { listServices } from "@/services/services";
 import { startOfWeek, addDays } from "@/lib/utils/dates";
 import { CalendarShell } from "@/components/calendar/calendar-shell";
+import { listMyHorses } from "@/services/myHorses";
+import { listLessonRequestsForClient } from "@/services/lessonRequests";
+import {
+  RequestLessonButton,
+  type HorseChoice,
+} from "@/components/lessonRequests/request-lesson-button";
+import { MyLessonRequestsSection } from "@/components/lessonRequests/my-lesson-requests-section";
+
+export const dynamic = "force-dynamic";
 
 const FMT_EUR = new Intl.NumberFormat(undefined, {
   style: "currency",
@@ -22,19 +31,44 @@ export default async function MyLessonsPage({
 
   // RLS narrows lessons to the caller's own client_id; services view is
   // active-only when the caller is a client.
-  const [lessons, services] = await Promise.all([
+  const [lessons, services, myHorses, myRequests] = await Promise.all([
     getCalendar(start.toISOString(), end.toISOString()),
     listServices(),
+    listMyHorses().catch(() => []),
+    listLessonRequestsForClient().catch(() => []),
   ]);
+
+  // The "Request a lesson" picker offers horses the client either owns or has
+  // lessoned with (listMyHorses already returns that union). RLS on the insert
+  // side enforces the same constraint, so the dropdown can't be tampered with.
+  const horseChoices: HorseChoice[] = myHorses.map((h) => ({
+    id:   h.id,
+    name: h.name,
+  }));
 
   return (
     <div className="flex flex-col gap-8">
+      <header className="flex items-baseline justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="font-display text-2xl md:text-3xl text-navy-900 leading-none">
+            My lessons
+          </h1>
+          <p className="text-sm text-ink-500 mt-2">
+            Your weekly calendar. Request a new lesson — the stable will confirm
+            time, horse, and trainer.
+          </p>
+        </div>
+        <RequestLessonButton horses={horseChoices} />
+      </header>
+
       <CalendarShell
         lessons={lessons}
         weekStart={start}
         basePath="/dashboard/my-lessons"
         editable={false}
       />
+
+      <MyLessonRequestsSection items={myRequests} />
 
       {services.length > 0 && (
         <section className="bg-white rounded-2xl shadow-soft p-5 md:p-6">
