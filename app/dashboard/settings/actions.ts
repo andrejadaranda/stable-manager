@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { updateOwnStable } from "@/services/stables";
+import { updateOwnStable, setStableAcceptsPublicJoin } from "@/services/stables";
 import { updateOwnProfile } from "@/services/account";
 import { toFriendlyError } from "@/lib/errors/friendly";
 
@@ -33,6 +33,20 @@ export async function updateStableNameAction(formData: FormData): Promise<void> 
   }
   revalidatePath("/dashboard/settings/stable");
   bounce("/dashboard/settings/stable", { ok: "Stable info updated." });
+}
+
+export async function toggleAcceptsPublicJoinAction(formData: FormData): Promise<void> {
+  const enabled = String(formData.get("enabled") ?? "false") === "true";
+  try {
+    await setStableAcceptsPublicJoin(enabled);
+  } catch (err) {
+    bounce("/dashboard/settings/stable", { err: toFriendlyError(err).message });
+  }
+  revalidatePath("/dashboard/settings/stable");
+  revalidatePath("/dashboard/join-requests");
+  bounce("/dashboard/settings/stable", {
+    ok: enabled ? "Public sign-ups are ON." : "Public sign-ups are OFF.",
+  });
 }
 
 export async function updateProfileNameAction(formData: FormData): Promise<void> {

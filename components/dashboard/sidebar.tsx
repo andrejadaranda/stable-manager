@@ -24,6 +24,7 @@ const NAV: Record<Role, Item[]> = {
     { href: "/dashboard/sessions",      label: "Sessions",      icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/horses",        label: "Horses",        icon: <IconHorse /> },
     { href: "/dashboard/clients",         label: "Clients",         icon: <IconUsers /> },
+    { href: "/dashboard/join-requests",   label: "Join requests",   icon: <IconInbox /> },
     { href: "/dashboard/lesson-requests", label: "Lesson requests", icon: <IconCal /> },
     { href: "/dashboard/care-requests",   label: "Care requests",   icon: <IconWrench /> },
     { href: "/dashboard/chat",            label: "Chat",            icon: <IconChat />, feature: "chat" },
@@ -38,6 +39,7 @@ const NAV: Record<Role, Item[]> = {
     { href: "/dashboard/sessions",      label: "Sessions",      icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/horses",        label: "Horses",        icon: <IconHorse /> },
     { href: "/dashboard/clients",         label: "Clients",         icon: <IconUsers /> },
+    { href: "/dashboard/join-requests",   label: "Join requests",   icon: <IconInbox /> },
     { href: "/dashboard/lesson-requests", label: "Lesson requests", icon: <IconCal /> },
     { href: "/dashboard/care-requests",   label: "Care requests",   icon: <IconWrench /> },
     { href: "/dashboard/chat",            label: "Chat",            icon: <IconChat />, feature: "chat" },
@@ -324,4 +326,7 @@ function IconHeart() {
 }
 function IconWrench() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-7 7 2 2 7-7a4 4 0 0 0 5.4-5.4l-2.3 2.3-2.4-2.4z"/></svg>;
+}
+function IconInbox() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13l3-9h12l3 9"/><path d="M3 13v6a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-6"/><path d="M8 13h2a2 2 0 0 0 4 0h2"/></svg>;
 }

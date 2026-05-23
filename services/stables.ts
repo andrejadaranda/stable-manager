@@ -10,6 +10,7 @@ export type StableRow = {
   name: string;
   slug: string;
   created_at: string;
+  accepts_public_join: boolean;
 };
 
 export async function getOwnStable(): Promise<StableRow> {
@@ -18,11 +19,25 @@ export async function getOwnStable(): Promise<StableRow> {
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
     .from("stables")
-    .select("id, name, slug, created_at")
+    .select("id, name, slug, created_at, accepts_public_join")
     .eq("id", session.stableId)
     .single();
   if (error) throw error;
   return data as StableRow;
+}
+
+/** Owner-only toggle for the public stable_join_requests insert gate
+ *  (used by Settings → Stable). Defaults to true at provision time. */
+export async function setStableAcceptsPublicJoin(enabled: boolean): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("stables")
+    .update({ accepts_public_join: enabled })
+    .eq("id", session.stableId);
+  if (error) throw error;
 }
 
 export async function updateOwnStable(input: { name?: string }) {
@@ -43,7 +58,7 @@ export async function updateOwnStable(input: { name?: string }) {
     .from("stables")
     .update(update)
     .eq("id", session.stableId)
-    .select("id, name, slug, created_at")
+    .select("id, name, slug, created_at, accepts_public_join")
     .single();
   if (error) throw error;
   return data as StableRow;

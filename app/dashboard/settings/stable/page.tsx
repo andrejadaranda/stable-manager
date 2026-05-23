@@ -1,7 +1,10 @@
 import { requirePageRole } from "@/lib/auth/redirects";
 import { getOwnStable } from "@/services/stables";
 import { Card, CardHeader, Field, Input, Button } from "@/components/ui";
-import { updateStableNameAction } from "../actions";
+import {
+  updateStableNameAction,
+  toggleAcceptsPublicJoinAction,
+} from "../actions";
 import { ExportPanel } from "@/components/settings/export-panel";
 
 export default async function StableSettingsPage() {
@@ -71,6 +74,55 @@ export default async function StableSettingsPage() {
             Horses appear once you add a public bio to them in their profile.
             Services appear automatically from your price list.
           </p>
+        </div>
+      </Card>
+
+      <Card padded={false}>
+        <CardHeader
+          title="Public sign-ups"
+          subtitle="Anyone with your join link can apply as a rider or horse owner. You approve each application before they get app access."
+        />
+        <div className="p-6 flex flex-col gap-4">
+          <div className="rounded-xl bg-ink-50/60 px-4 py-3 text-[12.5px] text-ink-700">
+            <p>
+              Join link:{" "}
+              <span className="font-mono text-navy-900 break-all">
+                https://longrein.eu/signup/join/{stable.slug}
+              </span>
+            </p>
+            <p className="mt-1 text-ink-500">
+              Share on Instagram bio, WhatsApp, printed flyers, your website
+              footer.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm font-medium text-navy-900">
+                {stable.accepts_public_join
+                  ? "Accepting public applications"
+                  : "Public applications turned off"}
+              </p>
+              <p className="text-[12px] text-ink-500 mt-1 max-w-md">
+                {stable.accepts_public_join
+                  ? "New applicants land in Join requests for your review."
+                  : "The join link returns a friendly “not accepting right now” message — you can still invite people manually from Clients."}
+              </p>
+            </div>
+            <form action={toggleAcceptsPublicJoinAction}>
+              <input
+                type="hidden"
+                name="enabled"
+                value={stable.accepts_public_join ? "false" : "true"}
+              />
+              <Button
+                type="submit"
+                variant={stable.accepts_public_join ? "secondary" : "primary"}
+              >
+                {stable.accepts_public_join ? "Turn off" : "Turn on"}
+              </Button>
+            </form>
+          </div>
         </div>
       </Card>
 

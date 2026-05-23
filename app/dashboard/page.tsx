@@ -31,11 +31,13 @@ import { SmartSuggestions } from "@/components/dashboard/smart-suggestions";
 import { BirthdaysWidget } from "@/components/dashboard/birthdays-widget";
 import { CareRequestsWidget } from "@/components/dashboard/care-requests-widget";
 import { LessonRequestsWidget } from "@/components/dashboard/lesson-requests-widget";
+import { JoinRequestsWidget } from "@/components/dashboard/join-requests-widget";
 import { getOnboardingStatus } from "@/services/onboarding";
 import { getSmartSuggestions } from "@/services/suggestions";
 import { getUpcomingBirthdays } from "@/services/birthdays";
 import { listCareRequestsForOwner } from "@/services/careRequests";
 import { listLessonRequestsForOwner } from "@/services/lessonRequests";
+import { listJoinRequestsForOwner } from "@/services/joinRequests";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +46,7 @@ export default async function DashboardHome() {
   if (!session) redirect("/login");
   if (session.role === "client") redirect("/dashboard/my-lessons");
 
-  const [s, profile, onboarding, suggestions, birthdays, openCareRequests, openLessonRequests] = await Promise.all([
+  const [s, profile, onboarding, suggestions, birthdays, openCareRequests, openLessonRequests, openJoinRequests] = await Promise.all([
     getDashboardSummary(),
     getOwnProfile().catch(() => null),
     getOnboardingStatus().catch(() => null),
@@ -52,6 +54,7 @@ export default async function DashboardHome() {
     getUpcomingBirthdays().catch(() => []),
     listCareRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
     listLessonRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
+    listJoinRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
   ]);
 
   const firstName = (profile?.full_name ?? "").split(" ")[0] ?? "";
@@ -219,6 +222,11 @@ export default async function DashboardHome() {
               fmtEUR={fmtEUR}
             />
           </div>
+
+          {/* Join requests — applicants pending owner approval. Highest
+              priority of the three inboxes because each row is revenue
+              adjacent (new client / horse-owner conversion). */}
+          <JoinRequestsWidget items={openJoinRequests} />
 
           {/* Lesson requests — actionable inbox for clients proposing times. */}
           <LessonRequestsWidget items={openLessonRequests} />
