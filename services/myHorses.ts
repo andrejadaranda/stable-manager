@@ -1,3 +1,4 @@
+// =============================================================
 // Client-portal "My horses" service.
 //
 // Two distinct collections per client:
@@ -146,4 +147,58 @@ export async function listMyHorses(): Promise<MyHorseSummary[]> {
   // Owned first (more important to the client), then ridden alpha by name.
   ridden.sort((a, b) => a.name.localeCompare(b.name));
   return [...owned, ...ridden];
+}
+
+// =============================================================
+// Horse-owner client EDIT — only the bio fields, never workload caps
+// or active toggle. The DB trigger horses_client_field_lock rejects
+// anything else; this service mirrors that contract at the type level
+// so the caller can't pass extra props.
+// =============================================================
+export type EditMyHorseInput = {
+  name?:           string;
+  breed?:          string | null;
+  date_of_birth?:  string | null;  // YYYY-MM-DD
+  notes?:          string | null;
+  public_bio?:     string | null;
+  photo_url?:      string | null;
+};
+
+export async function updateMyHorse(
+  horseId: string,
+  input: EditMyHorseInput,
+): Promise<void> {
+  const session = await getSession();
+  if (session.role !== "client") throw new Error("FORBIDDEN");
+  if (!session.clientId) throw new Error("CLIENT_NOT_LINKED");
+
+  const update: Record<string, unknown> = {};
+  if (input.name           !== undefined) {
+    const trimmed = (input.name ?? "").trim();
+    if (!trimmed)         throw new Error("HORSE_NAME_REQUIRED");
+    if (trimmed.length > 60) throw new Error("HORSE_NAME_TOO_LONG");
+    update.name = trimmed;
+  }
+  if (input.breed          !== undefined) update.breed          = nullIfEmpty(input.breed);
+  if (input.date_of_birth  !== undefined) update.date_of_birth  = input.date_of_birth || null;
+  if (input.notes          !== undefined) update.notes          = nullIfEmpty(input.notes);
+  if (input.public_bio     !== undefined) update.public_bio     = nullIfEmpty(input.public_bio);
+  if (input.photo_url      !== undefined) update.photo_url      = nullIfEmpty(input.photo_url);
+
+  if (Object.keys(update).length === 0) return;
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("horses")
+    .update(update)
+    .eq("id", horseId)
+    .eq("owner_client_id", session.clientId);  // belt + braces vs RLS
+
+  if (error) throw error;
+}
+
+function nullIfEmpty(v: string | null | undefined): string | null {
+  if (v === null || v === undefined) return null;
+  const trimmed = v.trim();
+  return trimmed.length === 0 ? null : trimmed;
 }
