@@ -29,9 +29,7 @@ import { RemindersBlock } from "@/components/reminders/reminders-block";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 import { SmartSuggestions } from "@/components/dashboard/smart-suggestions";
 import { BirthdaysWidget } from "@/components/dashboard/birthdays-widget";
-import { CareRequestsWidget } from "@/components/dashboard/care-requests-widget";
-import { LessonRequestsWidget } from "@/components/dashboard/lesson-requests-widget";
-import { JoinRequestsWidget } from "@/components/dashboard/join-requests-widget";
+import { InboxWidget } from "@/components/dashboard/inbox-widget";
 import { getOnboardingStatus } from "@/services/onboarding";
 import { getSmartSuggestions } from "@/services/suggestions";
 import { getUpcomingBirthdays } from "@/services/birthdays";
@@ -223,17 +221,13 @@ export default async function DashboardHome() {
             />
           </div>
 
-          {/* Join requests — applicants pending owner approval. Highest
-              priority of the three inboxes because each row is revenue
-              adjacent (new client / horse-owner conversion). */}
-          <JoinRequestsWidget items={openJoinRequests} />
-
-          {/* Lesson requests — actionable inbox for clients proposing times. */}
-          <LessonRequestsWidget items={openLessonRequests} />
-
-          {/* Care requests — auto-hides when nothing's open. Sits above
-              Birthdays because it's actionable; Birthdays is decorative. */}
-          <CareRequestsWidget items={openCareRequests} />
+          {/* Combined inbox — Join + Lesson + Care requests grouped.
+              Auto-hides when all 3 are empty. */}
+          <InboxWidget
+            joinOpen={openJoinRequests}
+            lessonOpen={openLessonRequests}
+            careOpen={openCareRequests}
+          />
 
           {/* Birthdays — emotional micro-widget, moved to the bottom.
               Auto-hides when no horse/client birthday in next 14 days. */}
