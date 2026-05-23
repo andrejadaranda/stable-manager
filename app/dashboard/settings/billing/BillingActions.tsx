@@ -8,11 +8,15 @@
 import { useState } from "react";
 
 type Props = {
-  kind:   "start" | "manage";
-  label?: string;
+  kind:    "start" | "manage";
+  label?:  string;
+  // When true, hides the "No card charged during the trial" helper line —
+  // used for the trial-expired / reactivate flow where the user IS being
+  // charged immediately.
+  immediateCharge?: boolean;
 };
 
-export function BillingActions({ kind, label }: Props) {
+export function BillingActions({ kind, label, immediateCharge }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,8 +49,11 @@ export function BillingActions({ kind, label }: Props) {
       >
         {busy ? "Opening…" : (label ?? defaultLabel)}
       </button>
-      {kind === "start" && (
+      {kind === "start" && !immediateCharge && (
         <p className="text-[12px] text-ink-500 italic">No card charged during the trial — cancel any time before day 14.</p>
+      )}
+      {kind === "start" && immediateCharge && (
+        <p className="text-[12px] text-ink-500 italic">You'll be charged €49 immediately and can cancel any time from the billing page.</p>
       )}
       {error && (
         <p className="text-[13px] text-red-700 mt-1">{error}</p>

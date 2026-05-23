@@ -81,6 +81,28 @@ export async function POST() {
     );
   }
 
+  // Has this stable already used its free trial? Without this check, a
+  // user could let one trial lapse and then come back here to start a
+  // fresh 14-day trial indefinitely — the seed migration writes a default
+  // 'trialing' row at signup, so any account ever past day 0 has a trial
+  // record. If the row exists AND it isn't currently active in Stripe
+  // (no stripe_subscription_id), the previous trial expired without a
+  // card → charge immediately on this re-attempt instead.
+  const { data: existingSub } = await supabase
+    .from("subscriptions")
+    .select("status, current_period_end, stripe_subscription_id")
+    .eq("stable_id", stable.id)
+    .maybeSingle();
+  const hadPriorTrial = Boolean(
+    existingSub &&
+    !existingSub.stripe_subscription_id &&
+    (existingSub.status === "trialing" || existingSub.status === "cancelled" || existingSub.status === "unpaid"),
+  );
+  const trialEndPassed = existingSub?.current_period_end != null
+    ? new Date(existingSub.current_period_end).getTime() <= Date.now()
+    : true;
+  const skipTrial = hadPriorTrial && trialEndPassed;
+
   // Get the owner's email for the customer record. We use the canonical
   // auth.users.email rather than any cached column to stay schema-light.
   const { data: { user } } = await supabase.auth.admin.getUserById(session.authUserId);
@@ -121,8 +143,12 @@ export async function POST() {
     customer:            customerId,
     line_items:          [{ price: priceId, quantity: 1 }],
     subscription_data: {
-      trial_period_days: 14,
-      metadata: { stable_id: stable.id },
+      // Only grant the 14-day trial on a first attempt. Anyone with an
+      // existing 'trialing' row that already lapsed (no Stripe sub
+      // attached) is starting from a known second-chance position —
+      // immediate charge instead of free trial recursion.
+      ...(skipTrial ? {} : { trial_period_days: 14 }),
+      metadata: { stable_id: stable.id, restart: skipTrial ? "true" : "false" },
       // Surfaces on every invoice line + receipt as a human-readable
       // subscription description. Without this, Stripe falls back to
       // the bare product nickname ("Pro plan"), which reads cold next
@@ -139,9 +165,13 @@ export async function POST() {
     // Custom_text appears on the Checkout page itself, not the invoice,
     // but it warms up the brand voice before the user sees the receipt.
     custom_text: {
-      submit:               { message: "You'll only be charged after the 14-day trial." },
+      submit: {
+        message: skipTrial
+          ? "You'll be charged €49 immediately and can cancel any time."
+          : "You'll only be charged after the 14-day trial.",
+      },
       terms_of_service_acceptance: {
-        message: "By starting your trial you agree to the Longrein [Terms](https://longrein.eu/terms) and [Privacy Policy](https://longrein.eu/privacy).",
+        message: "By starting your subscription you agree to the Longrein [Terms](https://longrein.eu/terms) and [Privacy Policy](https://longrein.eu/privacy).",
       },
     },
     consent_collection: {

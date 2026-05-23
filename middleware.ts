@@ -99,11 +99,22 @@ export async function middleware(request: NextRequest) {
     if (profile.role === "owner") {
       const { data: sub } = await supabase
         .from("subscriptions")
-        .select("status")
+        .select("status, current_period_end")
         .eq("stable_id", profile.stable_id)
         .maybeSingle();
 
-      const allowed = sub?.status === "trialing" || sub?.status === "active";
+      // Defense-in-depth: 'trialing' alone is not enough — also verify the
+      // trial window hasn't lapsed. Without this check, an account whose
+      // Stripe subscription never got attached (stale trial row) could
+      // browse the app indefinitely past the trial end date, bypassing
+      // the paywall. 'active' is always allowed (Stripe webhook tracks
+      // renewals + flips to past_due/cancelled when needed).
+      const now = Date.now();
+      const trialOk =
+        sub?.status === "trialing" &&
+        sub?.current_period_end != null &&
+        new Date(sub.current_period_end).getTime() > now;
+      const allowed = trialOk || sub?.status === "active";
       if (!allowed) {
         // Personal accounts skip the business /settings/billing page —
         // they go straight to /dashboard/personal-checkout which fires
@@ -117,7 +128,14 @@ export async function middleware(request: NextRequest) {
         url.pathname = isPersonal
           ? "/dashboard/personal-checkout"
           : "/dashboard/settings/billing";
-        url.searchParams.set("gated", sub?.status ?? "no-subscription");
+        // Reason hint for the billing UI so it can show the right copy:
+        //   trial-expired → had a trial, it lapsed without a card
+        //   <status>      → past_due / unpaid / cancelled / incomplete
+        //   no-subscription → never had a row
+        const gatedReason = sub?.status === "trialing"
+          ? "trial-expired"
+          : (sub?.status ?? "no-subscription");
+        url.searchParams.set("gated", gatedReason);
         return NextResponse.redirect(url);
       }
     }

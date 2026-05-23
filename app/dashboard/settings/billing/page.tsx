@@ -41,21 +41,32 @@ export default async function BillingSettingsPage({
 
   const subscription = sub as SubscriptionRow | null;
   const hasActiveStripe = Boolean(subscription?.stripe_subscription_id);
-  const isTrialing = subscription?.status === "trialing";
+  const statusIsTrialing = subscription?.status === "trialing";
   const isActive   = subscription?.status === "active";
   const isPastDue  = subscription?.status === "past_due";
   const isCancelled = subscription?.status === "cancelled" || subscription?.plan === "cancelled";
 
-  const trialEndDate = subscription?.current_period_end && isTrialing
-    ? new Date(subscription.current_period_end).toLocaleDateString("en-GB", {
+  // "Effective" trial state — only treat as a real ongoing trial if the
+  // current_period_end hasn't lapsed. Without this guard, a stable whose
+  // trial expired without a Stripe subscription ever being attached would
+  // render BOTH the "Start your trial" CTA AND the "First charge in X days"
+  // status block at the same time (contradictory UI).
+  const trialEndMs = subscription?.current_period_end
+    ? new Date(subscription.current_period_end).getTime()
+    : null;
+  const isTrialing = statusIsTrialing && trialEndMs != null && trialEndMs > Date.now();
+  // Trial row exists but it's already lapsed — show the "trial expired" UI
+  // (offer restart) instead of pretending it's still active.
+  const isTrialExpired = statusIsTrialing && !isTrialing;
+
+  const trialEndDate = trialEndMs && isTrialing
+    ? new Date(trialEndMs).toLocaleDateString("en-GB", {
         day: "2-digit", month: "short", year: "numeric",
       })
     : null;
 
-  const daysLeft = subscription?.current_period_end && isTrialing
-    ? Math.max(0, Math.ceil(
-        (new Date(subscription.current_period_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
-      ))
+  const daysLeft = trialEndMs && isTrialing
+    ? Math.max(0, Math.ceil((trialEndMs - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
 
   return (
@@ -82,21 +93,34 @@ export default async function BillingSettingsPage({
           title="Plan"
           subtitle="Your Longrein subscription."
           action={
-            isActive    ? <Badge tone="success" dot>Active</Badge>
-            : isTrialing ? <Badge tone="brand" dot>14-day trial</Badge>
-            : isPastDue  ? <Badge tone="warning" dot>Past due</Badge>
-            : isCancelled ? <Badge tone="neutral" dot>Cancelled</Badge>
+            isActive       ? <Badge tone="success" dot>Active</Badge>
+            : isTrialing    ? <Badge tone="brand"   dot>14-day trial</Badge>
+            : isTrialExpired ? <Badge tone="warning" dot>Trial expired</Badge>
+            : isPastDue     ? <Badge tone="warning" dot>Past due</Badge>
+            : isCancelled   ? <Badge tone="neutral" dot>Cancelled</Badge>
             : <Badge tone="neutral" dot>Not started</Badge>
           }
         />
         <div className="p-6 flex flex-col gap-4">
-          {!hasActiveStripe && !isCancelled && (
+          {/* Never-started (no row OR trial row exists but has lapsed and was
+              never tied to a real Stripe subscription). Mutually exclusive
+              with the isTrialing block below — handled by isTrialing now
+              requiring trial_end > now. */}
+          {!hasActiveStripe && !isCancelled && !isTrialing && (
             <>
-              <p className="text-sm text-ink-700 leading-relaxed">
-                Start your 14-day free trial. A card is required at signup —
-                you won't be charged until day 14, and you can cancel any time
-                in one click before then.
-              </p>
+              {isTrialExpired ? (
+                <p className="text-sm text-ink-700 leading-relaxed">
+                  Your trial has ended. Add a payment method to continue using
+                  Longrein — you'll be charged immediately and can cancel any
+                  time from this page.
+                </p>
+              ) : (
+                <p className="text-sm text-ink-700 leading-relaxed">
+                  Start your 14-day free trial. A card is required at signup —
+                  you won't be charged until day 14, and you can cancel any
+                  time in one click before then.
+                </p>
+              )}
               <div className="rounded-xl border border-ink-200 bg-white p-5">
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="text-sm font-semibold text-ink-900">Longrein</p>
@@ -106,7 +130,11 @@ export default async function BillingSettingsPage({
                   Every feature included. Cancel anytime.
                 </p>
               </div>
-              <BillingActions kind="start" />
+              <BillingActions
+                kind="start"
+                label={isTrialExpired ? "Continue to payment" : undefined}
+                immediateCharge={isTrialExpired}
+              />
             </>
           )}
 

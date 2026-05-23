@@ -84,11 +84,17 @@ export default async function DashboardHome() {
       : 100;
 
   const greetingName = firstName;
-  const today = new Date().toLocaleDateString(undefined, {
+  // Render the greeting date in Europe/Vilnius so a server in UTC (Vercel runs
+  // most edges in UTC) doesn't show "yesterday" between 21:00 UTC and 00:00
+  // UTC, when Vilnius has already rolled past midnight. Locked to en-GB for
+  // consistency — month and weekday names stay English regardless of the
+  // viewer's browser locale.
+  const today = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     month: "long",
     day: "numeric",
-  });
+    timeZone: "Europe/Vilnius",
+  }).format(new Date());
 
   return (
     <div className="flex flex-col gap-6">
