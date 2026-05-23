@@ -1,62 +1,169 @@
+// Client portal — "My payments + balance" page.
+//
+// Shows:
+//   1. Big balance card — Owes / Credit / Settled with stable-tone colours
+//   2. Payment history — every transfer/cash payment the trainer recorded
+//      against this client. RLS already narrows listPayments() to the
+//      caller's own rows when role='client'.
+//
+// What we DO NOT show on this client-facing surface:
+//   * other clients' transactions (RLS handles it but doc'd for posterity)
+//   * the owner-side OwesBreakdown (it surfaces internal lesson/charge
+//     IDs and "mark paid" controls — owner-only by design)
+
 import { requirePageRole } from "@/lib/auth/redirects";
-import { listPayments, getClientBalance } from "@/services/payments";
-import { PaymentList } from "@/components/payments/payment-list";
+import {
+  listPayments,
+  getClientBalance,
+} from "@/services/payments";
+
+export const dynamic = "force-dynamic";
+
+const FMT_EUR = new Intl.NumberFormat("en-IE", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+});
 
 export default async function MyPaymentsPage() {
   const session = await requirePageRole("client");
-
-  // A client without a linked clients row can't have payments yet.
   if (!session.clientId) {
     return (
-      <div className="flex flex-col gap-3 max-w-2xl">
-        <h1 className="text-2xl font-semibold tracking-tight">My Payments</h1>
-        <p className="text-sm text-neutral-600">
-          Your portal account isn&apos;t linked to a client record yet. Ask your
-          stable owner to finish setting it up.
+      <div className="max-w-2xl">
+        <p className="text-sm text-ink-600">
+          Your account isn&apos;t linked to a client record yet. Ask your
+          trainer to re-send your invite, or contact{" "}
+          <a href="mailto:hello@longrein.eu" className="text-brand-700 underline">
+            hello@longrein.eu
+          </a>.
         </p>
       </div>
     );
   }
 
   const [payments, balance] = await Promise.all([
-    listPayments(),                            // RLS filters to own payments
-    getClientBalance(session.clientId),        // owner-or-self; allowed
+    listPayments({ clientId: session.clientId }),
+    getClientBalance(session.clientId),
   ]);
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight">My Payments</h1>
-
-      <section className="border border-neutral-200 rounded-md bg-white p-4">
-        <p className="text-xs text-neutral-500 mb-1">Current balance</p>
-        <BalanceLine balance={balance} />
-        <p className="text-xs text-neutral-500 mt-2">
-          Negative means you owe the stable. Positive means you have a credit.
+    <div className="flex flex-col gap-8 max-w-3xl">
+      <header>
+        <h1
+          className="text-3xl tracking-tight text-ink-900"
+          style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: 500 }}
+        >
+          My payments
+        </h1>
+        <p className="text-sm text-ink-500 mt-1">
+          Your balance with the stable + every payment you&apos;ve made.
         </p>
+      </header>
+
+      <BalanceCard balance={balance} />
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-[11px] uppercase tracking-[0.14em] font-semibold text-ink-500">
+          Payment history ({payments.length})
+        </h2>
+        {payments.length === 0 ? (
+          <p className="text-sm text-ink-500">
+            No payments recorded yet. As your trainer logs payments
+            you&apos;ve made, they&apos;ll appear here.
+          </p>
+        ) : (
+          <ul className="bg-white rounded-2xl shadow-soft divide-y divide-ink-100">
+            {payments.map((p) => (
+              <li
+                key={p.id}
+                className="px-5 py-3.5 flex items-baseline justify-between gap-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-ink-900">
+                    {p.lesson
+                      ? `Lesson · ${new Date(p.lesson.starts_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`
+                      : "Payment"}
+                  </p>
+                  <p className="text-[11.5px] text-ink-500 mt-0.5">
+                    {new Date(p.paid_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                    {" · "}
+                    <span className="capitalize">{p.method}</span>
+                    {p.lesson?.horse && <> · {p.lesson.horse.name}</>}
+                  </p>
+                </div>
+                <p className="text-sm font-semibold tabular-nums text-emerald-700">
+                  +{FMT_EUR.format(Number(p.amount))}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium">Payment history</h2>
-        <PaymentList payments={payments} showClientName={false} />
+      <section className="flex flex-col gap-2 text-[12px] text-ink-500 bg-ink-50/60 rounded-xl p-4">
+        <p>
+          <span className="font-medium text-ink-700">How balances work:</span>{" "}
+          a negative balance (Owes) means the stable has charged you for
+          lessons or services you haven&apos;t paid for yet. A positive
+          balance (Credit) means you&apos;ve paid more than what&apos;s due —
+          useful when you keep a deposit on file.
+        </p>
+        <p>
+          Payments are recorded by your trainer or the stable owner when they
+          receive your cash, card, or bank transfer. If something is missing,
+          reach out to them directly.
+        </p>
       </section>
     </div>
   );
 }
 
-function BalanceLine({ balance }: { balance: number }) {
+function BalanceCard({ balance }: { balance: number }) {
   if (balance < 0) {
+    const owed = Math.abs(balance);
     return (
-      <p className="text-lg font-semibold text-red-700">
-        Owes {Math.abs(balance).toFixed(2)}
-      </p>
+      <section className="rounded-2xl shadow-soft p-6 bg-gradient-to-br from-rose-50 to-rose-100/60 border border-rose-200">
+        <p className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-rose-700">
+          You owe
+        </p>
+        <p className="text-3xl font-semibold tabular-nums text-rose-900 mt-1">
+          {FMT_EUR.format(owed)}
+        </p>
+        <p className="text-[12.5px] text-rose-800/80 mt-2 leading-relaxed">
+          Pay your trainer directly (cash, transfer, card — whatever they
+          accept). Once they record the payment it&apos;ll move into your
+          history below.
+        </p>
+      </section>
     );
   }
   if (balance > 0) {
     return (
-      <p className="text-lg font-semibold text-emerald-700">
-        Credit {balance.toFixed(2)}
-      </p>
+      <section className="rounded-2xl shadow-soft p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/60 border border-emerald-200">
+        <p className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-emerald-700">
+          Credit on file
+        </p>
+        <p className="text-3xl font-semibold tabular-nums text-emerald-900 mt-1">
+          {FMT_EUR.format(balance)}
+        </p>
+        <p className="text-[12.5px] text-emerald-800/80 mt-2 leading-relaxed">
+          You&apos;ve paid more than what&apos;s currently charged. This
+          credit will offset the next lesson or service.
+        </p>
+      </section>
     );
   }
-  return <p className="text-lg font-semibold text-neutral-700">Settled (0.00)</p>;
+  return (
+    <section className="rounded-2xl shadow-soft p-6 bg-white border border-ink-200">
+      <p className="text-[10.5px] uppercase tracking-[0.14em] font-semibold text-ink-500">
+        Balance
+      </p>
+      <p className="text-3xl font-semibold tabular-nums text-ink-900 mt-1">
+        {FMT_EUR.format(0)}
+      </p>
+      <p className="text-[12.5px] text-ink-500 mt-2">
+        Settled — nothing outstanding, nothing prepaid.
+      </p>
+    </section>
+  );
 }

@@ -72,12 +72,12 @@ export async function middleware(request: NextRequest) {
   const isDashboard = path.startsWith("/dashboard");
   const isBillingPage = path.startsWith("/dashboard/settings/billing");
   if (isDashboard && !isBillingPage && user) {
-    // Look up the user's stable_id via their profile, then check subscription.
-    // Two queries instead of one join because Supabase ssr client doesn't
-    // play nicely with nested selects on RLS-protected views from middleware.
+    // Look up the user's stable_id + role. Two queries instead of one
+    // join because Supabase ssr client doesn't play nicely with nested
+    // selects on RLS-protected views from middleware.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("stable_id")
+      .select("stable_id, role")
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
@@ -90,18 +90,28 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    const { data: sub } = await supabase
-      .from("subscriptions")
-      .select("status")
-      .eq("stable_id", profile.stable_id)
-      .maybeSingle();
+    // Subscription gate applies to STABLE OWNERS only. Employees and
+    // clients don't pay — the stable owner pays for the workspace they
+    // belong to, so gating their access would just produce an infinite
+    // redirect loop (they have no way to fix the gating themselves).
+    // Owners get redirected to billing when their sub lapses. Employees
+    // and clients ride along — if the stable's sub lapses, the owner
+    // will deal with it, and everyone else just sees the app stop
+    // working naturally.
+    if (profile.role === "owner") {
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("stable_id", profile.stable_id)
+        .maybeSingle();
 
-    const allowed = sub?.status === "trialing" || sub?.status === "active";
-    if (!allowed) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard/settings/billing";
-      url.searchParams.set("gated", sub?.status ?? "no-subscription");
-      return NextResponse.redirect(url);
+      const allowed = sub?.status === "trialing" || sub?.status === "active";
+      if (!allowed) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/dashboard/settings/billing";
+        url.searchParams.set("gated", sub?.status ?? "no-subscription");
+        return NextResponse.redirect(url);
+      }
     }
   }
 
