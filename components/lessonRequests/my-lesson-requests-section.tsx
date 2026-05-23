@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   LESSON_STATUS_LABEL,
   type LessonRequestWithContext,
-} from "@/services/lessonRequests";
+} from "@/services/lessonRequests.types";
 import { cancelLessonRequestAction } from "@/app/dashboard/my-lessons/request-actions";
 
 export function MyLessonRequestsSection({

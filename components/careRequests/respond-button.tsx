@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { respondCareRequestAction } from "@/app/dashboard/care-requests/actions";
-import type { CareRequestStatus } from "@/services/careRequests";
+import type { CareRequestStatus } from "@/services/careRequests.types";
 
 export function RespondButton({
   requestId,

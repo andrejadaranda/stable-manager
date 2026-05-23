@@ -10,7 +10,7 @@ import {
   submitCareRequestAction,
   type CareRequestActionState,
 } from "@/app/dashboard/my-horses/[id]/care-actions";
-import { CARE_TYPE_LABEL, CARE_TYPE_EMOJI, type CareRequestType } from "@/services/careRequests";
+import { CARE_TYPE_LABEL, CARE_TYPE_EMOJI, type CareRequestType } from "@/services/careRequests.types";
 
 const initial: CareRequestActionState = { error: null, success: false };
 

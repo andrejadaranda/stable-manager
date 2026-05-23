@@ -12,32 +12,20 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import type {
+  LessonRequestStatus,
+  LessonRequestRow,
+  LessonRequestWithContext,
+} from "./lessonRequests.types";
 
-export type LessonRequestStatus = "pending" | "accepted" | "declined" | "cancelled";
-
-export type LessonRequestRow = {
-  id:                     string;
-  stable_id:              string;
-  requester_client_id:    string;
-  horse_id:               string | null;
-  preferred_trainer_id:   string | null;
-  requested_start:        string;       // ISO timestamp
-  requested_duration_min: number;
-  notes:                  string | null;
-  status:                 LessonRequestStatus;
-  accepted_lesson_id:     string | null;
-  decline_reason:         string | null;
-  responded_by:           string | null;
-  responded_at:           string | null;
-  created_at:             string;
-  updated_at:             string;
-};
-
-export type LessonRequestWithContext = LessonRequestRow & {
-  horse_name:             string | null;
-  preferred_trainer_name: string | null;
-  requester_name:         string | null;
-};
+// Re-export types + presentation maps from the client-safe sibling file
+// so existing server-side imports keep working without churn.
+export type {
+  LessonRequestStatus,
+  LessonRequestRow,
+  LessonRequestWithContext,
+} from "./lessonRequests.types";
+export { LESSON_STATUS_LABEL } from "./lessonRequests.types";
 
 // =============================================================
 // Reads
@@ -221,12 +209,8 @@ export async function declineLessonRequest(requestId: string, reason?: string | 
 // Helpers
 // =============================================================
 
-export const LESSON_STATUS_LABEL: Record<LessonRequestStatus, string> = {
-  pending:   "Pending",
-  accepted:  "Accepted",
-  declined:  "Declined",
-  cancelled: "Cancelled",
-};
+// LESSON_STATUS_LABEL re-exported from lessonRequests.types.ts at the top
+// so server- and client-side imports stay aligned.
 
 function flattenContext(r: LessonRequestRow & {
   horse?:             { name: string } | null;

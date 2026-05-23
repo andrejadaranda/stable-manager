@@ -13,47 +13,32 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import type {
+  CareRequestType,
+  CareRequestUrgency,
+  CareRequestStatus,
+  CareRequestRow,
+  CareRequestWithContext,
+} from "./careRequests.types";
 
-export type CareRequestType =
-  | "farrier"
-  | "vet"
-  | "feed"
-  | "equipment"
-  | "transport"
-  | "other";
+// Re-export types + presentation maps from the client-safe sibling file
+// so existing server-side imports keep working without churn.
+export type {
+  CareRequestType,
+  CareRequestUrgency,
+  CareRequestStatus,
+  CareRequestRow,
+  CareRequestWithContext,
+} from "./careRequests.types";
+export {
+  CARE_TYPE_LABEL,
+  CARE_TYPE_EMOJI,
+  URGENCY_LABEL,
+  STATUS_LABEL,
+} from "./careRequests.types";
 
-export type CareRequestUrgency = "low" | "normal" | "high";
-
-export type CareRequestStatus =
-  | "pending"
-  | "acknowledged"
-  | "scheduled"
-  | "done"
-  | "declined";
-
-export type CareRequestRow = {
-  id:                   string;
-  stable_id:            string;
-  horse_id:             string;
-  requester_client_id:  string;
-  type:                 CareRequestType;
-  urgency:              CareRequestUrgency;
-  preferred_date:       string | null;
-  notes:                string | null;
-  status:               CareRequestStatus;
-  owner_response:       string | null;
-  responded_by:         string | null;
-  responded_at:         string | null;
-  scheduled_for:        string | null;
-  created_at:           string;
-  updated_at:           string;
-};
-
-/** Row plus joined horse + requester names (for owner inbox). */
-export type CareRequestWithContext = CareRequestRow & {
-  horse_name:      string;
-  requester_name:  string | null;
-};
+// CareRequestRow + CareRequestWithContext are defined in careRequests.types.ts
+// and re-exported at the top of this file for server-side callers.
 
 // =============================================================
 // CLIENT-side reads (horse-owner viewing their own history)
@@ -250,38 +235,5 @@ export async function respondToCareRequest(input: RespondToCareRequestInput): Pr
   if (error) throw error;
 }
 
-// =============================================================
-// Presentation helpers
-// =============================================================
-
-export const CARE_TYPE_LABEL: Record<CareRequestType, string> = {
-  farrier:   "Farrier",
-  vet:       "Vet",
-  feed:      "Feed",
-  equipment: "Equipment",
-  transport: "Transport",
-  other:     "Other",
-};
-
-export const CARE_TYPE_EMOJI: Record<CareRequestType, string> = {
-  farrier:   "🧲",
-  vet:       "🩺",
-  feed:      "🌾",
-  equipment: "🧰",
-  transport: "🚛",
-  other:     "✉️",
-};
-
-export const URGENCY_LABEL: Record<CareRequestUrgency, string> = {
-  low:    "Whenever",
-  normal: "Soon",
-  high:   "Urgent",
-};
-
-export const STATUS_LABEL: Record<CareRequestStatus, string> = {
-  pending:      "Pending",
-  acknowledged: "Acknowledged",
-  scheduled:    "Scheduled",
-  done:         "Done",
-  declined:     "Declined",
-};
+// Presentation helpers (CARE_TYPE_LABEL etc.) live in careRequests.types.ts
+// and are re-exported from this file's header to keep the public API stable.

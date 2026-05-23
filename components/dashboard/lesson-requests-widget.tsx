@@ -3,7 +3,7 @@
 // requests widget — both are actionable inboxes the owner should react to.
 
 import Link from "next/link";
-import type { LessonRequestWithContext } from "@/services/lessonRequests";
+import type { LessonRequestWithContext } from "@/services/lessonRequests.types";
 
 export function LessonRequestsWidget({ items }: { items: LessonRequestWithContext[] }) {
   if (items.length === 0) return null;
