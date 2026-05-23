@@ -8,6 +8,7 @@
 import { requirePageRole } from "@/lib/auth/redirects";
 import { getOwnProfile, getOwnActivityStats, type ActivitySummary } from "@/services/account";
 import { Card, CardHeader, Field, Input, Button, Badge } from "@/components/ui";
+import { AvatarUploader } from "@/components/account/avatar-uploader";
 import { updateProfileNameAction } from "../actions";
 
 const ROLE_LABEL: Record<"owner" | "employee" | "client", string> = {
@@ -113,43 +114,15 @@ export default async function ProfileSettingsPage() {
           subtitle="Your name + photo + phone appear in the sidebar, on lessons, payments, and any invitations you send."
         />
         <form action={updateProfileNameAction} className="p-6 flex flex-col gap-5">
-          {/* Avatar preview + photo URL — clicking the photo isn't a
-              real upload yet (Supabase Storage ships next wave). For
-              now any public image URL works (Cloudinary / Imgur / etc.) */}
-          <div className="flex items-center gap-4">
-            {profile.photo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.photo_url}
-                alt={profile.full_name ?? "Profile photo"}
-                className="w-16 h-16 rounded-2xl object-cover ring-2 ring-white shadow-soft"
-              />
-            ) : (
-              <span
-                aria-hidden
-                className="w-16 h-16 rounded-2xl shrink-0 inline-flex items-center justify-center bg-brand-500 text-white font-semibold text-2xl shadow-soft"
-              >
-                {initial}
-              </span>
-            )}
-            <div className="text-[12px] text-ink-500 leading-relaxed">
-              <p>
-                Paste a public image URL below — it will replace the initial
-                avatar in the sidebar.
-              </p>
-              <p className="mt-0.5">
-                Direct upload from your phone is shipping soon.
-              </p>
-            </div>
-          </div>
-
-          <Field label="Photo URL (optional)" hint="Public image URL — Imgur, Cloudinary, your own host.">
-            <Input
-              name="photo_url"
-              type="url"
-              defaultValue={profile.photo_url ?? ""}
-              placeholder="https://…"
-              maxLength={500}
+          {/* Direct photo upload — phone camera roll on iOS, file
+              picker on desktop. Resizes to 512px webp client-side,
+              uploads to Supabase Storage avatars bucket, sets the
+              hidden photo_url input that updateProfileNameAction reads. */}
+          <Field label="Profile photo" hint="Tap to upload from your phone — JPG, PNG, HEIC all work.">
+            <AvatarUploader
+              initialUrl={profile.photo_url}
+              initial={initial}
+              fieldName="photo_url"
             />
           </Field>
 
