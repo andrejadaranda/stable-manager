@@ -71,13 +71,15 @@ export async function middleware(request: NextRequest) {
   // -----------------------------------------------------------------
   const isDashboard = path.startsWith("/dashboard");
   const isBillingPage = path.startsWith("/dashboard/settings/billing");
-  if (isDashboard && !isBillingPage && user) {
-    // Look up the user's stable_id + role. Two queries instead of one
-    // join because Supabase ssr client doesn't play nicely with nested
-    // selects on RLS-protected views from middleware.
+  const isPersonalCheckoutWait = path.startsWith("/dashboard/personal-checkout");
+  if (isDashboard && !isBillingPage && !isPersonalCheckoutWait && user) {
+    // Look up the user's stable_id + role + stable.account_type. Two
+    // queries instead of one join because Supabase ssr client doesn't
+    // play nicely with nested selects on RLS-protected views from
+    // middleware.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("stable_id, role")
+      .select("stable_id, role, stable:stables(account_type)")
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
@@ -94,10 +96,6 @@ export async function middleware(request: NextRequest) {
     // clients don't pay — the stable owner pays for the workspace they
     // belong to, so gating their access would just produce an infinite
     // redirect loop (they have no way to fix the gating themselves).
-    // Owners get redirected to billing when their sub lapses. Employees
-    // and clients ride along — if the stable's sub lapses, the owner
-    // will deal with it, and everyone else just sees the app stop
-    // working naturally.
     if (profile.role === "owner") {
       const { data: sub } = await supabase
         .from("subscriptions")
@@ -107,8 +105,18 @@ export async function middleware(request: NextRequest) {
 
       const allowed = sub?.status === "trialing" || sub?.status === "active";
       if (!allowed) {
+        // Personal accounts skip the business /settings/billing page —
+        // they go straight to /dashboard/personal-checkout which fires
+        // /api/stripe/checkout/personal and redirects to Stripe Checkout.
+        const stableJoin = Array.isArray((profile as { stable?: unknown }).stable)
+          ? (profile as { stable: Array<{ account_type?: string }> }).stable[0]
+          : (profile as { stable?: { account_type?: string } }).stable;
+        const isPersonal = stableJoin?.account_type === "personal";
+
         const url = request.nextUrl.clone();
-        url.pathname = "/dashboard/settings/billing";
+        url.pathname = isPersonal
+          ? "/dashboard/personal-checkout"
+          : "/dashboard/settings/billing";
         url.searchParams.set("gated", sub?.status ?? "no-subscription");
         return NextResponse.redirect(url);
       }
