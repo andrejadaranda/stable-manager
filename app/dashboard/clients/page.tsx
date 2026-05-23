@@ -12,7 +12,7 @@ export default async function ClientsPage({
 }: {
   searchParams: { filter?: string };
 }) {
-  await requirePageRole("owner", "employee");
+  const session = await requirePageRole("owner", "employee");
 
   const all = await listClientsWithUpcomingCount();
 
@@ -49,7 +49,10 @@ export default async function ClientsPage({
         <FilterChip href="/dashboard/clients?filter=owners" label="Horse owners"  count={counts.owners} active={filter === "owners"} />
       </div>
 
-      <ClientList clients={filtered} />
+      <ClientList
+        clients={filtered}
+        showInviteButton={session.role === "owner"}
+      />
     </div>
   );
 }

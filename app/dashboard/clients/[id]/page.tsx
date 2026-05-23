@@ -15,6 +15,8 @@ import { ClientBoardingSection } from "@/components/clients/client-boarding-sect
 import { AgreementsPanel } from "@/components/clients/agreements-panel";
 import { ChargesPanel } from "@/components/clients/charges-panel";
 import { OwesBreakdown } from "@/components/clients/owes-breakdown";
+import { InviteToAppButton } from "@/components/clients/invite-to-app-button";
+import { getPendingInviteForClient } from "@/services/invitations";
 
 const SKILL_LABEL: Record<SkillLevel, string> = {
   beginner: "Beginner",
@@ -43,17 +45,20 @@ export default async function ClientDetailPage({
     listClientCharges(params.id),
   ]);
 
-  // Owner-only: payment balance + owes breakdown. Both services throw
-  // FORBIDDEN for employees, so we just don't call them for non-owners.
-  // The breakdown is the per-line explanation behind the balance — only
-  // worth fetching when the client actually owes money (balance < 0).
+  // Owner-only: payment balance + owes breakdown + pending invite check.
+  // The owes breakdown is only worth fetching when the client actually
+  // owes money (balance < 0). Pending-invite is needed to decide whether
+  // to render "Invite to app" vs "Resend invite".
   let balance: number | null = null;
   let owedItems: Awaited<ReturnType<typeof listClientOwedItems>> = [];
+  let hasPendingInvite = false;
   if (session.role === "owner") {
     balance = await getClientBalance(params.id);
     if (balance !== null && balance < 0) {
       owedItems = await listClientOwedItems(params.id);
     }
+    const pending = await getPendingInviteForClient(params.id).catch(() => null);
+    hasPendingInvite = pending !== null;
   }
 
   const initial = client.full_name?.[0]?.toUpperCase() ?? "?";
@@ -111,7 +116,15 @@ export default async function ClientDetailPage({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 self-center md:self-end mt-3 md:mt-0 md:pb-1">
+            <div className="flex items-center gap-2 shrink-0 self-center md:self-end mt-3 md:mt-0 md:pb-1 flex-wrap">
+              {session.role === "owner" && (
+                <InviteToAppButton
+                  clientId={client.id}
+                  hasPortalAccount={Boolean(client.profile_id)}
+                  hasPendingInvite={hasPendingInvite}
+                  hasEmail={Boolean(client.email)}
+                />
+              )}
               <EditClientButton client={client} />
             </div>
           </div>

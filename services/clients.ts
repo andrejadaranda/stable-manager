@@ -38,7 +38,13 @@ export type ClientRow = {
   updated_at: string;
 };
 
-export type ClientWithUpcomingCount = ClientRow & { upcoming_count: number };
+export type ClientWithUpcomingCount = ClientRow & {
+  upcoming_count: number;
+  /** True when a non-used, non-revoked, non-expired client_invitations
+   *  row exists for this client. Used to render "Resend invite" instead
+   *  of "Invite to app" on the client list. */
+  has_pending_invite: boolean;
+};
 
 // ------- list -------------------------------------------------------------
 export async function listClients(opts?: { activeOnly?: boolean }): Promise<ClientRow[]> {
@@ -53,8 +59,10 @@ export async function listClients(opts?: { activeOnly?: boolean }): Promise<Clie
   return (data ?? []) as ClientRow[];
 }
 
-// List + count of upcoming scheduled lessons. Two queries, one aggregate.
-// Used by the clients index page.
+// List + count of upcoming scheduled lessons + pending-invite flag.
+// Three queries instead of one aggregate — keeps each query simple and
+// the joins manageable. Used by the clients index page (owner only —
+// pending invites are owner-scoped per RLS).
 export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcomingCount[]> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
@@ -62,25 +70,45 @@ export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcoming
   const supabase = createSupabaseServerClient();
   const now = new Date().toISOString();
 
-  const [clientsRes, lessonsRes] = await Promise.all([
+  // Employees can't read client_invitations (owner-only RLS), so skip
+  // that query for them — the field defaults to false.
+  const invitesPromise =
+    session.role === "owner"
+      ? supabase
+          .from("client_invitations")
+          .select("client_id")
+          .is("used_at", null)
+          .is("revoked_at", null)
+          .gt("expires_at", now)
+      : Promise.resolve({ data: [] as { client_id: string }[], error: null });
+
+  const [clientsRes, lessonsRes, invitesRes] = await Promise.all([
     supabase.from("clients").select("*").order("full_name"),
     supabase
       .from("lessons")
       .select("client_id")
       .gte("starts_at", now)
       .eq("status", "scheduled"),
+    invitesPromise,
   ]);
   if (clientsRes.error)  throw clientsRes.error;
   if (lessonsRes.error)  throw lessonsRes.error;
+  if (invitesRes.error)  throw invitesRes.error;
 
   const counts = new Map<string, number>();
   for (const l of (lessonsRes.data ?? []) as Array<{ client_id: string }>) {
     counts.set(l.client_id, (counts.get(l.client_id) ?? 0) + 1);
   }
 
+  const pending = new Set<string>();
+  for (const r of (invitesRes.data ?? []) as Array<{ client_id: string }>) {
+    pending.add(r.client_id);
+  }
+
   return ((clientsRes.data ?? []) as ClientRow[]).map((c) => ({
     ...c,
-    upcoming_count: counts.get(c.id) ?? 0,
+    upcoming_count:      counts.get(c.id) ?? 0,
+    has_pending_invite:  pending.has(c.id),
   }));
 }
 
