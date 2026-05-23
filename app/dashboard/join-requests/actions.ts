@@ -34,6 +34,9 @@ export async function approveJoinAction(
   try {
     newClientId = await approveJoinRequest(requestId);
   } catch (err) {
+    // Temporary verbose log to identify the real failure cause — remove
+    // once the approve path is verified end-to-end.
+    console.error("[approveJoinAction] approveJoinRequest threw:", err);
     return { ...initial, error: toFriendlyError(err).message };
   }
 
