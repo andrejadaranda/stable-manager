@@ -87,7 +87,7 @@ export default async function StableSettingsPage() {
             <p>
               Join link:{" "}
               <span className="font-mono text-navy-900 break-all">
-                https://longrein.eu/signup/join/{stable.slug}
+                https://app.longrein.eu/signup/join/{stable.slug}
               </span>
             </p>
             <p className="mt-1 text-ink-500">

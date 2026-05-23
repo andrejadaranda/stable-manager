@@ -23,7 +23,7 @@ export default async function JoinRequestsPage() {
 
   const closedRows = allRows.filter((r) => r.status !== "pending").slice(0, 30);
   const publicLink = stable
-    ? `https://longrein.eu/signup/join/${stable.slug}`
+    ? `https://app.longrein.eu/signup/join/${stable.slug}`
     : null;
 
   return (
