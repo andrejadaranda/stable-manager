@@ -29,9 +29,11 @@ import { RemindersBlock } from "@/components/reminders/reminders-block";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 import { SmartSuggestions } from "@/components/dashboard/smart-suggestions";
 import { BirthdaysWidget } from "@/components/dashboard/birthdays-widget";
+import { CareRequestsWidget } from "@/components/dashboard/care-requests-widget";
 import { getOnboardingStatus } from "@/services/onboarding";
 import { getSmartSuggestions } from "@/services/suggestions";
 import { getUpcomingBirthdays } from "@/services/birthdays";
+import { listCareRequestsForOwner } from "@/services/careRequests";
 
 export const dynamic = "force-dynamic";
 
@@ -40,12 +42,13 @@ export default async function DashboardHome() {
   if (!session) redirect("/login");
   if (session.role === "client") redirect("/dashboard/my-lessons");
 
-  const [s, profile, onboarding, suggestions, birthdays] = await Promise.all([
+  const [s, profile, onboarding, suggestions, birthdays, openCareRequests] = await Promise.all([
     getDashboardSummary(),
     getOwnProfile().catch(() => null),
     getOnboardingStatus().catch(() => null),
     getSmartSuggestions().catch(() => []),
     getUpcomingBirthdays().catch(() => []),
+    listCareRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
   ]);
 
   const firstName = (profile?.full_name ?? "").split(" ")[0] ?? "";
@@ -213,6 +216,10 @@ export default async function DashboardHome() {
               fmtEUR={fmtEUR}
             />
           </div>
+
+          {/* Care requests — auto-hides when nothing's open. Sits above
+              Birthdays because it's actionable; Birthdays is decorative. */}
+          <CareRequestsWidget items={openCareRequests} />
 
           {/* Birthdays — emotional micro-widget, moved to the bottom.
               Auto-hides when no horse/client birthday in next 14 days. */}

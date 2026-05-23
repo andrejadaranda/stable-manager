@@ -17,6 +17,15 @@ import { requirePageRole } from "@/lib/auth/redirects";
 import { getSession } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EditMyHorseButton } from "@/components/myHorses/edit-my-horse-dialog";
+import { NewCareRequestButton } from "@/components/careRequests/new-care-request-button";
+import {
+  listCareRequestsForHorse,
+  CARE_TYPE_LABEL,
+  CARE_TYPE_EMOJI,
+  STATUS_LABEL,
+  URGENCY_LABEL,
+} from "@/services/careRequests";
+import { cancelCareRequestAction } from "./care-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +81,9 @@ export default async function MyHorseDetailPage({
   const { data: sessions } = await sessionsQ;
   const rows = (sessions ?? []) as SessionRow[];
   const totalMinutes = rows.reduce((s, r) => s + (r.duration_minutes ?? 0), 0);
+
+  // Care requests — only the owner-client sees & creates these.
+  const careRequests = isOwner ? await listCareRequestsForHorse(h.id) : [];
 
   const initial = (h.name?.[0] ?? "?").toUpperCase();
   const age = h.date_of_birth ? ageYears(h.date_of_birth) : null;
@@ -179,6 +191,107 @@ export default async function MyHorseDetailPage({
         </div>
       </header>
 
+      {isOwner && (
+        <section className="bg-white rounded-2xl shadow-soft p-5">
+          <div className="flex items-baseline justify-between gap-3 mb-4 flex-wrap">
+            <div className="min-w-0">
+              <h2 className="text-[11px] uppercase tracking-[0.14em] font-semibold text-ink-500">
+                Care requests
+              </h2>
+              <p className="text-[12.5px] text-ink-500 mt-1">
+                Ask the stable to arrange farrier, vet, feed, equipment, or transport for {h.name}.
+              </p>
+            </div>
+            <NewCareRequestButton horseId={h.id} horseName={h.name} />
+          </div>
+
+          {careRequests.length === 0 ? (
+            <p className="text-sm text-ink-500">
+              No requests yet. Use the button above next time you need something
+              arranged.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {careRequests.map((cr) => {
+                const dateStr = new Date(cr.created_at).toLocaleDateString("en-GB", {
+                  day: "2-digit", month: "short",
+                });
+                const tone = STATUS_TONE[cr.status];
+                return (
+                  <li
+                    key={cr.id}
+                    className="rounded-xl border border-ink-100 bg-white px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-ink-900 flex items-center gap-2">
+                          <span aria-hidden>{CARE_TYPE_EMOJI[cr.type]}</span>
+                          {CARE_TYPE_LABEL[cr.type]}
+                          <span className="text-[11px] text-ink-400 font-normal">
+                            · {URGENCY_LABEL[cr.urgency]}
+                          </span>
+                        </p>
+                        {cr.notes && (
+                          <p className="text-[12.5px] text-ink-700 mt-1 whitespace-pre-wrap">
+                            {cr.notes}
+                          </p>
+                        )}
+                        {cr.preferred_date && (
+                          <p className="text-[11.5px] text-ink-500 mt-1">
+                            Preferred:{" "}
+                            {new Date(cr.preferred_date).toLocaleDateString("en-GB", {
+                              day: "2-digit", month: "short", year: "numeric",
+                            })}
+                          </p>
+                        )}
+                        {cr.owner_response && (
+                          <div className="mt-2 rounded-md bg-brand-50 px-3 py-2">
+                            <p className="text-[10.5px] uppercase tracking-wider font-semibold text-brand-700 mb-0.5">
+                              Stable response
+                            </p>
+                            <p className="text-[12.5px] text-ink-700 whitespace-pre-wrap">
+                              {cr.owner_response}
+                            </p>
+                            {cr.scheduled_for && (
+                              <p className="text-[11.5px] text-brand-700 mt-1 font-medium">
+                                Scheduled for{" "}
+                                {new Date(cr.scheduled_for).toLocaleDateString("en-GB", {
+                                  day: "2-digit", month: "short", year: "numeric",
+                                })}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span
+                          className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${tone}`}
+                        >
+                          {STATUS_LABEL[cr.status]}
+                        </span>
+                        <span className="text-[11px] text-ink-400">{dateStr}</span>
+                        {cr.status === "pending" && (
+                          <form action={cancelCareRequestAction}>
+                            <input type="hidden" name="request_id" value={cr.id} />
+                            <input type="hidden" name="horse_id"   value={h.id} />
+                            <button
+                              type="submit"
+                              className="text-[11px] text-red-600 hover:text-red-800"
+                            >
+                              Cancel
+                            </button>
+                          </form>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
       <section className="bg-white rounded-2xl shadow-soft p-5">
         <div className="flex items-baseline justify-between gap-3 mb-3">
           <h2 className="text-[11px] uppercase tracking-[0.14em] font-semibold text-ink-500">
@@ -230,6 +343,14 @@ export default async function MyHorseDetailPage({
     </div>
   );
 }
+
+const STATUS_TONE: Record<string, string> = {
+  pending:      "bg-amber-50  text-amber-700",
+  acknowledged: "bg-sky-50    text-sky-700",
+  scheduled:    "bg-brand-50  text-brand-700",
+  done:         "bg-emerald-50 text-emerald-700",
+  declined:     "bg-ink-100   text-ink-600",
+};
 
 function ageYears(dob: string): number {
   const birth = new Date(dob);

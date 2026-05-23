@@ -18,25 +18,27 @@ type Item = {
 
 const NAV: Record<Role, Item[]> = {
   owner: [
-    { href: "/dashboard",          label: "Overview", icon: <IconHome /> },
-    { href: "/dashboard/calendar", label: "Calendar", icon: <IconCal />  },
-    { href: "/dashboard/welfare",  label: "Welfare",  icon: <IconHeart /> },
-    { href: "/dashboard/sessions", label: "Sessions", icon: <IconActivity />, feature: "sessions" },
-    { href: "/dashboard/horses",   label: "Horses",   icon: <IconHorse /> },
-    { href: "/dashboard/clients",  label: "Clients",  icon: <IconUsers /> },
-    { href: "/dashboard/chat",     label: "Chat",     icon: <IconChat />, feature: "chat" },
-    { href: "/dashboard/payments", label: "Payments", icon: <IconCash /> },
-    { href: "/dashboard/expenses", label: "Expenses", icon: <IconReceipt /> },
-    { href: "/dashboard/team",     label: "Team",     icon: <IconShield /> },
+    { href: "/dashboard",               label: "Overview",      icon: <IconHome /> },
+    { href: "/dashboard/calendar",      label: "Calendar",      icon: <IconCal />  },
+    { href: "/dashboard/welfare",       label: "Welfare",       icon: <IconHeart /> },
+    { href: "/dashboard/sessions",      label: "Sessions",      icon: <IconActivity />, feature: "sessions" },
+    { href: "/dashboard/horses",        label: "Horses",        icon: <IconHorse /> },
+    { href: "/dashboard/clients",       label: "Clients",       icon: <IconUsers /> },
+    { href: "/dashboard/care-requests", label: "Care requests", icon: <IconWrench /> },
+    { href: "/dashboard/chat",          label: "Chat",          icon: <IconChat />, feature: "chat" },
+    { href: "/dashboard/payments",      label: "Payments",      icon: <IconCash /> },
+    { href: "/dashboard/expenses",      label: "Expenses",      icon: <IconReceipt /> },
+    { href: "/dashboard/team",          label: "Team",          icon: <IconShield /> },
   ],
   employee: [
-    { href: "/dashboard",          label: "Overview", icon: <IconHome /> },
-    { href: "/dashboard/calendar", label: "Calendar", icon: <IconCal />  },
-    { href: "/dashboard/welfare",  label: "Welfare",  icon: <IconHeart /> },
-    { href: "/dashboard/sessions", label: "Sessions", icon: <IconActivity />, feature: "sessions" },
-    { href: "/dashboard/horses",   label: "Horses",   icon: <IconHorse /> },
-    { href: "/dashboard/clients",  label: "Clients",  icon: <IconUsers /> },
-    { href: "/dashboard/chat",     label: "Chat",     icon: <IconChat />, feature: "chat" },
+    { href: "/dashboard",               label: "Overview",      icon: <IconHome /> },
+    { href: "/dashboard/calendar",      label: "Calendar",      icon: <IconCal />  },
+    { href: "/dashboard/welfare",       label: "Welfare",       icon: <IconHeart /> },
+    { href: "/dashboard/sessions",      label: "Sessions",      icon: <IconActivity />, feature: "sessions" },
+    { href: "/dashboard/horses",        label: "Horses",        icon: <IconHorse /> },
+    { href: "/dashboard/clients",       label: "Clients",       icon: <IconUsers /> },
+    { href: "/dashboard/care-requests", label: "Care requests", icon: <IconWrench /> },
+    { href: "/dashboard/chat",          label: "Chat",          icon: <IconChat />, feature: "chat" },
   ],
   client: [
     { href: "/dashboard/my-lessons",   label: "My Lessons",  icon: <IconCal />      },
@@ -317,4 +319,7 @@ function IconActivity() {
 }
 function IconHeart() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6.5 5.5 5.5 0 0 1 21.5 12C19 16.5 12 21 12 21z"/></svg>;
+}
+function IconWrench() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-7 7 2 2 7-7a4 4 0 0 0 5.4-5.4l-2.3 2.3-2.4-2.4z"/></svg>;
 }
