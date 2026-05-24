@@ -139,7 +139,7 @@ function EditClientDialog({
           <p className="text-[11px] text-neutral-500 -mt-1">
             Who do we call if something happens during a lesson? Optional, kept private to staff.
           </p>
-          <Field label="Name" name="emergency_contact_name" type="text" defaultValue={client.emergency_contact_name ?? ""} placeholder="e.g. Jonas Kazlauskas" />
+          <Field label="Name" name="emergency_contact_name" type="text" defaultValue={client.emergency_contact_name ?? ""} placeholder="e.g. Marco Rossi" />
           <Field label="Phone" name="emergency_contact_phone" type="tel" defaultValue={client.emergency_contact_phone ?? ""} placeholder="+370 6…" />
           <Field label="Relationship" name="emergency_contact_relation" type="text" defaultValue={client.emergency_contact_relation ?? ""} placeholder="spouse, parent, friend…" />
         </fieldset>

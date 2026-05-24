@@ -35,7 +35,7 @@ export function SignupPersonalForm() {
           required
           minLength={2}
           maxLength={80}
-          placeholder="e.g. Andrėja Daranda"
+          placeholder="e.g. Maria Schneider"
         />
       </Field>
 

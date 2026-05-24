@@ -184,7 +184,7 @@ function EditHorseDialog({
           <p className="text-[11px] text-neutral-500 -mt-1">
             Who do we call when the owner is unreachable (vet decisions, transport, end-of-life). Survives ownership changes.
           </p>
-          <Field label="Name" name="backup_contact_name" type="text" defaultValue={(horse as HorseRow & { backup_contact_name?: string | null }).backup_contact_name ?? ""} placeholder="e.g. Marija Vilkienė" />
+          <Field label="Name" name="backup_contact_name" type="text" defaultValue={(horse as HorseRow & { backup_contact_name?: string | null }).backup_contact_name ?? ""} placeholder="e.g. Eva Müller" />
           <Field label="Phone" name="backup_contact_phone" type="tel" defaultValue={(horse as HorseRow & { backup_contact_phone?: string | null }).backup_contact_phone ?? ""} placeholder="+370 6…" />
           <Field label="Relationship" name="backup_contact_relation" type="text" defaultValue={(horse as HorseRow & { backup_contact_relation?: string | null }).backup_contact_relation ?? ""} placeholder="vet, neighbour, partner…" />
         </fieldset>

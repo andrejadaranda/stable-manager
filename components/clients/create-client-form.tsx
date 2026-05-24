@@ -124,7 +124,7 @@ function CreateClientDialog({ onClose }: { onClose: () => void }) {
               type="text"
               required
               autoFocus
-              placeholder="Jonas Petraitis"
+              placeholder="Lukas Becker"
               maxLength={120}
             />
           </Field>

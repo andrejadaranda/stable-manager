@@ -161,7 +161,7 @@ function Dialog({
             <textarea
               name="notes"
               rows={3}
-              placeholder="e.g. preferred trainer Lina if possible, focus on canter transitions…"
+              placeholder="e.g. preferred trainer Sofia if possible, focus on canter transitions…"
               className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
             />
             <span className="text-[11px] text-neutral-500">
