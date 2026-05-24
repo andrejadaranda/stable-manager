@@ -86,21 +86,31 @@ function AddHealthRecordForm({
       <fieldset className="flex flex-col gap-1.5">
         <legend className="text-[11px] tracking-[0.04em] uppercase text-ink-500">Type</legend>
         <div className="flex flex-wrap gap-1.5">
-          {HEALTH_RECORD_KINDS.map((k, i) => (
-            <label key={k} className="cursor-pointer">
-              <input
-                type="radio"
-                name="kind"
-                value={k}
-                defaultChecked={i === 0}
-                onChange={() => setKind(k)}
-                className="peer sr-only"
-              />
-              <span className="inline-block px-2.5 py-1 rounded-full text-[12px] bg-ink-100 text-ink-700 peer-checked:bg-brand-600 peer-checked:text-white transition-colors">
-                {KIND_LABEL[k]}
-              </span>
-            </label>
-          ))}
+          {HEALTH_RECORD_KINDS.map((k) => {
+            const selected = kind === k;
+            return (
+              <label key={k} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="kind"
+                  value={k}
+                  checked={selected}
+                  onChange={() => setKind(k)}
+                  className="sr-only"
+                />
+                <span
+                  className={
+                    "inline-block px-3 py-1.5 rounded-full text-[12px] font-medium border transition-colors " +
+                    (selected
+                      ? "bg-brand-700 text-cream-50 border-brand-700 shadow-sm"
+                      : "bg-white text-ink-700 border-ink-200 hover:border-brand-400 hover:text-brand-700")
+                  }
+                >
+                  {KIND_LABEL[k]}
+                </span>
+              </label>
+            );
+          })}
         </div>
       </fieldset>
 

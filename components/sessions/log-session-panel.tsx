@@ -37,20 +37,45 @@ export function LogSessionPanel({
     );
   }
 
+  // Open: full-screen sheet on mobile (so form fields have real width
+  // instead of being squeezed into a parent flex action area), centered
+  // dialog on desktop.
   return (
-    <div className="w-full md:w-[640px] max-w-full bg-white rounded-2xl shadow-soft p-5 flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-navy-900">Log session</h2>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-ink-400 hover:text-navy-900 p-1 -mr-1 rounded-lg"
-          aria-label="Collapse"
-        >
-          ✕
-        </button>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="log-session-title"
+      className="fixed inset-0 z-40 flex items-stretch sm:items-start sm:justify-center sm:pt-10 bg-ink-900/40 backdrop-blur-sm"
+    >
+      <div
+        className="
+          bg-white border border-ink-100 flex flex-col w-full
+          h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-5rem)]
+          sm:rounded-2xl sm:shadow-soft sm:max-w-2xl
+        "
+      >
+        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-ink-100 shrink-0">
+          <div>
+            <h2 id="log-session-title" className="font-display text-xl text-navy-700 leading-tight">
+              Log a session
+            </h2>
+            <p className="text-[12.5px] text-ink-500 mt-1 leading-relaxed">
+              Every ride counts toward welfare workload. Sessions are not billed (lessons are).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Close"
+            className="-mt-1 -mr-1 h-8 w-8 inline-flex items-center justify-center rounded-lg text-ink-500 hover:text-ink-900 hover:bg-ink-100/60 transition-colors"
+          >
+            <span aria-hidden className="text-base">✕</span>
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <LogSessionForm horses={horses} clients={clients} />
+        </div>
       </div>
-      <LogSessionForm horses={horses} clients={clients} />
     </div>
   );
 }

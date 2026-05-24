@@ -9,7 +9,7 @@ import {
   createSessionAction,
   type CreateSessionState,
 } from "@/app/dashboard/sessions/actions";
-import { SESSION_TYPES } from "@/services/sessions.types";
+import { SESSION_TYPES, SESSION_TYPE_LABEL } from "@/services/sessions.types";
 
 type HorseOpt  = { id: string; name: string };
 type ClientOpt = { id: string; full_name: string };
@@ -121,7 +121,7 @@ export function LogSessionForm({
           className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 focus:outline-none focus:shadow-focus"
         >
           {SESSION_TYPES.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <option key={t} value={t}>{SESSION_TYPE_LABEL[t]}</option>
           ))}
         </select>
       </label>

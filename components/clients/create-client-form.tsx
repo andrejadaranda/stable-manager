@@ -152,7 +152,10 @@ function CreateClientDialog({ onClose }: { onClose: () => void }) {
             </Field>
           </div>
 
-          <Field label="Lesson reminders" hint={reminderHint ?? undefined}>
+          <Field
+            label="Lesson reminders"
+            hint={reminderHint ?? "Email reminders fire 24h before each lesson. SMS is on the roadmap."}
+          >
             <Select
               name="reminder_pref"
               value={reminderPref}
@@ -164,33 +167,23 @@ function CreateClientDialog({ onClose }: { onClose: () => void }) {
               <option value="email" disabled={!hasEmail}>
                 Email {hasEmail ? "" : "— add email first"}
               </option>
-              <option value="sms" disabled={!hasPhone}>
-                SMS {hasPhone ? "(coming June)" : "— add phone first"}
-              </option>
-              <option value="both" disabled={!hasEmail || !hasPhone}>
-                Email + SMS
-                {!hasEmail || !hasPhone ? " — add both contacts first" : ""}
-              </option>
             </Select>
           </Field>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Skill level">
-              <Select name="skill_level" defaultValue="">
-                <option value="">—</option>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-                <option value="pro">Pro</option>
-              </Select>
-            </Field>
-            <Field label="Status">
-              <Select name="status" defaultValue="active">
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </Select>
-            </Field>
-          </div>
+          <Field
+            label="Riding skill level"
+            hint="Helps trainers match the right horse and lesson plan. Edit any time from the client profile."
+          >
+            <Select name="skill_level" defaultValue="">
+              <option value="">— Select skill level —</option>
+              <option value="beginner">Beginner — first months in the saddle</option>
+              <option value="intermediate">Intermediate — confident at walk, trot, canter</option>
+              <option value="advanced">Advanced — competing or jumping confidently</option>
+              <option value="pro">Pro — competitive rider, multiple disciplines</option>
+            </Select>
+          </Field>
+          {/* status defaults to 'active' server-side. Inactive toggle lives on the client edit dialog. */}
+          <input type="hidden" name="status" value="active" />
 
           <Field label="Notes">
             <Textarea

@@ -366,7 +366,8 @@ export default async function DashboardHome({
               <KpiRing
                 label="Horses in care"
                 value={`${s.activeHorses}`}
-                sub={s.activeHorses === 0 ? "Add your first horse" : "Currently active"}
+                sub={s.activeHorses === 0 ? "Add your first horse →" : "Currently active"}
+                subHref={s.activeHorses === 0 ? "/dashboard/horses?new=1" : undefined}
                 pct={s.activeHorses > 0 ? 100 : 0}
                 color="#1E2A47"
               />
@@ -467,6 +468,7 @@ function KpiRing({
   label,
   value,
   sub,
+  subHref,
   pct,
   color,
   inverted,
@@ -474,6 +476,7 @@ function KpiRing({
   label: string;
   value: string;
   sub: string;
+  subHref?: string;
   pct: number;
   color: string;
   inverted?: boolean;
@@ -510,7 +513,16 @@ function KpiRing({
       </svg>
       <div className="min-w-0 flex-1">
         <div className="text-[12.5px] font-medium text-navy-900">{label}</div>
-        <div className="text-[11px] text-ink-500 mt-0.5">{sub}</div>
+        {subHref ? (
+          <Link
+            href={subHref}
+            className="text-[11px] mt-0.5 font-semibold text-brand-700 hover:text-brand-800 underline underline-offset-2 decoration-1 inline-block"
+          >
+            {sub}
+          </Link>
+        ) : (
+          <div className="text-[11px] text-ink-500 mt-0.5">{sub}</div>
+        )}
       </div>
     </div>
   );

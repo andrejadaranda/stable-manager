@@ -6,20 +6,45 @@
 
 export type SessionType =
   | "flat"
+  | "dressage"
   | "jumping"
+  | "cross_country"
   | "lunging"
   | "groundwork"
   | "hack"
+  | "western"
+  | "vaulting"
+  | "rehab"
   | "other";
 
 export const SESSION_TYPES: SessionType[] = [
   "flat",
+  "dressage",
   "jumping",
+  "cross_country",
   "lunging",
   "groundwork",
   "hack",
+  "western",
+  "vaulting",
+  "rehab",
   "other",
 ];
+
+/** Display labels for session types — keep in sync with SESSION_TYPES. */
+export const SESSION_TYPE_LABEL: Record<SessionType, string> = {
+  flat:          "Flat",
+  dressage:      "Dressage",
+  jumping:       "Jumping",
+  cross_country: "Cross-country",
+  lunging:       "Lunging",
+  groundwork:    "Groundwork",
+  hack:          "Hack / trail",
+  western:       "Western",
+  vaulting:      "Vaulting",
+  rehab:         "Rehab / recovery",
+  other:         "Other",
+};
 
 export type SessionRow = {
   id: string;

@@ -168,31 +168,48 @@ function CreateHorseDialog({
             />
           </Field>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field label="Status">
-              <Select name="status" defaultValue="active">
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </Select>
-            </Field>
-            <Field label="Max / day" hint="0 = no limit.">
-              <Input
-                name="daily_lesson_limit"
-                type="number"
-                min="0"
-                step="1"
-                defaultValue="4"
-              />
-            </Field>
-            <Field label="Max / week" hint="0 = no limit.">
-              <Input
-                name="weekly_lesson_limit"
-                type="number"
-                min="0"
-                step="1"
-                defaultValue="20"
-              />
-            </Field>
+          <div className="rounded-xl border border-ink-200/70 bg-cream-50/40 px-4 py-4">
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-ink-600 mb-1">
+              Workload &amp; availability
+            </p>
+            <p className="text-[12.5px] text-ink-500 leading-relaxed mb-3">
+              These caps protect the horse from being overbooked. The welfare board flags any horse that hits them — and the calendar refuses double-bookings beyond the limit. Set <strong>0</strong> on either field to disable that check entirely.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Field
+                label="Status"
+                hint="Active = available for lessons. Inactive = hidden from the calendar (e.g. injured, sold, on holiday)."
+              >
+                <Select name="status" defaultValue="active">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </Select>
+              </Field>
+              <Field
+                label="Max lessons / day"
+                hint="How many lessons this horse can carry in a single day before the welfare board flags it. Typical: 3–4. Use 0 = no limit."
+              >
+                <Input
+                  name="daily_lesson_limit"
+                  type="number"
+                  min="0"
+                  step="1"
+                  defaultValue="4"
+                />
+              </Field>
+              <Field
+                label="Max lessons / week"
+                hint="Weekly workload cap. Welfare board flags horses over this. Typical: 15–20. Use 0 = no limit."
+              >
+                <Input
+                  name="weekly_lesson_limit"
+                  type="number"
+                  min="0"
+                  step="1"
+                  defaultValue="20"
+                />
+              </Field>
+            </div>
           </div>
 
           <Field label="Notes">
