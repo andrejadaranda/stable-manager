@@ -81,7 +81,7 @@ export default async function DashboardLayout({
       </Suspense>
       {/* First-time welcome tour. Only shows when profiles.onboarded_at
           is NULL. Users can replay it from the profile menu later. */}
-      {!onboarded && <WelcomeTour role={session.role} />}
+      {!onboarded && <WelcomeTour role={session.role} accountType={session.accountType} />}
 
       {/* Cmd+K global search palette. Hidden until shortcut/triggered. */}
       <CommandPalette />

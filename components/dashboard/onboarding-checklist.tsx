@@ -13,15 +13,22 @@ export function OnboardingChecklist({ status }: { status: OnboardingStatus | nul
   // sees exactly what to tap next.
   const nextIdx = status.steps.findIndex((s) => !s.done);
 
+  // Personal accounts only have 3 steps and no "stable" concept. We
+  // infer from the shape — a 3-step list with no "client" step means
+  // it's the personal flavour.
+  const isPersonal = !status.steps.some((s) => s.key === "client");
+
   return (
     <section className="bg-white rounded-2xl shadow-soft p-5 md:p-6 flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
         <div>
           <h2 className="font-display text-xl text-navy-900 leading-none">
-            Get your stable up and running
+            {isPersonal ? "Get your account up and running" : "Get your stable up and running"}
           </h2>
           <p className="text-[12.5px] text-ink-500 mt-1.5">
-            A few clicks to go from empty to ready to book.
+            {isPersonal
+              ? "Two quick steps to start tracking your horse and rides."
+              : "A few clicks to go from empty to ready to book."}
           </p>
         </div>
         <span className="text-[11px] uppercase tracking-[0.14em] font-semibold text-ink-500 tabular-nums">

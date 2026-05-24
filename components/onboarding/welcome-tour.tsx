@@ -52,6 +52,31 @@ const OWNER_STEPS: Step[] = [
   },
 ];
 
+const PERSONAL_STEPS: Step[] = [
+  {
+    title:  "Welcome to Longrein.",
+    body:   "A simple, beautiful place to track your horse — calendar, sessions, expenses, vet records. Built for private owners. Just three quick steps to get going.",
+    visual: "celebrate",
+  },
+  {
+    title:  "Add your horse",
+    body:   "Every session and expense ties back to a horse. Name, breed, date of birth — basics are fine, you can add more later from the horse profile.",
+    cta:    { label: "Open Horses", href: "/dashboard/horses" },
+    visual: "horses",
+  },
+  {
+    title:  "Log a ride",
+    body:   "Track every ride — flat, hack, lunging, jumping. Sessions feed the welfare workload chart so you always know how hard your horse has been working.",
+    cta:    { label: "Open Sessions", href: "/dashboard/sessions" },
+    visual: "schedule",
+  },
+  {
+    title:  "You're all set.",
+    body:   "Health records, expenses, photo album, vet visits — all under Settings. Open the calendar to plan ahead, or just dive in.",
+    visual: "celebrate",
+  },
+];
+
 const CLIENT_STEPS: Step[] = [
   {
     title:  "Welcome to your stable's portal.",
@@ -78,8 +103,21 @@ const CLIENT_STEPS: Step[] = [
   },
 ];
 
-export function WelcomeTour({ role }: { role: Role }) {
-  const steps = role === "client" ? CLIENT_STEPS : OWNER_STEPS;
+export function WelcomeTour({
+  role,
+  accountType = "business",
+}: {
+  role: Role;
+  /** Personal (B2C) accounts get a stripped tour focused on solo horse
+   *  ownership — no clients, no payments, no team. */
+  accountType?: "business" | "personal";
+}) {
+  const steps =
+    role === "client"
+      ? CLIENT_STEPS
+      : accountType === "personal" && role === "owner"
+      ? PERSONAL_STEPS
+      : OWNER_STEPS;
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
   const [hidden, setHidden] = useState(false);

@@ -44,15 +44,20 @@ export default async function DashboardHome() {
   if (!session) redirect("/login");
   if (session.role === "client") redirect("/dashboard/my-lessons");
 
+  // Personal (B2C) accounts have no clients, no inbox, no payments collected,
+  // no team — they only manage THEIR OWN horses. Anything business-only on
+  // this dashboard branches on this flag below.
+  const isPersonal = session.accountType === "personal";
+
   const [s, profile, onboarding, suggestions, birthdays, openCareRequests, openLessonRequests, openJoinRequests] = await Promise.all([
     getDashboardSummary(),
     getOwnProfile().catch(() => null),
     getOnboardingStatus().catch(() => null),
     getSmartSuggestions().catch(() => []),
     getUpcomingBirthdays().catch(() => []),
-    listCareRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
-    listLessonRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
-    listJoinRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
+    isPersonal ? Promise.resolve([]) : listCareRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
+    isPersonal ? Promise.resolve([]) : listLessonRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
+    isPersonal ? Promise.resolve([]) : listJoinRequestsForOwner({ status: "open", limit: 25 }).catch(() => []),
   ]);
 
   const firstName = (profile?.full_name ?? "").split(" ")[0] ?? "";
@@ -142,20 +147,37 @@ export default async function DashboardHome() {
           </span>
         </Link>
 
-        <Link
-          href="/dashboard/calendar"
-          className="
-            rounded-2xl bg-white shadow-soft hover:shadow-lift transition-shadow
-            px-4 py-4 flex flex-col justify-center gap-1
-          "
-        >
-          <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-brand-700">
-            + New lesson
-          </span>
-          <span className="text-[12.5px] text-ink-600">
-            Click any time slot to book.
-          </span>
-        </Link>
+        {isPersonal ? (
+          <Link
+            href="/dashboard/horses"
+            className="
+              rounded-2xl bg-white shadow-soft hover:shadow-lift transition-shadow
+              px-4 py-4 flex flex-col justify-center gap-1
+            "
+          >
+            <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-brand-700">
+              + Add horse
+            </span>
+            <span className="text-[12.5px] text-ink-600">
+              Up to {isPersonal ? "2 horses (Mini) / 5 horses (Plus)" : "your plan limit"}.
+            </span>
+          </Link>
+        ) : (
+          <Link
+            href="/dashboard/calendar"
+            className="
+              rounded-2xl bg-white shadow-soft hover:shadow-lift transition-shadow
+              px-4 py-4 flex flex-col justify-center gap-1
+            "
+          >
+            <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-brand-700">
+              + New lesson
+            </span>
+            <span className="text-[12.5px] text-ink-600">
+              Click any time slot to book.
+            </span>
+          </Link>
+        )}
 
         <Link
           href="/dashboard/sessions"
@@ -165,7 +187,7 @@ export default async function DashboardHome() {
           "
         >
           <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-navy-700">
-            Log a session
+            Log a {isPersonal ? "ride" : "session"}
           </span>
           <span className="text-[12.5px] text-ink-600">
             Record a ride that just happened.
@@ -217,30 +239,37 @@ export default async function DashboardHome() {
           {/* Reminders */}
           <RemindersBlock />
 
-          {/* Active horses + Revenue row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Active horses + Revenue row.
+              Personal accounts: hide the Revenue card (no client billing). */}
+          <div className={`grid grid-cols-1 ${isPersonal ? "" : "md:grid-cols-2"} gap-5`}>
             <ActiveHorsesCard count={s.activeHorses} />
-            <RevenueCard
-              monthlyRevenue={s.monthlyRevenue}
-              monthLabel={s.monthLabel}
-              fmtEUR={fmtEUR}
-            />
+            {!isPersonal && (
+              <RevenueCard
+                monthlyRevenue={s.monthlyRevenue}
+                monthLabel={s.monthLabel}
+                fmtEUR={fmtEUR}
+              />
+            )}
           </div>
 
           {/* Combined inbox — Join + Lesson + Care requests grouped.
-              Auto-hides when all 3 are empty. */}
-          <InboxWidget
-            joinOpen={openJoinRequests}
-            lessonOpen={openLessonRequests}
-            careOpen={openCareRequests}
-          />
+              Personal accounts: there's no inbox concept (no clients
+              requesting things), so skip rendering entirely. */}
+          {!isPersonal && (
+            <InboxWidget
+              joinOpen={openJoinRequests}
+              lessonOpen={openLessonRequests}
+              careOpen={openCareRequests}
+            />
+          )}
 
           {/* Birthdays — emotional micro-widget, moved to the bottom.
               Auto-hides when no horse/client birthday in next 14 days. */}
           <BirthdaysWidget items={birthdays} />
 
-          {/* Quick actions — owner only */}
-          {s.isOwner && (
+          {/* Quick actions — owner only, business stables. Personal
+              accounts get a single-card prompt at the top instead. */}
+          {s.isOwner && !isPersonal && (
             <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <QuickAction
                 href="/dashboard/horses"
@@ -291,7 +320,30 @@ export default async function DashboardHome() {
           </div>
 
           {s.weekLessonsCount === 0 && s.monthlyRevenue === 0 && s.outstandingBalance === 0 ? (
-            <EmptyMetrics />
+            <EmptyMetrics isPersonal={isPersonal} />
+          ) : isPersonal ? (
+            <>
+              {/* Personal accounts: emphasise rides + horse welfare; hide
+                  Payments + Client balance entirely (no clients). */}
+              <KpiRing
+                label="Rides this week"
+                value={`${s.weekLessonsCount}`}
+                sub={
+                  s.weekLessonsCompleted > 0
+                    ? `${s.weekLessonsCompleted} completed`
+                    : "Log a session to track progress"
+                }
+                pct={Math.min(100, s.weekLessonsCount * 14)}
+                color="#E04E25"
+              />
+              <KpiRing
+                label="Horses in care"
+                value={`${s.activeHorses}`}
+                sub={s.activeHorses === 0 ? "Add your first horse" : "Currently active"}
+                pct={s.activeHorses > 0 ? 100 : 0}
+                color="#1E2A47"
+              />
+            </>
           ) : (
             <>
               <KpiRing
@@ -437,7 +489,7 @@ function KpiRing({
   );
 }
 
-function EmptyMetrics() {
+function EmptyMetrics({ isPersonal }: { isPersonal: boolean }) {
   return (
     <div className="flex flex-col items-center text-center py-4 px-2">
       <span
@@ -451,13 +503,15 @@ function EmptyMetrics() {
       </span>
       <p className="text-[13px] font-medium text-navy-900">Metrics will appear as you use the app</p>
       <p className="text-[11.5px] text-ink-500 mt-1.5 leading-relaxed">
-        Add your first lesson and log your first session — utilization, payments, and outstanding balances will start filling in immediately.
+        {isPersonal
+          ? "Add your horse and log your first ride — your weekly activity will start showing here."
+          : "Add your first lesson and log your first session — utilization, payments, and outstanding balances will start filling in immediately."}
       </p>
       <Link
-        href="/dashboard/calendar"
+        href={isPersonal ? "/dashboard/horses" : "/dashboard/calendar"}
         className="mt-3 text-[12px] font-medium text-brand-700 hover:text-brand-800"
       >
-        + New lesson →
+        {isPersonal ? "+ Add horse →" : "+ New lesson →"}
       </Link>
     </div>
   );
