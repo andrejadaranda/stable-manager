@@ -48,7 +48,11 @@
       "url": "https://longrein.eu",
       "email": "hello@longrein.eu",
       "address": { "@type": "PostalAddress", "addressCountry": "LT", "addressLocality": "Vilnius" },
-      "areaServed": ["LT","PL","DE","EE","LV","FI","SE"]
+      "areaServed": ["LT","PL","DE","EE","LV","FI","SE"],
+      "sameAs": [
+        "https://www.instagram.com/longreinapp/",
+        "https://www.facebook.com/longreinapp"
+      ]
     },
     {
       "@type": "SoftwareApplication",
@@ -410,7 +414,21 @@
   footer .top { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 40px; margin-bottom: 40px; }
   footer .brand .word { font-family: var(--serif); font-weight: 600; font-size: 22px; color: var(--cream); letter-spacing: -0.02em; }
   footer .brand .word .dot { color: var(--saddle); }
-  footer .brand p { font-size: 14px; line-height: 1.6; margin: 12px 0 0; max-width: 320px; color: rgba(244,236,223,0.7); }
+  footer .brand p { font-size: 14px; line-height: 1.6; margin: 12px 0 18px; max-width: 320px; color: rgba(244,236,223,0.7); }
+  footer .social { display: flex; gap: 10px; margin-top: 4px; }
+  footer .social a {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(244,236,223,0.08); color: var(--cream);
+    border: 1px solid rgba(244,236,223,0.12);
+    text-decoration: none;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  footer .social a:hover {
+    background: var(--saddle); color: white; border-color: var(--saddle);
+    transform: translateY(-1px);
+  }
+  footer .social svg { width: 18px; height: 18px; }
   footer .col h4 { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(244,236,223,0.55); font-weight: 600; margin: 0 0 14px; }
   footer .col ul { margin: 0; padding: 0; list-style: none; }
   footer .col li { margin-bottom: 8px; font-size: 14px; }
@@ -886,6 +904,14 @@
       <div class="brand">
         <div class="word">Longrein<span class="dot">.</span></div>
         <p>Premium stable management for European riding clubs. Built in a Lithuanian stable, hosted in Frankfurt, designed for how the yard actually runs.</p>
+        <div class="social">
+          <a href="https://www.instagram.com/longreinapp/" target="_blank" rel="noopener noreferrer" aria-label="Longrein on Instagram" title="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          </a>
+          <a href="https://www.facebook.com/longreinapp" target="_blank" rel="noopener noreferrer" aria-label="Longrein on Facebook" title="Facebook">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99h-2.54V12h2.54V9.8c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.24.19 2.24.19v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.77l-.44 2.89h-2.33v6.99A10 10 0 0 0 22 12z"/></svg>
+          </a>
+        </div>
       </div>
       <div class="col">
         <h4>Product</h4>
