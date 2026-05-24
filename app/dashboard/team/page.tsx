@@ -1,10 +1,10 @@
-import { requirePageRole } from "@/lib/auth/redirects";
+import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { listMembers } from "@/services/profiles";
 import { MemberList } from "@/components/team/member-list";
 import { InviteEmployeePanel } from "@/components/team/invite-forms";
 
 export default async function TeamPage() {
-  await requirePageRole("owner");
+  await requireBusinessAccount("owner");
 
   // Team = owner + employees only. Clients live on /dashboard/clients
   // (which has its own Invite-to-App flow per #44 — link-based, no

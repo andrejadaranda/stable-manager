@@ -21,9 +21,11 @@ type Item = {
 // Personal (B2C) owners get a trimmed nav — no clients, no inbox,
 // no payments collected from other clients, no team. Just their own
 // horses, calendar, sessions, expenses.
+// Calendar is intentionally excluded — Personal owners have no clients,
+// so the calendar UI would be an empty trap. Their workflow centers on
+// horses + sessions logged after the fact, not scheduled lessons.
 const PERSONAL_NAV: Item[] = [
   { href: "/dashboard",          label: "Overview",  icon: <IconHome /> },
-  { href: "/dashboard/calendar", label: "Calendar",  icon: <IconCal />  },
   { href: "/dashboard/horses",   label: "My horses", icon: <IconHorse /> },
   { href: "/dashboard/sessions", label: "Sessions",  icon: <IconActivity />, feature: "sessions" },
   { href: "/dashboard/welfare",  label: "Welfare",   icon: <IconHeart /> },

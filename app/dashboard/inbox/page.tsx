@@ -8,7 +8,7 @@
 // rows stay accessible via the individual archive pages.
 
 import Link from "next/link";
-import { requirePageRole } from "@/lib/auth/redirects";
+import { requireBusinessAccount } from "@/lib/auth/redirects";
 import {
   listJoinRequestsForOwner,
   type JoinRequestRow,
@@ -40,7 +40,7 @@ export const dynamic = "force-dynamic";
 const TOP_N = 5;
 
 export default async function InboxPage() {
-  await requirePageRole("owner", "employee");
+  await requireBusinessAccount("owner", "employee");
 
   const [
     joinOpen,

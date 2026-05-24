@@ -161,8 +161,8 @@ function FormShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="fixed inset-0 z-30 flex items-start justify-center pt-16 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-xl border border-neutral-200 p-6 w-full max-w-md flex flex-col gap-3.5">
+    <div className="fixed inset-0 z-30 flex items-stretch sm:items-start sm:justify-center sm:pt-16 bg-black/40 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white border border-neutral-200 p-6 w-full sm:max-w-md sm:rounded-xl sm:shadow-xl flex flex-col gap-3.5 h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-5rem)] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{title}</h2>
           <button

@@ -10,7 +10,7 @@
 // All numbers come from a single service call (`getMonthFinancials`)
 // which fans out two parallel queries.
 
-import { requirePageRole } from "@/lib/auth/redirects";
+import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { getMonthFinancials } from "@/services/finance";
 import { FinanceShell } from "@/components/finance/finance-shell";
 
@@ -26,7 +26,7 @@ export default async function FinancePage({
 }: {
   searchParams: { period?: string };
 }) {
-  await requirePageRole("owner");
+  await requireBusinessAccount("owner");
 
   const period = /^\d{4}-\d{2}$/.test(searchParams.period ?? "")
     ? (searchParams.period as string)

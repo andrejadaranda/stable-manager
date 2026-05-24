@@ -9,7 +9,7 @@
 // lessons row.
 
 import Link from "next/link";
-import { requirePageRole } from "@/lib/auth/redirects";
+import { requireBusinessAccount } from "@/lib/auth/redirects";
 import {
   listLessonRequestsForOwner,
   LESSON_STATUS_LABEL,
@@ -22,7 +22,7 @@ import { RespondLessonRequestButtons } from "@/components/lessonRequests/accept-
 export const dynamic = "force-dynamic";
 
 export default async function LessonRequestsPage() {
-  await requirePageRole("owner", "employee");
+  await requireBusinessAccount("owner", "employee");
 
   const [openRows, allRows, horses, trainers] = await Promise.all([
     listLessonRequestsForOwner({ status: "open", limit: 100 }),

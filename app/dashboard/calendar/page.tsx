@@ -1,4 +1,4 @@
-import { requirePageRole } from "@/lib/auth/redirects";
+import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { getCalendar } from "@/services/lessons";
 import { listClients } from "@/services/clients";
 import { listHorses } from "@/services/horses";
@@ -14,7 +14,7 @@ export default async function CalendarPage({
 }: {
   searchParams: { date?: string };
 }) {
-  await requirePageRole("owner", "employee");
+  await requireBusinessAccount("owner", "employee");
 
   const ref = searchParams.date ? new Date(searchParams.date) : new Date();
   const start = startOfWeek(ref);

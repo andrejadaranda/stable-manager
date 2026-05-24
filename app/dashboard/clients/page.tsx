@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requirePageRole } from "@/lib/auth/redirects";
+import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { listClientsWithUpcomingCount } from "@/services/clients";
 import { ClientList } from "@/components/clients/client-list";
 import { CreateClientPanel } from "@/components/clients/create-client-form";
@@ -12,7 +12,7 @@ export default async function ClientsPage({
 }: {
   searchParams: { filter?: string };
 }) {
-  const session = await requirePageRole("owner", "employee");
+  const session = await requireBusinessAccount("owner", "employee");
 
   const all = await listClientsWithUpcomingCount();
 

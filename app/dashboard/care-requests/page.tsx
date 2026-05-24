@@ -6,7 +6,7 @@
 // workflow. No filters, no search; volume is low.
 
 import Link from "next/link";
-import { requirePageRole } from "@/lib/auth/redirects";
+import { requireBusinessAccount } from "@/lib/auth/redirects";
 import {
   listCareRequestsForOwner,
   CARE_TYPE_LABEL,
@@ -20,7 +20,7 @@ import { RespondButton } from "@/components/careRequests/respond-button";
 export const dynamic = "force-dynamic";
 
 export default async function CareRequestsPage() {
-  await requirePageRole("owner", "employee");
+  await requireBusinessAccount("owner", "employee");
 
   const [openRows, closedRows] = await Promise.all([
     listCareRequestsForOwner({ status: "open",  limit: 100 }),

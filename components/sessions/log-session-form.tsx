@@ -128,7 +128,7 @@ export function LogSessionForm({
 
       {/* Duration -------------------------------------------------- */}
       <label className="md:col-span-2 block">
-        <span className="block text-xs font-medium text-ink-700 mb-1">Min</span>
+        <span className="block text-xs font-medium text-ink-700 mb-1">Duration (min)</span>
         <input
           type="number"
           name="duration_minutes"

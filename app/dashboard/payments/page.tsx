@@ -1,4 +1,4 @@
-import { requirePageRole } from "@/lib/auth/redirects";
+import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { listPayments } from "@/services/payments";
 import { listClients } from "@/services/clients";
 import { getCalendar } from "@/services/lessons";
@@ -8,7 +8,7 @@ import { ExportPdfButton } from "@/components/payments/export-pdf-button";
 import { PageHeader } from "@/components/ui";
 
 export default async function PaymentsPage() {
-  await requirePageRole("owner");
+  await requireBusinessAccount("owner");
 
   // Lesson dropdown shows ±60 days around today.
   const from = new Date();
