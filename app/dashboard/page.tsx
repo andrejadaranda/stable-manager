@@ -14,6 +14,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { syncSubscriptionFromCheckoutSession } from "@/lib/stripe/sync";
 import { getDashboardSummary, type DashboardLesson } from "@/services/dashboard";
 import { getOwnProfile } from "@/services/account";
 import {
@@ -39,10 +40,36 @@ import { listJoinRequestsForOwner } from "@/services/joinRequests";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardHome() {
+export default async function DashboardHome({
+  searchParams,
+}: {
+  searchParams?: Promise<{ session_id?: string; welcome?: string }>;
+}) {
   const session = await getSession().catch(() => null);
   if (!session) redirect("/login");
   if (session.role === "client") redirect("/dashboard/my-lessons");
+
+  // Belt-and-braces: if Stripe redirected the user back here with a
+  // session_id, sync the subscription state DIRECTLY (don't trust the
+  // webhook to have arrived yet). Without this, a Personal user who
+  // pays via FOUNDER100 + Apple Pay can complete Checkout but get
+  // bounced back to /dashboard/personal-checkout because middleware
+  // sees the stale 'trialing past' seed row. After sync, status flips
+  // to 'active' / 'trialing' with the real subscription row and
+  // middleware lets them through on next request.
+  const params = await searchParams;
+  if (params?.session_id && session.stableId) {
+    try {
+      await syncSubscriptionFromCheckoutSession(params.session_id, session.stableId);
+      // Redirect to clean URL without session_id so a refresh doesn't re-sync.
+      redirect("/dashboard" + (params.welcome ? `?welcome=${params.welcome}` : ""));
+    } catch (err) {
+      // Don't block dashboard if sync fails — log and continue. Middleware
+      // may still redirect them; the surfaced message in billing UI will
+      // explain. (Webhook should eventually catch up.)
+      console.error("[dashboard] post-checkout sync failed:", err);
+    }
+  }
 
   // Personal (B2C) accounts have no clients, no inbox, no payments collected,
   // no team — they only manage THEIR OWN horses. Anything business-only on

@@ -12,6 +12,8 @@
 
 import { requirePageRole } from "@/lib/auth/redirects";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { syncSubscriptionFromCheckoutSession } from "@/lib/stripe/sync";
+import { getSession } from "@/lib/auth/session";
 import { Card, CardHeader, Badge } from "@/components/ui";
 import { BillingActions } from "./BillingActions";
 
@@ -27,10 +29,25 @@ type SubscriptionRow = {
 export default async function BillingSettingsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ started?: string; cancelled?: string }>;
+  searchParams?: Promise<{ started?: string; cancelled?: string; session_id?: string }>;
 }) {
   await requirePageRole("owner");
   const params = (await searchParams) ?? {};
+
+  // Belt-and-braces: if Stripe redirected back here with a session_id,
+  // sync the subscription state directly. Without this, a user who
+  // completes Checkout can still see "no subscription" on this page
+  // until the webhook arrives (which can lag or fail). See lib/stripe/sync.ts.
+  if (params.session_id) {
+    try {
+      const session = await getSession();
+      if (session.stableId) {
+        await syncSubscriptionFromCheckoutSession(params.session_id, session.stableId);
+      }
+    } catch (err) {
+      console.error("[billing-page] post-checkout sync failed:", err);
+    }
+  }
 
   const supabase = createSupabaseServerClient();
   // RLS allows owner to SELECT their own stable's subscription row.
