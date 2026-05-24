@@ -147,6 +147,7 @@ export async function POST(req: Request) {
     customer_update:            { name: "auto", address: "auto" },
     billing_address_collection: "auto",
     locale:                     "auto",
+    allow_promotion_codes:      true,
   });
 
   return NextResponse.json({ ok: true, url: checkoutSession.url });

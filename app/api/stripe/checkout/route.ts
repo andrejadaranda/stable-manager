@@ -200,6 +200,11 @@ export async function POST() {
     // Stripe auto-detects from billing address; this just controls the
     // initial page language.
     locale: "auto",
+    // Promotion-code input field on Checkout. Lets us run founder/team comp
+    // (e.g. FOUNDER100 = 100% off forever) and any future marketing promos
+    // without a code change. Stripe only honors codes you create in
+    // Dashboard → Products → Coupons → Promotion codes.
+    allow_promotion_codes: true,
   });
 
   return NextResponse.json({ ok: true, url: checkoutSession.url });
