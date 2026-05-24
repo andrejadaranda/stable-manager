@@ -136,7 +136,7 @@ export function AvatarUploader({
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={status === "uploading"}
-              className="rounded-md bg-neutral-900 text-white px-3.5 py-2 text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-md bg-brand-600 text-white px-3.5 py-2 text-sm font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {status === "uploading"
                 ? "Uploading…"

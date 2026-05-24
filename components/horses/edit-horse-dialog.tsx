@@ -221,7 +221,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
-      className="mt-2 rounded-md bg-neutral-900 text-white py-2.5 text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="mt-2 rounded-md bg-brand-600 text-white py-2.5 text-sm font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {pending ? "Saving…" : "Save changes"}
     </button>

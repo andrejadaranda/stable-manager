@@ -21,7 +21,7 @@ export function InviteEmployeePanel() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="rounded-md bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-800"
+        className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
       >
         + Invite employee
       </button>
@@ -200,7 +200,7 @@ function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }
     <button
       type="submit"
       disabled={pending}
-      className="mt-2 rounded-md bg-neutral-900 text-white py-2.5 text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="mt-2 rounded-md bg-brand-600 text-white py-2.5 text-sm font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {pending ? pendingLabel : label}
     </button>
