@@ -7,6 +7,9 @@ import { FlashToast } from "@/components/ui";
 import { getStableFeatures, DEFAULT_FEATURES } from "@/services/features";
 import { isUserOnboarded } from "@/services/onboardingTour";
 import { getOwnProfile } from "@/services/account";
+import { countOpenLessonRequests } from "@/services/lessonRequests";
+import { countOpenCareRequests } from "@/services/careRequests";
+import { countPendingJoinRequests } from "@/services/joinRequests";
 import { WelcomeTour } from "@/components/onboarding/welcome-tour";
 import { CommandPalette } from "@/components/search/command-palette";
 import { ReportProblemButton } from "@/components/feedback/ReportProblemButton";
@@ -23,14 +26,28 @@ export default async function DashboardLayout({
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Both used for sidebar filtering + first-run welcome tour gating.
-  // Failures fall back to defaults so a partial migration / bad row
+  // Sidebar context. Inbox counts only mattter for owners/employees of
+  // business stables — personal accounts and clients don't have an inbox
+  // item in their nav, so we skip the queries entirely for them.
+  // Failures fall back to safe defaults so a partial migration / bad row
   // never blocks navigation.
-  const [features, onboarded, ownProfile] = await Promise.all([
-    getStableFeatures().catch(() => DEFAULT_FEATURES),
-    isUserOnboarded().catch(() => true),
-    getOwnProfile().catch(() => null),
-  ]);
+  const showsInbox =
+    session.accountType !== "personal" &&
+    (session.role === "owner" || session.role === "employee");
+
+  const [features, onboarded, ownProfile, lessonReqCount, careReqCount, joinReqCount] =
+    await Promise.all([
+      getStableFeatures().catch(() => DEFAULT_FEATURES),
+      isUserOnboarded().catch(() => true),
+      getOwnProfile().catch(() => null),
+      showsInbox ? countOpenLessonRequests().catch(() => 0) : Promise.resolve(0),
+      showsInbox ? countOpenCareRequests().catch(() => 0) : Promise.resolve(0),
+      // Join requests are owner-only (employees can't approve them).
+      showsInbox && session.role === "owner"
+        ? countPendingJoinRequests().catch(() => 0)
+        : Promise.resolve(0),
+    ]);
+  const inboxCount = lessonReqCount + careReqCount + joinReqCount;
 
   return (
     <div className="min-h-screen md:flex">
@@ -40,6 +57,7 @@ export default async function DashboardLayout({
         email={user?.email ?? ""}
         features={features}
         photoUrl={ownProfile?.photo_url ?? null}
+        inboxCount={inboxCount}
       />
       <main className="flex-1 px-4 md:px-10 py-6 md:py-10 max-w-[1400px] mx-auto w-full">
         {children}

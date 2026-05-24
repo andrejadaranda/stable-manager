@@ -14,6 +14,8 @@ type Item = {
   icon: React.ReactNode;
   /** If set, hide nav item when this feature is disabled. */
   feature?: FeatureKey;
+  /** Stable key for matching the live badge counts from layout props. */
+  badgeKey?: "inbox";
 };
 
 // Personal (B2C) owners get a trimmed nav — no clients, no inbox,
@@ -36,7 +38,7 @@ const NAV: Record<Role, Item[]> = {
     { href: "/dashboard/sessions",      label: "Sessions",      icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/horses",        label: "Horses",        icon: <IconHorse /> },
     { href: "/dashboard/clients",         label: "Clients",         icon: <IconUsers /> },
-    { href: "/dashboard/inbox",           label: "Inbox",           icon: <IconInbox /> },
+    { href: "/dashboard/inbox",           label: "Inbox",           icon: <IconInbox />, badgeKey: "inbox" },
     { href: "/dashboard/chat",            label: "Chat",            icon: <IconChat />, feature: "chat" },
     { href: "/dashboard/payments",        label: "Payments",        icon: <IconCash /> },
     { href: "/dashboard/expenses",      label: "Expenses",      icon: <IconReceipt /> },
@@ -49,7 +51,7 @@ const NAV: Record<Role, Item[]> = {
     { href: "/dashboard/sessions",      label: "Sessions",      icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/horses",        label: "Horses",        icon: <IconHorse /> },
     { href: "/dashboard/clients",         label: "Clients",         icon: <IconUsers /> },
-    { href: "/dashboard/inbox",           label: "Inbox",           icon: <IconInbox /> },
+    { href: "/dashboard/inbox",           label: "Inbox",           icon: <IconInbox />, badgeKey: "inbox" },
     { href: "/dashboard/chat",            label: "Chat",            icon: <IconChat />, feature: "chat" },
   ],
   client: [
@@ -73,6 +75,7 @@ export function Sidebar({
   email,
   features,
   photoUrl,
+  inboxCount = 0,
 }: {
   role: Role;
   /** Personal accounts get a trimmed nav (no clients, inbox, team). */
@@ -80,6 +83,10 @@ export function Sidebar({
   email: string;
   features: StableFeatures;
   photoUrl?: string | null;
+  /** Sum of pending lesson_requests + care_requests + join_requests.
+   *  Only owners/employees of business stables see this — the layout
+   *  short-circuits the queries for personal accounts + clients. */
+  inboxCount?: number;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -201,6 +208,9 @@ export function Sidebar({
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(item.href + "/")) ||
               (item.href === "/dashboard" && pathname === "/dashboard");
+            // Live badge count for this nav item. Only "inbox" is wired today;
+            // additional badgeKey values can plug into the same prop API later.
+            const badge = item.badgeKey === "inbox" ? inboxCount : 0;
             return (
               <Link
                 key={item.href}
@@ -218,7 +228,19 @@ export function Sidebar({
                 >
                   {item.icon}
                 </span>
-                {item.label}
+                <span className="flex-1 min-w-0 truncate">{item.label}</span>
+                {badge > 0 && (
+                  <span
+                    aria-label={`${badge} pending`}
+                    className={`shrink-0 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[11px] font-semibold leading-none tabular-nums ${
+                      isActive
+                        ? "bg-white text-brand-700"
+                        : "bg-brand-600 text-white"
+                    }`}
+                  >
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
               </Link>
             );
           })}
