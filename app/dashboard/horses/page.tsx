@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { listHorsesWithWeeklyWorkload } from "@/services/horses";
+import { listClients } from "@/services/clients";
 import { startOfWeek, addDays } from "@/lib/utils/dates";
 import { HorseList } from "@/components/horses/horse-list";
 import { CreateHorsePanel } from "@/components/horses/create-horse-form";
@@ -11,10 +12,15 @@ export default async function HorsesPage() {
 
   const start = startOfWeek(new Date());
   const end = addDays(start, 7);
-  const horses = await listHorsesWithWeeklyWorkload(
-    start.toISOString(),
-    end.toISOString(),
-  );
+  // Load horses + the active client roster in parallel. Clients feed the
+  // "Owner (boarding horse)" picker inside the + New horse dialog.
+  const [horses, clients] = await Promise.all([
+    listHorsesWithWeeklyWorkload(start.toISOString(), end.toISOString()),
+    listClients({ activeOnly: true }).catch(
+      () => [] as Array<{ id: string; full_name: string }>,
+    ),
+  ]);
+  const clientOptions = clients.map((c) => ({ id: c.id, full_name: c.full_name }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,7 +40,7 @@ export default async function HorsesPage() {
                 Profitability
               </Link>
             )}
-            <CreateHorsePanel />
+            <CreateHorsePanel clients={clientOptions} />
           </>
         }
       />

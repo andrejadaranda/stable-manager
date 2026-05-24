@@ -1,13 +1,26 @@
 "use client";
 
+// "+ New client" panel — premium brand UI.
+//
+// Trigger: button in the Clients page header.
+// Modal: brand-styled. On mobile renders as a full-screen sheet (so the
+// submit button stays reachable above iOS keyboard + home indicator); on
+// desktop renders as a centered card with shadow-soft.
+//
+// Fields: full name (required), phone, email, lesson reminders, skill
+// level, status, notes. Reminder dropdown auto-disables choices that don't
+// have the required contact field filled in — so a user can't pick "SMS"
+// before adding a phone number.
+
 import { useEffect, useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createClientAction,
   type CreateClientState,
 } from "@/app/dashboard/clients/actions";
+import { Button, Field, Input, Select, Textarea } from "@/components/ui";
 
-const createClientInitialState: CreateClientState = { error: null, success: false };
+const initialState: CreateClientState = { error: null, success: false };
 
 type ReminderPrefValue = "none" | "email" | "sms" | "both";
 
@@ -15,28 +28,24 @@ export function CreateClientPanel() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="rounded-md bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-800"
-      >
-        {open ? "Close" : "+ New client"}
-      </button>
-      {open && <CreateClientForm onClose={() => setOpen(false)} />}
+      <Button type="button" onClick={() => setOpen(true)} size="md" variant="primary">
+        + New client
+      </Button>
+      {open && <CreateClientDialog onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function CreateClientForm({ onClose }: { onClose: () => void }) {
+function CreateClientDialog({ onClose }: { onClose: () => void }) {
   const [state, formAction] = useFormState<CreateClientState, FormData>(
-    createClientAction, createClientInitialState,
+    createClientAction,
+    initialState,
   );
 
-  // Track email/phone/reminder choice locally so we can:
-  //  (1) disable email/sms options when the contact channel isn't filled
-  //  (2) surface a helpful hint instead of letting the server bounce the form
-  // The server still re-validates — this is purely UX scaffolding.
-  const [email, setEmail]               = useState("");
-  const [phone, setPhone]               = useState("");
+  // Local mirrors of the contact fields so we can conditionally enable
+  // reminder channels. Server still re-validates — this is UX scaffolding.
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [reminderPref, setReminderPref] = useState<ReminderPrefValue>("none");
 
   const hasEmail = email.trim().length > 0;
@@ -50,179 +59,182 @@ function CreateClientForm({ onClose }: { onClose: () => void }) {
     if (reminderPref === "both" && (!hasEmail || !hasPhone))
       return "Both channels selected — fill in email AND phone above.";
     if (reminderPref === "sms" || reminderPref === "both")
-      return "SMS dispatch goes live with the June update — preference is saved now.";
+      return "SMS dispatch is shipping with the June update — preference is saved now.";
     return null;
   }, [reminderPref, hasEmail, hasPhone]);
 
+  // Auto-close on successful submit; list revalidates server-side.
   useEffect(() => {
     if (state.success) onClose();
   }, [state.success, onClose]);
 
+  // Close on ESC.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <form
-      action={formAction}
-      // Mobile: full-screen sheet so the entire form (including Submit) is
-      // always reachable above the iOS home indicator and the keyboard.
-      // Desktop: centered modal as before.
-      className="fixed inset-0 z-30 flex items-stretch sm:items-start sm:justify-center sm:pt-16 bg-black/40 backdrop-blur-sm"
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-client-title"
+      className="fixed inset-0 z-40 flex items-stretch sm:items-start sm:justify-center sm:pt-10 bg-ink-900/40 backdrop-blur-sm"
     >
-      <div
+      <form
+        action={formAction}
         className="
-          bg-white border border-neutral-200 flex flex-col w-full
+          bg-white border border-ink-100 flex flex-col w-full
           h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-5rem)]
-          sm:rounded-xl sm:shadow-xl sm:max-w-md
+          sm:rounded-2xl sm:shadow-soft sm:max-w-lg
         "
       >
-        {/* Header (sticky on mobile) */}
-        <div className="flex items-center justify-between px-5 sm:px-6 pt-5 sm:pt-6 pb-3 border-b border-neutral-100 sm:border-0 shrink-0">
-          <h2 className="text-lg font-semibold">New client</h2>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-ink-100 shrink-0">
+          <div>
+            <h2
+              id="new-client-title"
+              className="font-display text-xl text-navy-700 leading-tight"
+            >
+              New client
+            </h2>
+            <p className="text-[12.5px] text-ink-500 mt-1 leading-relaxed">
+              Add a client. You can invite them to the app from their profile
+              once they're created.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-neutral-500 hover:text-neutral-900 px-2 py-1"
             aria-label="Close"
+            className="-mt-1 -mr-1 h-8 w-8 inline-flex items-center justify-center rounded-lg text-ink-500 hover:text-ink-900 hover:bg-ink-100/60 transition-colors"
           >
-            ✕
+            <span aria-hidden className="text-base">✕</span>
           </button>
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-3 flex flex-col gap-3.5">
-          <Field label="Full name" name="full_name" type="text" required />
-          <Field
-            label="Phone (optional)"
-            name="phone"
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.currentTarget.value)}
-          />
-          <Field
-            label="Email (optional)"
-            name="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.currentTarget.value)}
-          />
+        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+          <Field label="Full name" required>
+            <Input
+              name="full_name"
+              type="text"
+              required
+              autoFocus
+              placeholder="Jonas Petraitis"
+              maxLength={120}
+            />
+          </Field>
 
-          {/* Reminder preference — captured now so when SMS dispatch ships
-              in #34 we can fire reminders without re-prompting each client. */}
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-700">
-              Lesson reminders
-            </span>
-            <select
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Phone">
+              <Input
+                name="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.currentTarget.value)}
+                placeholder="+37061234567"
+                maxLength={32}
+              />
+            </Field>
+            <Field label="Email">
+              <Input
+                name="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.currentTarget.value)}
+                placeholder="name@example.com"
+                maxLength={254}
+              />
+            </Field>
+          </div>
+
+          <Field label="Lesson reminders" hint={reminderHint ?? undefined}>
+            <Select
               name="reminder_pref"
               value={reminderPref}
               onChange={(e) =>
                 setReminderPref(e.currentTarget.value as ReminderPrefValue)
               }
-              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
             >
               <option value="none">Don&apos;t send reminders</option>
               <option value="email" disabled={!hasEmail}>
-                Email {hasEmail ? "" : "(add email first)"}
+                Email {hasEmail ? "" : "— add email first"}
               </option>
               <option value="sms" disabled={!hasPhone}>
-                SMS {hasPhone ? "(coming June)" : "(add phone first)"}
+                SMS {hasPhone ? "(coming June)" : "— add phone first"}
               </option>
-              <option
-                value="both"
-                disabled={!hasEmail || !hasPhone}
-              >
-                Email + SMS{" "}
-                {!hasEmail || !hasPhone ? "(add both contacts first)" : ""}
+              <option value="both" disabled={!hasEmail || !hasPhone}>
+                Email + SMS
+                {!hasEmail || !hasPhone ? " — add both contacts first" : ""}
               </option>
-            </select>
-            {reminderHint && (
-              <span className="text-xs text-neutral-500 mt-0.5">
-                {reminderHint}
-              </span>
-            )}
-          </label>
+            </Select>
+          </Field>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-700">Skill level</span>
-            <select
-              name="skill_level"
-              defaultValue=""
-              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
-            >
-              <option value="">—</option>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-              <option value="pro">Pro</option>
-            </select>
-          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Skill level">
+              <Select name="skill_level" defaultValue="">
+                <option value="">—</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+                <option value="pro">Pro</option>
+              </Select>
+            </Field>
+            <Field label="Status">
+              <Select name="status" defaultValue="active">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </Select>
+            </Field>
+          </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-700">Status</span>
-            <select
-              name="status"
-              defaultValue="active"
-              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-700">Notes (optional)</span>
-            <textarea
+          <Field label="Notes">
+            <Textarea
               name="notes"
-              rows={2}
-              className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
+              rows={3}
+              placeholder="Allergies, preferred trainer, anything the team should know…"
+              maxLength={1000}
             />
-          </label>
+          </Field>
 
           {state.error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            <p
+              role="alert"
+              className="text-[13px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3.5 py-2.5 leading-relaxed"
+            >
               {state.error}
             </p>
           )}
         </div>
 
-        {/* Sticky footer with Submit — always visible on mobile, safe-area aware */}
+        {/* Sticky footer — always visible above iOS safe-area inset. */}
         <div
           className="
-            shrink-0 border-t border-neutral-100 sm:border-0
-            px-5 sm:px-6 py-3 sm:py-2 sm:pb-6
+            shrink-0 border-t border-ink-100
+            px-6 py-3 sm:py-4
             pb-[max(0.75rem,env(safe-area-inset-bottom))]
+            flex items-center justify-end gap-2
           "
         >
-          <Submit label="Create client" />
+          <Button type="button" variant="ghost" size="md" onClick={onClose}>
+            Cancel
+          </Button>
+          <SubmitButton />
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }
 
-// ---------- primitives ----------
-function Field(
-  props: React.InputHTMLAttributes<HTMLInputElement> & { label: string },
-) {
-  const { label, ...rest } = props;
-  return (
-    <label className="flex flex-col gap-1.5 text-sm">
-      <span className="text-neutral-700 font-medium">{label}</span>
-      <input
-        className="border border-neutral-300 rounded-md px-3 py-2 text-sm placeholder:text-neutral-400"
-        {...rest}
-      />
-    </label>
-  );
-}
-
-function Submit({ label }: { label: string }) {
+function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full sm:w-auto rounded-md bg-neutral-900 text-white py-3 sm:py-2.5 px-4 text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {pending ? "Creating…" : label}
-    </button>
+    <Button type="submit" variant="primary" size="md" loading={pending}>
+      {pending ? "Creating…" : "Create client"}
+    </Button>
   );
 }

@@ -11,11 +11,15 @@ export async function createHorseAction(
   _prev: CreateHorseState,
   formData: FormData,
 ): Promise<CreateHorseState> {
-  const name      = String(formData.get("name") ?? "").trim();
-  const status    = String(formData.get("status") ?? "active");
-  const dailyRaw  = String(formData.get("daily_lesson_limit") ?? "").trim();
-  const weeklyRaw = String(formData.get("weekly_lesson_limit") ?? "").trim();
-  const notesRaw  = String(formData.get("notes") ?? "").trim();
+  const name        = String(formData.get("name") ?? "").trim();
+  const breedRaw    = String(formData.get("breed") ?? "").trim();
+  const dobRaw      = String(formData.get("date_of_birth") ?? "").trim();
+  const ownerRaw    = String(formData.get("owner_client_id") ?? "").trim();
+  const photoUrlRaw = String(formData.get("photo_url") ?? "").trim();
+  const status      = String(formData.get("status") ?? "active");
+  const dailyRaw    = String(formData.get("daily_lesson_limit") ?? "").trim();
+  const weeklyRaw   = String(formData.get("weekly_lesson_limit") ?? "").trim();
+  const notesRaw    = String(formData.get("notes") ?? "").trim();
 
   if (!name) return { error: "Name is required.", success: false };
 
@@ -24,18 +28,36 @@ export async function createHorseAction(
   if (!Number.isFinite(daily)  || daily  < 0) return { error: "Daily limit must be a non-negative number.",  success: false };
   if (!Number.isFinite(weekly) || weekly < 0) return { error: "Weekly limit must be a non-negative number.", success: false };
 
+  // date_of_birth: optional, must be a sane date if provided.
+  if (dobRaw !== "") {
+    const d = new Date(dobRaw);
+    if (Number.isNaN(d.getTime())) {
+      return { error: "Date of birth is invalid.", success: false };
+    }
+    if (d.getTime() > Date.now()) {
+      return { error: "Date of birth can't be in the future.", success: false };
+    }
+  }
+
   try {
     await createHorse({
       name,
+      breed: breedRaw || undefined,
+      dateOfBirth: dobRaw || undefined,
       active: status === "active",
       dailyLessonLimit:  daily,
       weeklyLessonLimit: weekly,
       notes: notesRaw || undefined,
+      ownerClientId: ownerRaw || null,
+      photoUrl: photoUrlRaw || null,
     });
   } catch (err: any) {
     const message = err?.message ?? "";
     if (message === "FORBIDDEN")        return { error: "You don't have permission to add horses.", success: false };
     if (message === "UNAUTHENTICATED")  return { error: "Your session expired. Sign in again.",   success: false };
+    if (message.startsWith("HORSE_CAP_REACHED")) {
+      return { error: "You've hit your plan's horse limit. Upgrade to add more.", success: false };
+    }
     return { error: `Could not create horse: ${message || "unknown error"}.`, success: false };
   }
 

@@ -139,6 +139,11 @@ export async function createHorse(input: {
   weeklyLessonLimit?: number;
   active?: boolean;
   notes?: string;
+  /** If set, the horse belongs to a specific client (boarding scenario).
+   *  Stable-owned horses leave this null. */
+  ownerClientId?: string | null;
+  /** Public photo URL — usually from the avatars Supabase storage bucket. */
+  photoUrl?: string | null;
 }) {
   const session = await getSession();
   requireRole(session, "owner", "employee");
@@ -155,6 +160,8 @@ export async function createHorse(input: {
       weekly_lesson_limit: input.weeklyLessonLimit ?? 20,
       active: input.active ?? true,
       notes: input.notes ?? null,
+      owner_client_id: input.ownerClientId ?? null,
+      photo_url: input.photoUrl ?? null,
     })
     .select()
     .single();

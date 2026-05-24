@@ -1,131 +1,240 @@
 "use client";
 
+// "+ New horse" panel — premium brand UI.
+//
+// Trigger: button in the Horses page header.
+// Modal: rounded-2xl card with shadow-soft, brand emerald button, branded
+// field labels with required asterisk, helper text, error tone-token.
+//
+// Fields:
+//   - Name (required)
+//   - Breed (optional)
+//   - Date of birth (optional, browser-native picker)
+//   - Owner client (optional — picks an EXISTING client to mark this as a
+//     boarder horse; empty = stable-owned/lesson horse)
+//   - Photo URL (optional — paste a hosted URL; richer avatar uploader lives
+//     on the horse profile page after creation)
+//   - Status (active / inactive)
+//   - Max lessons per day (default 4)
+//   - Max lessons per week (default 20)
+//   - Notes (optional)
+//
+// All inputs use the shared <Field> + <Input>/<Select>/<Textarea>
+// primitives so styling stays consistent with the rest of the app.
+
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   createHorseAction,
   type CreateHorseState,
 } from "@/app/dashboard/horses/actions";
+import { Button, Field, Input, Select, Textarea } from "@/components/ui";
 
-const createHorseInitialState: CreateHorseState = { error: null, success: false };
+const initialState: CreateHorseState = { error: null, success: false };
 
-export function CreateHorsePanel() {
+export type ClientOpt = { id: string; full_name: string };
+
+export function CreateHorsePanel({ clients = [] }: { clients?: ClientOpt[] }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="rounded-md bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-800"
+      <Button
+        type="button"
+        onClick={() => setOpen(true)}
+        size="md"
+        variant="primary"
       >
-        {open ? "Close" : "+ New horse"}
-      </button>
-      {open && <CreateHorseForm onClose={() => setOpen(false)} />}
+        + New horse
+      </Button>
+      {open && (
+        <CreateHorseDialog clients={clients} onClose={() => setOpen(false)} />
+      )}
     </>
   );
 }
 
-function CreateHorseForm({ onClose }: { onClose: () => void }) {
+function CreateHorseDialog({
+  clients,
+  onClose,
+}: {
+  clients: ClientOpt[];
+  onClose: () => void;
+}) {
   const [state, formAction] = useFormState<CreateHorseState, FormData>(
-    createHorseAction, createHorseInitialState,
+    createHorseAction,
+    initialState,
   );
 
+  // Auto-close on success. The horses list revalidates server-side so the
+  // new row will already be visible when the dialog disappears.
   useEffect(() => {
     if (state.success) onClose();
   }, [state.success, onClose]);
 
+  // Close on ESC. Click-outside is intentionally NOT implemented — the form
+  // can contain a lot of input; an accidental backdrop click shouldn't wipe
+  // 30 seconds of typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
-    <form
-      action={formAction}
-      className="fixed inset-0 z-30 flex items-start justify-center pt-16 bg-black/40 backdrop-blur-sm"
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-horse-title"
+      className="fixed inset-0 z-40 flex items-start justify-center pt-10 sm:pt-16 px-4 bg-ink-900/40 backdrop-blur-sm overflow-y-auto"
     >
-      <div className="bg-white rounded-xl shadow-xl border border-neutral-200 p-6 w-full max-w-md flex flex-col gap-3.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">New horse</h2>
+      <form
+        action={formAction}
+        className="bg-white rounded-2xl shadow-soft border border-ink-100 w-full max-w-lg p-6 sm:p-7 flex flex-col gap-5 my-6"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2
+              id="new-horse-title"
+              className="font-display text-xl text-navy-700 leading-tight"
+            >
+              New horse
+            </h2>
+            <p className="text-[12.5px] text-ink-500 mt-1 leading-relaxed">
+              Add a horse to the stable. You can edit every field later from
+              the horse profile.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-neutral-500 hover:text-neutral-900"
+            aria-label="Close"
+            className="-mt-1 -mr-1 h-8 w-8 inline-flex items-center justify-center rounded-lg text-ink-500 hover:text-ink-900 hover:bg-ink-100/60 transition-colors"
           >
-            ✕
+            <span aria-hidden className="text-base">✕</span>
           </button>
         </div>
 
-        <Field label="Name" name="name" type="text" required />
+        <div className="flex flex-col gap-4">
+          <Field label="Name" required>
+            <Input
+              name="name"
+              type="text"
+              required
+              autoFocus
+              placeholder="Bingo"
+              maxLength={80}
+            />
+          </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700">Status</span>
-          <select
-            name="status"
-            defaultValue="active"
-            className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Breed">
+              <Input
+                name="breed"
+                type="text"
+                placeholder="Lithuanian heavy draft"
+                maxLength={80}
+              />
+            </Field>
+            <Field label="Date of birth" hint="Used for age in welfare reports.">
+              <Input name="date_of_birth" type="date" max="2099-12-31" />
+            </Field>
+          </div>
+
+          <Field
+            label="Owner (boarding horse)"
+            hint="Leave empty for stable-owned lesson horses."
           >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </label>
+            <Select name="owner_client_id" defaultValue="">
+              <option value="">— Stable-owned (no client owner) —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.full_name}
+                </option>
+              ))}
+            </Select>
+          </Field>
 
-        <Field
-          label="Max lessons per day"
-          name="daily_lesson_limit"
-          type="number"
-          min="0"
-          step="1"
-          defaultValue="4"
-        />
-        <Field
-          label="Max lessons per week"
-          name="weekly_lesson_limit"
-          type="number"
-          min="0"
-          step="1"
-          defaultValue="20"
-        />
+          <Field
+            label="Photo URL"
+            hint="Optional. Use a hosted image URL — richer photo upload lives on the horse profile."
+          >
+            <Input
+              name="photo_url"
+              type="url"
+              placeholder="https://…"
+              inputMode="url"
+            />
+          </Field>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700">Notes (optional)</span>
-          <textarea
-            name="notes"
-            rows={2}
-            className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
-          />
-        </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Field label="Status">
+              <Select name="status" defaultValue="active">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </Select>
+            </Field>
+            <Field label="Max / day" hint="0 = no limit.">
+              <Input
+                name="daily_lesson_limit"
+                type="number"
+                min="0"
+                step="1"
+                defaultValue="4"
+              />
+            </Field>
+            <Field label="Max / week" hint="0 = no limit.">
+              <Input
+                name="weekly_lesson_limit"
+                type="number"
+                min="0"
+                step="1"
+                defaultValue="20"
+              />
+            </Field>
+          </div>
 
-        <Submit label="Create horse" />
+          <Field label="Notes">
+            <Textarea
+              name="notes"
+              rows={3}
+              placeholder="Quirks, vet notes, things only the team should see…"
+              maxLength={1000}
+            />
+          </Field>
+        </div>
+
         {state.error && (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+          <p
+            role="alert"
+            className="text-[13px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3.5 py-2.5 leading-relaxed"
+          >
             {state.error}
           </p>
         )}
-      </div>
-    </form>
+
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="md"
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+          <SubmitButton />
+        </div>
+      </form>
+    </div>
   );
 }
 
-// ---------- primitives ----------
-function Field(
-  props: React.InputHTMLAttributes<HTMLInputElement> & { label: string },
-) {
-  const { label, ...rest } = props;
-  return (
-    <label className="flex flex-col gap-1.5 text-sm">
-      <span className="text-neutral-700 font-medium">{label}</span>
-      <input
-        className="border border-neutral-300 rounded-md px-3 py-2 text-sm placeholder:text-neutral-400"
-        {...rest}
-      />
-    </label>
-  );
-}
-
-function Submit({ label }: { label: string }) {
+function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="mt-2 rounded-md bg-neutral-900 text-white py-2.5 text-sm font-medium hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {pending ? "Creating…" : label}
-    </button>
+    <Button type="submit" variant="primary" size="md" loading={pending}>
+      {pending ? "Creating…" : "Create horse"}
+    </Button>
   );
 }
