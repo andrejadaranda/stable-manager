@@ -79,19 +79,41 @@ export type SubmitJoinRequestInput = {
 };
 
 export async function submitJoinRequest(input: SubmitJoinRequestInput): Promise<void> {
+  // Routes through submit_public_join_request (SECURITY DEFINER RPC) so the
+  // server-side rate limit (max 3 per (stable, email) per 24h) can run on
+  // a table anon can't SELECT. Direct insert would still work but anon has
+  // no way to count its own submissions, so spam protection has to live
+  // server-side.
   const supabase = createSupabaseAnonClient();
-  const { error } = await supabase
-    .from("stable_join_requests")
-    .insert({
-      stable_id:      input.stableId,
-      requested_role: input.requestedRole,
-      full_name:      input.fullName.trim(),
-      email:          input.email.trim().toLowerCase(),
-      phone:          input.phone?.trim() || null,
-      message:        input.message?.trim() || null,
-      status:         "pending",
-    });
-  if (error) throw error;
+  const { error } = await supabase.rpc("submit_public_join_request", {
+    p_stable_id:      input.stableId,
+    p_requested_role: input.requestedRole,
+    p_full_name:      input.fullName.trim(),
+    p_email:          input.email.trim().toLowerCase(),
+    p_phone:          input.phone?.trim() || null,
+    p_message:        input.message?.trim() || null,
+  });
+  if (error) {
+    // Translate the well-known Postgres exception strings into UX copy.
+    if (error.message.includes("RATE_LIMITED")) {
+      throw new Error(
+        "You've already applied to this stable today. Please wait for them to respond before re-applying.",
+      );
+    }
+    if (error.message.includes("STABLE_CLOSED_TO_APPLICATIONS")) {
+      throw new Error("This stable is not accepting applications right now.");
+    }
+    if (error.message.includes("INVALID_EMAIL")) {
+      throw new Error("Enter a valid email address.");
+    }
+    if (error.message.includes("FULL_NAME_REQUIRED")) {
+      throw new Error("Please enter your full name.");
+    }
+    if (error.message.includes("INVALID_ROLE")) {
+      throw new Error("Pick rider or horse owner.");
+    }
+    throw error;
+  }
 }
 
 // =============================================================
