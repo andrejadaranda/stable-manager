@@ -7,9 +7,6 @@ import { FlashToast } from "@/components/ui";
 import { getStableFeatures, DEFAULT_FEATURES } from "@/services/features";
 import { isUserOnboarded } from "@/services/onboardingTour";
 import { getOwnProfile } from "@/services/account";
-import { countOpenLessonRequests } from "@/services/lessonRequests";
-import { countOpenCareRequests } from "@/services/careRequests";
-import { countPendingJoinRequests } from "@/services/joinRequests";
 import { WelcomeTour } from "@/components/onboarding/welcome-tour";
 import { CommandPalette } from "@/components/search/command-palette";
 import { ReportProblemButton } from "@/components/feedback/ReportProblemButton";
@@ -26,25 +23,40 @@ export default async function DashboardLayout({
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Sidebar context. Inbox counts only mattter for owners/employees of
-  // business stables — personal accounts and clients don't have an inbox
-  // item in their nav, so we skip the queries entirely for them.
-  // Failures fall back to safe defaults so a partial migration / bad row
-  // never blocks navigation.
+  // Sidebar context. Three pre-existing parallel fetches plus the inbox
+  // count fan-out. The inbox count is computed inline against ONE shared
+  // supabase client — calling the per-service countOpen* helpers here
+  // would re-run getSession() (i.e. supabase.auth.getUser()) on every
+  // helper and trip the Supabase Auth rate limit.
   const showsInbox =
     session.accountType !== "personal" &&
     (session.role === "owner" || session.role === "employee");
+
+  // Pending-count helper: relies on RLS so we don't need explicit stable_id
+  // filtering. Returns 0 on any error so a stats hiccup never blocks nav.
+  // `head: true` makes the query count-only — no rows shipped over the wire.
+  const countPending = async (table: "lesson_requests" | "care_requests" | "stable_join_requests"): Promise<number> => {
+    try {
+      const { count } = await supabase
+        .from(table)
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      return count ?? 0;
+    } catch {
+      return 0;
+    }
+  };
 
   const [features, onboarded, ownProfile, lessonReqCount, careReqCount, joinReqCount] =
     await Promise.all([
       getStableFeatures().catch(() => DEFAULT_FEATURES),
       isUserOnboarded().catch(() => true),
       getOwnProfile().catch(() => null),
-      showsInbox ? countOpenLessonRequests().catch(() => 0) : Promise.resolve(0),
-      showsInbox ? countOpenCareRequests().catch(() => 0) : Promise.resolve(0),
+      showsInbox ? countPending("lesson_requests") : Promise.resolve(0),
+      showsInbox ? countPending("care_requests")   : Promise.resolve(0),
       // Join requests are owner-only (employees can't approve them).
       showsInbox && session.role === "owner"
-        ? countPendingJoinRequests().catch(() => 0)
+        ? countPending("stable_join_requests")
         : Promise.resolve(0),
     ]);
   const inboxCount = lessonReqCount + careReqCount + joinReqCount;
