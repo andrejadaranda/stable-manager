@@ -51,6 +51,10 @@ type SessionRow = {
   rating: number | null;
 };
 
+// RFC-4122 UUID guard — see /horses/[id]/page.tsx for rationale. Prevents
+// "invalid input syntax for type uuid" Postgres errors from junk slugs.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function MyHorseDetailPage({
   params,
 }: {
@@ -59,6 +63,8 @@ export default async function MyHorseDetailPage({
   await requirePageRole("client");
   const session = await getSession();
   if (!session.clientId) notFound();
+
+  if (!UUID_RE.test(params.id)) notFound();
 
   const supabase = createSupabaseServerClient();
   const { data: horse, error } = await supabase

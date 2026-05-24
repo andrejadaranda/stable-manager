@@ -22,12 +22,16 @@ const FMT_EUR = new Intl.NumberFormat(undefined, {
 
 export const dynamic = "force-dynamic";
 
+// RFC-4122 UUID guard — see /horses/[id]/page.tsx.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function ClientInvoicePage({
   params,
 }: {
   params: { id: string };
 }) {
   await requirePageRole("owner");
+  if (!UUID_RE.test(params.id)) notFound();
   const [client, stable, boarding, misc, balance] = await Promise.all([
     getClient(params.id),
     getOwnStable().catch(() => null),

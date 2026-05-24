@@ -25,6 +25,9 @@ const SKILL_LABEL: Record<SkillLevel, string> = {
   pro: "Pro",
 };
 
+// RFC-4122 UUID guard — see /horses/[id]/page.tsx for rationale.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function ClientDetailPage({
   params,
 }: {
@@ -32,6 +35,8 @@ export default async function ClientDetailPage({
 }) {
   // Owner + employee may view the page. Balance is gated below.
   const session = await requirePageRole("owner", "employee");
+
+  if (!UUID_RE.test(params.id)) notFound();
 
   const client = await getClient(params.id);
   if (!client) notFound();

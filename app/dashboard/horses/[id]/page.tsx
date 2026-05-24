@@ -41,6 +41,12 @@ type SearchParams = { tab?: string };
 const VALID_TABS = ["overview", "sessions", "boarding", "health", "goals", "media"] as const;
 type Tab = (typeof VALID_TABS)[number];
 
+// RFC-4122 UUID regex. We validate before touching the DB so a stray URL like
+// /dashboard/horses/new (or any junk in the slot where an id belongs) returns
+// a clean 404 instead of crashing Postgres with an "invalid input syntax for
+// type uuid" cast error and bubbling a 500 to the user.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function HorseDetailPage({
   params,
   searchParams,
@@ -49,6 +55,8 @@ export default async function HorseDetailPage({
   searchParams: SearchParams;
 }) {
   const session = await requirePageRole("owner", "employee");
+
+  if (!UUID_RE.test(params.id)) notFound();
 
   const horse = await getHorseProfileSummary(params.id);
   if (!horse) notFound();
