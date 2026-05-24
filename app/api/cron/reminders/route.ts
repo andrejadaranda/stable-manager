@@ -24,7 +24,7 @@
 
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
-import { sendEmail } from "@/lib/email/send";
+import { sendLessonReminderEmail } from "@/lib/email/lesson-reminder";
 import { sendSMS, toE164Lithuania } from "@/lib/sms/send";
 
 export const runtime = "nodejs";
@@ -39,6 +39,7 @@ type Channel = "email" | "sms";
 type ReminderCandidate = {
   lesson_id:    string;
   stable_id:    string;
+  stable_name:  string;
   client_id:    string;
   client_name:  string;
   client_email: string | null;
@@ -75,7 +76,8 @@ export async function GET(req: Request) {
       id, stable_id, starts_at, status,
       client:clients!inner(id, full_name, email, phone, reminder_pref),
       horse:horses(name),
-      trainer:profiles(full_name)
+      trainer:profiles(full_name),
+      stable:stables(name)
     `)
     .gte("starts_at", winFrom.toISOString())
     .lt("starts_at", winTo.toISOString())
@@ -90,6 +92,7 @@ export async function GET(req: Request) {
   const candidates: ReminderCandidate[] = (lessonRows ?? []).map((l: any) => ({
     lesson_id:    l.id,
     stable_id:    l.stable_id,
+    stable_name:  (Array.isArray(l.stable) ? l.stable[0]?.name : l.stable?.name) ?? "your stable",
     client_id:    l.client.id,
     client_name:  l.client.full_name,
     client_email: l.client.email,
@@ -150,12 +153,14 @@ export async function GET(req: Request) {
           status = "skipped";
           errorMessage = "client has no email";
         } else {
-          await sendEmail({
-            to:      d.client_email,
-            subject: `Reminder — ${d.horse_name ?? "Lesson"} tomorrow at ${formatTime(d.starts_at)}`,
-            text:    body,
-            html:    `<p>${escapeHtml(body).replace(/\n/g, "<br>")}</p>`,
-            idempotencyKey: `lesson-reminder:${d.lesson_id}:email`,
+          await sendLessonReminderEmail({
+            to:          d.client_email,
+            firstName:   d.client_name.split(" ")[0] ?? d.client_name,
+            horseName:   d.horse_name,
+            trainerName: d.trainer_name,
+            timeLabel:   formatTime(d.starts_at),
+            dateLabel:   formatDate(d.starts_at),
+            stableName:  d.stable_name,
           });
           status = "sent";
         }
@@ -211,27 +216,32 @@ export async function GET(req: Request) {
 // shape per channel. When we add the 2h-before reminder + the post-
 // lesson follow-up, extract to a templates/ dir.
 // ----------------------------------------------------------------
+// Short SMS body — phone-friendly, single line, no link (Lithuanian
+// SMS gateways charge per segment, so we keep it brief). Email goes
+// through the branded HTML template via sendLessonReminderEmail.
 function renderMessage(d: ReminderCandidate): string {
   const time   = formatTime(d.starts_at);
   const horse  = d.horse_name  ? ` with ${d.horse_name}`  : "";
   const trainer = d.trainer_name ? ` (${d.trainer_name})` : "";
-  return `Hi ${d.client_name.split(" ")[0]} — reminder: your lesson${horse}${trainer} is tomorrow at ${time}. Reply if you need to reschedule.`;
+  return `Hi ${d.client_name.split(" ")[0]} — your lesson${horse}${trainer} is tomorrow at ${time}. Open Longrein to reschedule.`;
 }
 
 function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString("en-GB", {
-    hour:   "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  // Render in Europe/Vilnius wall-clock — matches what the owner saw
+  // when they booked, not UTC offset of the storage timestamp.
+  return new Intl.DateTimeFormat("en-GB", {
+    hour:     "2-digit",
+    minute:   "2-digit",
+    hour12:   false,
+    timeZone: "Europe/Vilnius",
+  }).format(new Date(iso));
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday:  "long",
+    day:      "numeric",
+    month:    "long",
+    timeZone: "Europe/Vilnius",
+  }).format(new Date(iso));
 }
