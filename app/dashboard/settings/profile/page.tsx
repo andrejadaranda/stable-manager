@@ -132,7 +132,7 @@ export default async function ProfileSettingsPage() {
               defaultValue={profile.full_name ?? ""}
               required
               maxLength={80}
-              placeholder="e.g. Andreja Adaranda"
+              placeholder="e.g. Andreja Daranda"
             />
           </Field>
 

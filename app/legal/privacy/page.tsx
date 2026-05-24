@@ -1,6 +1,6 @@
 // /legal/privacy — Privacy Policy.
 //
-// GDPR-aligned. Single controller (Longrein UAB / Andreja Adaranda),
+// GDPR-aligned. Single controller (Longrein UAB / Andreja Daranda),
 // processors disclosed (Supabase, Vercel, Resend), data subject rights,
 // retention, security. To be reviewed by qualified counsel pre-paid.
 
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
 
       <h2>1. Who is the controller</h2>
       <p>
-        Longrein is operated by <strong>Andreja Adaranda</strong>, a sole trader registered in
+        Longrein is operated by <strong>Andreja Daranda</strong>, a sole trader registered in
         Vilnius, Lithuania. We act as the data controller for the data described below.
         Contact: <a href="mailto:hello@longrein.eu">hello@longrein.eu</a>.
       </p>

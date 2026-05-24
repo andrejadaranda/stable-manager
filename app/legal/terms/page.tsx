@@ -27,7 +27,7 @@ export default function TermsPage() {
       <h2>1. Who we are</h2>
       <p>
         Longrein (&ldquo;<strong>Longrein</strong>,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) is operated by
-        Andreja Adaranda, a sole trader registered in Vilnius, Lithuania. Contact:{" "}
+        Andreja Daranda, a sole trader registered in Vilnius, Lithuania. Contact:{" "}
         <a href="mailto:hello@longrein.eu">hello@longrein.eu</a>. Service domain:{" "}
         <code>longrein.eu</code>.
       </p>
