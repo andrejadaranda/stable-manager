@@ -25,7 +25,7 @@ export default function SignupLandingPage() {
         <Card
           href="/signup/owner"
           title="I run a stable"
-          body="Create your stable and start managing horses, lessons, clients, and payments. €25/mo Founding rate locked for early adopters."
+          body="Manage horses, lessons, clients, and payments in one place. €49/mo with a 14-day free trial — card required, cancel any time. Founding 15 spots at €25/mo for life: write to hello@longrein.eu."
           cta="Create a stable →"
           tone="primary"
         />
