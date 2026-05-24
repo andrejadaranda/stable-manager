@@ -79,7 +79,7 @@ export async function middleware(request: NextRequest) {
     // middleware.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("stable_id, role, stable:stables(account_type)")
+      .select("stable_id, role, stable:stables(account_type, stripe_customer_id)")
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
@@ -103,38 +103,51 @@ export async function middleware(request: NextRequest) {
         .eq("stable_id", profile.stable_id)
         .maybeSingle();
 
-      // Defense-in-depth: 'trialing' alone is not enough — also verify the
-      // trial window hasn't lapsed. Without this check, an account whose
-      // Stripe subscription never got attached (stale trial row) could
-      // browse the app indefinitely past the trial end date, bypassing
-      // the paywall. 'active' is always allowed (Stripe webhook tracks
-      // renewals + flips to past_due/cancelled when needed).
+      // Stable's Stripe customer id is the "has the user attached a card"
+      // gate. Pulled from the join above. Personal accounts don't depend
+      // on this check (they're handled separately by the trigger), but
+      // the join still surfaces it.
+      const stableJoinPre = Array.isArray((profile as { stable?: unknown }).stable)
+        ? (profile as { stable: Array<{ account_type?: string; stripe_customer_id?: string | null }> }).stable[0]
+        : (profile as { stable?: { account_type?: string; stripe_customer_id?: string | null } }).stable;
+      const hasStripeCustomer = Boolean(stableJoinPre?.stripe_customer_id);
+
+      // Defense-in-depth: 'trialing' alone is not enough.
+      // 1. The trial window hasn't lapsed (current_period_end > now).
+      // 2. The user has attached a card — i.e. they walked through Stripe
+      //    Checkout which set stripe_customer_id. Without this, anyone
+      //    could sign up with a fresh email, get 14 days free, never
+      //    touch a card, and repeat indefinitely (trial farming).
+      // 'active' is always allowed — Stripe webhook ties active state to
+      // a real subscription with stripe_customer_id by construction.
       const now = Date.now();
       const trialOk =
         sub?.status === "trialing" &&
         sub?.current_period_end != null &&
-        new Date(sub.current_period_end).getTime() > now;
+        new Date(sub.current_period_end).getTime() > now &&
+        hasStripeCustomer;
       const allowed = trialOk || sub?.status === "active";
       if (!allowed) {
         // Personal accounts skip the business /settings/billing page —
         // they go straight to /dashboard/personal-checkout which fires
         // /api/stripe/checkout/personal and redirects to Stripe Checkout.
-        const stableJoin = Array.isArray((profile as { stable?: unknown }).stable)
-          ? (profile as { stable: Array<{ account_type?: string }> }).stable[0]
-          : (profile as { stable?: { account_type?: string } }).stable;
-        const isPersonal = stableJoin?.account_type === "personal";
+        const isPersonal = stableJoinPre?.account_type === "personal";
 
         const url = request.nextUrl.clone();
         url.pathname = isPersonal
           ? "/dashboard/personal-checkout"
           : "/dashboard/settings/billing";
         // Reason hint for the billing UI so it can show the right copy:
-        //   trial-expired → had a trial, it lapsed without a card
+        //   no-card       → trial seeded but user never attached a card
+        //   trial-expired → had a trial, period_end lapsed
         //   <status>      → past_due / unpaid / cancelled / incomplete
         //   no-subscription → never had a row
-        const gatedReason = sub?.status === "trialing"
-          ? "trial-expired"
-          : (sub?.status ?? "no-subscription");
+        const gatedReason =
+          sub?.status === "trialing" && !hasStripeCustomer
+            ? "no-card"
+            : sub?.status === "trialing"
+            ? "trial-expired"
+            : (sub?.status ?? "no-subscription");
         url.searchParams.set("gated", gatedReason);
         return NextResponse.redirect(url);
       }

@@ -3,6 +3,12 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  isDisposableEmail,
+  extractClientIp,
+  checkSignupRateLimit,
+  recordSignupAttempt,
+} from "@/lib/auth/anti-abuse";
 
 export type ActionState = {
   error: string | null;
@@ -124,6 +130,27 @@ export async function signupOwnerAction(
     };
   }
 
+  // Anti-abuse layer 1: disposable inbox blocklist. Most trial-farming
+  // attempts use known throwaway providers; rejecting them here saves
+  // a Supabase Auth round-trip + the email confirmation cycle.
+  if (isDisposableEmail(email)) {
+    return {
+      error: "Please use a real, permanent email address. Disposable inboxes are not supported.",
+      email,
+    };
+  }
+
+  // Anti-abuse layer 2: IP rate limit. Prevents the same network from
+  // spinning up many new stables to farm 14-day trials.
+  const clientIp = extractClientIp(headers());
+  const rateCheck = await checkSignupRateLimit(clientIp);
+  if (!rateCheck.allowed) {
+    return {
+      error: "Too many signups from your network. Please try again later or email hello@longrein.eu if this is a mistake.",
+      email,
+    };
+  }
+
   const supabase = createSupabaseServerClient();
 
   const { data, error: signUpError } = await supabase.auth.signUp({
@@ -147,6 +174,9 @@ export async function signupOwnerAction(
     const mapped = mapAuthError(signUpError.message);
     return { error: mapped.error, code: mapped.code ?? null, email };
   }
+
+  // Fire-and-forget — count this IP attempt for future rate-limit checks.
+  void recordSignupAttempt(clientIp);
 
   // Two cases here:
   //   A) Email confirmation IS enabled in Supabase  -> data.session is null.
@@ -198,6 +228,22 @@ export async function signupPersonalAction(
     return { error: "Pick a plan (Mini or Plus).", email };
   }
 
+  // Anti-abuse — same guards as owner signup. See lib/auth/anti-abuse.ts.
+  if (isDisposableEmail(email)) {
+    return {
+      error: "Please use a real, permanent email address. Disposable inboxes are not supported.",
+      email,
+    };
+  }
+  const clientIp = extractClientIp(headers());
+  const rateCheck = await checkSignupRateLimit(clientIp);
+  if (!rateCheck.allowed) {
+    return {
+      error: "Too many signups from your network. Please try again later or email hello@longrein.eu if this is a mistake.",
+      email,
+    };
+  }
+
   const supabase = createSupabaseServerClient();
   const { data, error: signUpError } = await supabase.auth.signUp({
     email,
@@ -216,6 +262,8 @@ export async function signupPersonalAction(
     const mapped = mapAuthError(signUpError.message);
     return { error: mapped.error, code: mapped.code ?? null, email };
   }
+
+  void recordSignupAttempt(clientIp);
 
   if (!data.session) {
     redirect(`/auth/check-email?email=${encodeURIComponent(email)}`);

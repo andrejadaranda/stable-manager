@@ -46,18 +46,26 @@ export default async function BillingSettingsPage({
   const isPastDue  = subscription?.status === "past_due";
   const isCancelled = subscription?.status === "cancelled" || subscription?.plan === "cancelled";
 
-  // "Effective" trial state — only treat as a real ongoing trial if the
-  // current_period_end hasn't lapsed. Without this guard, a stable whose
-  // trial expired without a Stripe subscription ever being attached would
-  // render BOTH the "Start your trial" CTA AND the "First charge in X days"
-  // status block at the same time (contradictory UI).
+  // "Effective" trial state — only treat as a real ongoing trial if:
+  //   (a) the current_period_end hasn't lapsed, AND
+  //   (b) the user has actually attached a card via Stripe Checkout
+  //       (stripe_subscription_id != null). Without (b), the seed trigger's
+  //       initial 'trialing' row would let users farm trials by signing up
+  //       with a new email — never paying, never attaching a card.
+  // Falling into !isTrialing without (b) sends them through the
+  // "Start your 14-day trial" CTA which fires Stripe Checkout.
   const trialEndMs = subscription?.current_period_end
     ? new Date(subscription.current_period_end).getTime()
     : null;
-  const isTrialing = statusIsTrialing && trialEndMs != null && trialEndMs > Date.now();
-  // Trial row exists but it's already lapsed — show the "trial expired" UI
-  // (offer restart) instead of pretending it's still active.
-  const isTrialExpired = statusIsTrialing && !isTrialing;
+  const isTrialing =
+    statusIsTrialing &&
+    trialEndMs != null &&
+    trialEndMs > Date.now() &&
+    hasActiveStripe;
+  // Trial row exists but it's already lapsed AND a card was previously
+  // attached — show the "trial expired" UI (offer restart).
+  const isTrialExpired =
+    statusIsTrialing && trialEndMs != null && trialEndMs <= Date.now() && hasActiveStripe;
 
   const trialEndDate = trialEndMs && isTrialing
     ? new Date(trialEndMs).toLocaleDateString("en-GB", {
