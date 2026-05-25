@@ -33,6 +33,7 @@ import { ComingSoonTab } from "@/components/horses/ComingSoonTab";
 import { listChargesForHorse } from "@/services/boarding";
 import { listChargesForHorse as listMiscChargesForHorse } from "@/services/clientCharges";
 import { getClient } from "@/services/clients";
+import { getOwnProfile } from "@/services/account";
 
 export const dynamic = "force-dynamic";
 
@@ -98,11 +99,12 @@ export default async function HorseDetailPage({
       />
     );
   } else if (tab === "boarding") {
-    const [charges, ownerClient, allClients, miscCharges] = await Promise.all([
+    const [charges, ownerClient, allClients, miscCharges, ownProfile] = await Promise.all([
       listChargesForHorse(params.id),
       horse.owner_client_id ? getClient(horse.owner_client_id) : Promise.resolve(null),
       listClients({ activeOnly: true }),
       listMiscChargesForHorse(params.id),
+      getOwnProfile().catch(() => null),
     ]);
     tabContent = (
       <BoardingTab
@@ -115,6 +117,8 @@ export default async function HorseDetailPage({
         miscCharges={miscCharges}
         clients={allClients.map((c) => ({ id: c.id, full_name: c.full_name }))}
         isOwner={session.role === "owner"}
+        accountType={session.accountType === "personal" ? "personal" : "business"}
+        selfDisplayName={ownProfile?.full_name ?? undefined}
       />
     );
   } else if (tab === "health") {

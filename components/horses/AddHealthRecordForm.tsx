@@ -30,35 +30,75 @@ const todayLocal = () => {
 
 export function AddHealthRecordButton({ horseId }: { horseId: string }) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Close on outside click while open.
+  // Lock body scroll while the modal is open (so mobile users don't
+  // accidentally scroll the underlying page).
   useEffect(() => {
     if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  // Close on ESC.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
   return (
-    <div className="relative" ref={containerRef}>
+    <>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(true)}
         className="text-[12px] text-brand-700 hover:text-brand-800 font-medium inline-flex items-center gap-1"
       >
         <span aria-hidden>＋</span> Add record
       </button>
 
       {open && (
-        <div className="absolute right-0 top-7 z-30 w-[320px] max-w-[92vw] card-elevated p-4">
-          <AddHealthRecordForm horseId={horseId} onDone={() => setOpen(false)} />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-health-title"
+          className="fixed inset-0 z-40 flex items-stretch sm:items-start sm:justify-center sm:pt-10 bg-ink-900/40 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
+          }}
+        >
+          <div
+            className="
+              bg-white border border-ink-100 flex flex-col w-full
+              h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-5rem)]
+              sm:rounded-2xl sm:shadow-soft sm:max-w-md
+            "
+          >
+            <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-ink-100 shrink-0">
+              <h2 id="add-health-title" className="font-display text-xl text-navy-700 leading-tight">
+                Add health record
+              </h2>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="-mt-1 -mr-1 h-8 w-8 inline-flex items-center justify-center rounded-lg text-ink-500 hover:text-ink-900 hover:bg-ink-100/60 transition-colors"
+              >
+                <span aria-hidden className="text-base">✕</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              <AddHealthRecordForm horseId={horseId} onDone={() => setOpen(false)} />
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

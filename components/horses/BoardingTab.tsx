@@ -47,6 +47,8 @@ export function BoardingTab({
   miscCharges,
   clients,
   isOwner,
+  accountType = "business",
+  selfDisplayName,
 }: {
   horseId: string;
   horseName: string;
@@ -60,36 +62,81 @@ export function BoardingTab({
   /** Active clients in the stable, used by the owner-picker on this tab. */
   clients: ClientOpt[];
   isOwner: boolean;
+  /** "personal" = solo B2C owner — re-themes labels to reflect that
+   *  THEY are paying a stable, not billing clients. */
+  accountType?: "business" | "personal";
+  /** Personal account's own display name — shown as Owner. */
+  selfDisplayName?: string;
 }) {
+  const isPersonal = accountType === "personal";
+
   const totalDue = charges.reduce((acc, c) => {
     const remaining = Math.max(0, Number(c.amount) - Number(c.paid_amount));
     return acc + remaining;
   }, 0);
 
+  // Personal-account totals are reframed as "tracked spend" rather than
+  // "outstanding billings" because the user is not billing anyone.
+  const personalSpend = charges.reduce(
+    (acc, c) => acc + Math.max(0, Number(c.paid_amount)),
+    0,
+  );
+
   return (
     <div className="flex flex-col gap-5">
       {/* Header KPIs ---------------------------------------------- */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {isPersonal ? (
+          <KpiCard
+            label="Owner"
+            value={selfDisplayName ?? "—"}
+            sub="That's you"
+          />
+        ) : (
+          <KpiCard
+            label="Owner"
+            value={ownerClient?.full_name ?? "—"}
+            sub={ownerClient ? "Boarding billed to" : "No owner set"}
+          />
+        )}
         <KpiCard
-          label="Owner"
-          value={ownerClient?.full_name ?? "—"}
-          sub={ownerClient ? "Boarding billed to" : "No owner set"}
-        />
-        <KpiCard
-          label="Monthly fee"
+          label={isPersonal ? "Monthly fee you pay" : "Monthly fee"}
           value={monthlyFee == null ? "—" : FMT_EUR.format(Number(monthlyFee))}
-          sub="Pre-fills new charges"
+          sub={isPersonal ? "To the stable, per month" : "Pre-fills new charges"}
         />
-        <KpiCard
-          label="Outstanding"
-          value={FMT_EUR.format(totalDue)}
-          sub={totalDue > 0 ? "Across open charges" : "All paid up"}
-          tone={totalDue > 0 ? "warn" : "ok"}
-        />
+        {isPersonal ? (
+          <KpiCard
+            label="Spent so far"
+            value={FMT_EUR.format(personalSpend)}
+            sub="Across all logged expenses"
+          />
+        ) : (
+          <KpiCard
+            label="Outstanding"
+            value={FMT_EUR.format(totalDue)}
+            sub={totalDue > 0 ? "Across open charges" : "All paid up"}
+            tone={totalDue > 0 ? "warn" : "ok"}
+          />
+        )}
       </div>
 
-      {/* Owner picker — owner-only ----------------------------------- */}
-      {isOwner && (
+      {/* Personal account: gentle explainer + quick name edit link --- */}
+      {isPersonal && (
+        <section className="bg-cream-50/60 border border-cream-300/70 rounded-2xl p-4 flex flex-col gap-2">
+          <p className="text-[13px] text-ink-700 leading-relaxed">
+            This is <strong>your</strong> horse. Use this tab to track what you pay your stable each month and any extra expenses (farrier, vet, equipment).
+          </p>
+          <a
+            href="/dashboard/settings/profile"
+            className="text-[12px] text-brand-700 hover:text-brand-800 font-medium inline-flex items-center gap-1 self-start"
+          >
+            Edit your name → /dashboard/settings/profile
+          </a>
+        </section>
+      )}
+
+      {/* Owner picker — business owner only, hidden for Personal ------ */}
+      {isOwner && !isPersonal && (
         <OwnerPanel
           horseId={horseId}
           currentOwner={ownerClient}
@@ -98,8 +145,8 @@ export function BoardingTab({
       )}
 
       {/* Lessons-availability toggle — only meaningful when the horse
-          is client-owned. Stable horses are always eligible. */}
-      {isOwner && ownerClient && (
+          is client-owned in a business stable. */}
+      {isOwner && !isPersonal && ownerClient && (
         <LessonsAvailabilityPanel
           horseId={horseId}
           initialValue={availableForLessons}
@@ -108,12 +155,16 @@ export function BoardingTab({
 
       {/* Monthly fee setter ---------------------------------------- */}
       {isOwner && (
-        <MonthlyFeePanel horseId={horseId} initialFee={monthlyFee} />
+        <MonthlyFeePanel
+          horseId={horseId}
+          initialFee={monthlyFee}
+          isPersonal={isPersonal}
+        />
       )}
 
       {/* Misc charges (farrier, equipment, etc) — shown only when
-          horse has an owner client to bill against. */}
-      {ownerClient && (
+          horse has an owner client to bill against (business only). */}
+      {!isPersonal && ownerClient && (
         <section className="bg-white rounded-2xl shadow-soft p-5 flex flex-col gap-4">
           <div>
             <h3 className="text-sm font-semibold text-navy-900">Other charges</h3>
@@ -135,27 +186,37 @@ export function BoardingTab({
       {/* Charges list ---------------------------------------------- */}
       <section className="bg-white rounded-2xl shadow-soft p-5">
         <div className="flex items-baseline justify-between mb-4">
-          <h3 className="text-sm font-semibold text-navy-900">Charges</h3>
+          <h3 className="text-sm font-semibold text-navy-900">
+            {isPersonal ? "Expenses log" : "Charges"}
+          </h3>
           <span className="text-[11px] uppercase tracking-[0.14em] font-medium text-ink-500">
             {charges.length} {charges.length === 1 ? "entry" : "entries"}
           </span>
         </div>
 
-        {isOwner && ownerClient && (
+        {isPersonal && (
+          <p className="text-[12.5px] text-ink-500 mb-3">
+            Every line here is money you've paid out for this horse. Add a line each month for the boarding fee — or log one-off costs as they come up.
+          </p>
+        )}
+
+        {isOwner && (ownerClient || isPersonal) && (
           <NewChargeForm
             horseId={horseId}
             horseName={horseName}
             defaultAmount={monthlyFee}
           />
         )}
-        {isOwner && !ownerClient && (
+        {isOwner && !ownerClient && !isPersonal && (
           <p className="text-[12.5px] text-ink-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-4">
             Set an owner on the horse first (from the Overview tab) — boarding charges bill against the owner client.
           </p>
         )}
 
         {charges.length === 0 ? (
-          <p className="text-sm text-ink-500 mt-2">No charges yet.</p>
+          <p className="text-sm text-ink-500 mt-2">
+            {isPersonal ? "No expenses logged yet." : "No charges yet."}
+          </p>
         ) : (
           <ul className="flex flex-col gap-2 mt-3">
             {charges.map((c) => (
@@ -310,9 +371,11 @@ function SaveAvailabilityButton({ disabled }: { disabled?: boolean }) {
 function MonthlyFeePanel({
   horseId,
   initialFee,
+  isPersonal,
 }: {
   horseId: string;
   initialFee: number | null;
+  isPersonal?: boolean;
 }) {
   const [state, action] = useFormState<BoardingActionState, FormData>(
     setMonthlyFeeAction, initialState,
@@ -322,32 +385,42 @@ function MonthlyFeePanel({
   return (
     <form
       action={action}
-      className="bg-white rounded-2xl shadow-soft p-4 flex items-end gap-3"
+      className="bg-white rounded-2xl shadow-soft p-4 flex flex-col gap-3"
     >
       <input type="hidden" name="horse_id" value={horseId} />
-      <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-0">
-        <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">
-          Monthly boarding fee · €
-        </span>
-        <input
-          name="fee"
-          type="number"
-          min="0"
-          step="0.01"
-          value={fee}
-          onChange={(e) => setFee(e.target.value)}
-          placeholder="Leave empty to clear"
-          className="
-            rounded-xl border border-ink-200 bg-white text-sm text-ink-900
-            placeholder:text-ink-400 px-3 py-2.5
-            focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
-          "
-        />
-        {state.error && (
-          <span className="text-[11px] text-rose-700 mt-0.5">{state.error}</span>
-        )}
-      </label>
-      <SaveFeeButton />
+      <div>
+        <p className="text-[12px] font-semibold tracking-[0.04em] uppercase text-ink-500">
+          {isPersonal ? "What you pay your stable" : "Monthly boarding fee"}
+        </p>
+        <p className="text-[11.5px] text-ink-500 mt-0.5 leading-relaxed">
+          {isPersonal
+            ? "Enter your monthly boarding cost (in EUR). Used to pre-fill recurring expense entries each month."
+            : "Used to pre-fill new boarding charges. Owner can override per period."}
+        </p>
+      </div>
+      <div className="flex items-end gap-3">
+        <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-0">
+          <span className="text-[12px] font-medium text-ink-700">Amount · €</span>
+          <input
+            name="fee"
+            type="number"
+            min="0"
+            step="0.01"
+            value={fee}
+            onChange={(e) => setFee(e.target.value)}
+            placeholder="0.00"
+            className="
+              rounded-xl border border-ink-200 bg-white text-sm text-ink-900
+              placeholder:text-ink-400 px-3 py-2.5
+              focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+            "
+          />
+          {state.error && (
+            <span className="text-[11px] text-rose-700 mt-0.5">{state.error}</span>
+          )}
+        </label>
+        <SaveFeeButton />
+      </div>
     </form>
   );
 }
