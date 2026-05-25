@@ -226,6 +226,14 @@ export type UpdateHorseInput = {
   sex?:          "mare" | "gelding" | "stallion" | "colt" | "filly" | null;
   uniqueNumber?: string | null;
   heightHh?:     number | null;
+  // Sprint 3b additions (migration 53)
+  microchipId?:  string | null;
+  passportNo?:   string | null;
+  feiId?:        string | null;
+  sireName?:     string | null;
+  damName?:      string | null;
+  heightHands?:  number | null;
+  discipline?:   string | null;
 };
 
 export async function updateHorse(id: string, input: UpdateHorseInput) {
@@ -249,6 +257,14 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
   if (input.sex           !== undefined) update.sex           = input.sex;
   if (input.uniqueNumber  !== undefined) update.unique_number = input.uniqueNumber;
   if (input.heightHh      !== undefined) update.height_hh     = input.heightHh;
+  // Sprint 3b additions (DB columns from migration 53)
+  if (input.microchipId   !== undefined) update.microchip_id  = input.microchipId;
+  if (input.passportNo    !== undefined) update.passport_no   = input.passportNo;
+  if (input.feiId         !== undefined) update.fei_id        = input.feiId;
+  if (input.sireName      !== undefined) update.sire_name     = input.sireName;
+  if (input.damName       !== undefined) update.dam_name      = input.damName;
+  if (input.heightHands   !== undefined) update.height_hands  = input.heightHands;
+  if (input.discipline    !== undefined) update.discipline    = input.discipline;
 
   const { data, error } = await supabase
     .from("horses")

@@ -89,6 +89,14 @@ export async function updateHorseAction(
   const sexRaw     = String(formData.get("sex") ?? "").trim();
   const uniqueRaw  = String(formData.get("unique_number") ?? "").trim();
   const heightRaw  = String(formData.get("height_hh") ?? "").trim();
+  // Sprint 3b — bio expansion
+  const microchipRaw = String(formData.get("microchip_id") ?? "").trim();
+  const passportRaw  = String(formData.get("passport_no")  ?? "").trim();
+  const feiRaw       = String(formData.get("fei_id")       ?? "").trim();
+  const sireRaw      = String(formData.get("sire_name")    ?? "").trim();
+  const damRaw       = String(formData.get("dam_name")     ?? "").trim();
+  const heightHandsRaw = String(formData.get("height_hands") ?? "").trim();
+  const disciplineRaw  = String(formData.get("discipline")   ?? "").trim();
 
   if (!id)   return { error: "Missing horse id.", success: false };
   if (!name) return { error: "Name is required.", success: false };
@@ -114,6 +122,14 @@ export async function updateHorseAction(
       sex:          (["mare","gelding","stallion","colt","filly"] as const).includes(sexRaw as never) ? (sexRaw as "mare"|"gelding"|"stallion"|"colt"|"filly") : null,
       uniqueNumber: uniqueRaw === "" ? null : uniqueRaw,
       heightHh:     heightRaw === "" ? null : (Number.isFinite(Number(heightRaw)) ? Number(heightRaw) : null),
+      // Sprint 3b — new bio columns (migration 53)
+      microchipId:  microchipRaw === "" ? null : microchipRaw,
+      passportNo:   passportRaw  === "" ? null : passportRaw,
+      feiId:        feiRaw       === "" ? null : feiRaw,
+      sireName:     sireRaw      === "" ? null : sireRaw,
+      damName:      damRaw       === "" ? null : damRaw,
+      heightHands:  heightHandsRaw === "" ? null : (Number.isFinite(Number(heightHandsRaw)) ? Number(heightHandsRaw) : null),
+      discipline:   disciplineRaw  === "" ? null : disciplineRaw,
     });
   } catch (err: any) {
     const message = err?.message ?? "";

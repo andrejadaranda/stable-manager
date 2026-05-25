@@ -42,10 +42,62 @@ export function OverviewTab({
   return (
     <div className="flex flex-col gap-4">
       <ActivityRingCard horse={horse} />
+      <IdentificationCard horse={horse} />
       <HeatmapCard heatmap={heatmap} />
       <BreakdownCard breakdown={breakdown} />
       <RecentSessionsCard sessions={recentSessions} horseId={horse.id} />
     </div>
+  );
+}
+
+// ---------- Identification card -------------------------------
+// Shows bio + lineage fields from migration 53 when at least one is set.
+// Hidden entirely when the owner hasn't filled any (keeps profile clean).
+
+function IdentificationCard({ horse }: { horse: HorseProfileSummary }) {
+  const h = horse as HorseProfileSummary & {
+    sex?: string | null;
+    color?: string | null;
+    height_hands?: number | null;
+    discipline?: string | null;
+    microchip_id?: string | null;
+    passport_no?: string | null;
+    fei_id?: string | null;
+    sire_name?: string | null;
+    dam_name?: string | null;
+    date_of_birth?: string | null;
+    breed?: string | null;
+  };
+  const fields: Array<[string, string | null | undefined]> = [
+    ["Sex",        h.sex],
+    ["Breed",      h.breed],
+    ["Color",      h.color],
+    ["Height",     h.height_hands != null ? `${h.height_hands} hh` : null],
+    ["Discipline", h.discipline],
+    ["Born",       h.date_of_birth ? new Date(h.date_of_birth).toLocaleDateString("en-GB") : null],
+    ["Sire",       h.sire_name],
+    ["Dam",        h.dam_name],
+    ["Microchip",  h.microchip_id],
+    ["Passport",   h.passport_no],
+    ["FEI ID",     h.fei_id],
+  ];
+  const visible = fields.filter(([, v]) => v != null && String(v).trim() !== "");
+  if (visible.length === 0) return null;
+
+  return (
+    <section className="bg-white rounded-2xl border border-ink-100 shadow-soft p-5">
+      <h3 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-500 mb-3">
+        Identification
+      </h3>
+      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-sm">
+        {visible.map(([label, val]) => (
+          <div key={label} className="flex flex-col gap-0.5">
+            <dt className="text-[11px] uppercase tracking-wider text-ink-500 font-medium">{label}</dt>
+            <dd className="text-ink-900 font-medium truncate" title={String(val)}>{String(val)}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 

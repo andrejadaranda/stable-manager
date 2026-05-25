@@ -94,21 +94,67 @@ function EditHorseDialog({
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <Field
-              label="Height (hh)"
-              name="height_hh"
+              label="Height (hands)"
+              name="height_hands"
               type="number"
               min="8"
               max="20"
               step="0.1"
-              defaultValue={(horse as HorseRow & { height_hh?: number | null }).height_hh != null ? String((horse as HorseRow & { height_hh?: number | null }).height_hh) : ""}
+              defaultValue={(horse as HorseRow & { height_hands?: number | null }).height_hands != null ? String((horse as HorseRow & { height_hands?: number | null }).height_hands) : ""}
               placeholder="16.2"
             />
             <Field
-              label="ID number"
-              name="unique_number"
+              label="Discipline"
+              name="discipline"
               type="text"
-              defaultValue={(horse as HorseRow & { unique_number?: string | null }).unique_number ?? ""}
-              placeholder="passport, microchip, brand"
+              defaultValue={(horse as HorseRow & { discipline?: string | null }).discipline ?? ""}
+              placeholder="dressage, jumping, hack…"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field
+              label="Microchip"
+              name="microchip_id"
+              type="text"
+              defaultValue={(horse as HorseRow & { microchip_id?: string | null }).microchip_id ?? ""}
+              placeholder="15-digit chip ID"
+            />
+            <Field
+              label="Passport no."
+              name="passport_no"
+              type="text"
+              defaultValue={(horse as HorseRow & { passport_no?: string | null }).passport_no ?? ""}
+              placeholder="EU passport number"
+            />
+          </div>
+          <Field
+            label="FEI ID (optional)"
+            name="fei_id"
+            type="text"
+            defaultValue={(horse as HorseRow & { fei_id?: string | null }).fei_id ?? ""}
+            placeholder="Only if competition-registered"
+          />
+        </fieldset>
+
+        {/* Lineage */}
+        <fieldset className="border-t border-neutral-200 pt-3.5 mt-1 flex flex-col gap-2.5">
+          <legend className="text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-500 px-1">
+            Lineage
+          </legend>
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field
+              label="Sire (father)"
+              name="sire_name"
+              type="text"
+              defaultValue={(horse as HorseRow & { sire_name?: string | null }).sire_name ?? ""}
+              placeholder="e.g. Galoubet A"
+            />
+            <Field
+              label="Dam (mother)"
+              name="dam_name"
+              type="text"
+              defaultValue={(horse as HorseRow & { dam_name?: string | null }).dam_name ?? ""}
+              placeholder="e.g. Indiana"
             />
           </div>
         </fieldset>
