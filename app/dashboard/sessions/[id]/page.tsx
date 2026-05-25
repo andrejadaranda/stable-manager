@@ -12,6 +12,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
 import { SESSION_TYPE_LABEL, type SessionType } from "@/services/sessions.types";
 import { SessionMap } from "@/components/sessions/SessionMap";
+import { ShareRideDialog } from "@/components/sessions/ShareRideDialog";
 import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,14 @@ type GaitBreakdown = {
   trot_s:   number;
   canter_s: number;
   gallop_s: number;
+};
+
+type Split = {
+  km: number;
+  pace_min_per_km: number;
+  avg_kmh: number;
+  elev_gain_m: number;
+  elev_loss_m: number;
 };
 
 type SessionDetail = {
@@ -43,6 +52,11 @@ type SessionDetail = {
   notes: string | null;
   rating: number | null;
   horse: { id: string; name: string } | null;
+  // Tier 2
+  elevation_gain_m: number | null;
+  elevation_loss_m: number | null;
+  kcal_estimate:    number | null;
+  splits_km:        Split[] | null;
 };
 
 // UUID-only — defense vs cast crashes (SEC-12 pattern).
@@ -65,6 +79,7 @@ export default async function SessionDetailPage({
       duration_minutes, distance_m, elapsed_seconds, moving_seconds,
       avg_speed_kmh, max_speed_kmh, encoded_polyline, gait_breakdown,
       tracking_points, notes, rating,
+      elevation_gain_m, elevation_loss_m, kcal_estimate, splits_km,
       horse:horses(id, name)
     `)
     .eq("id", params.id)
@@ -85,10 +100,15 @@ export default async function SessionDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title={s.horse?.name ? `${s.horse.name} · ${SESSION_TYPE_LABEL[s.type]}` : SESSION_TYPE_LABEL[s.type]}
-        subtitle={`${started.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${started.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}${finished ? ` → ${finished.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
-      />
+      <div className="flex items-start justify-between gap-3">
+        <PageHeader
+          title={s.horse?.name ? `${s.horse.name} · ${SESSION_TYPE_LABEL[s.type]}` : SESSION_TYPE_LABEL[s.type]}
+          subtitle={`${started.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${started.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}${finished ? ` → ${finished.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+        />
+        {s.status !== "live" && s.encoded_polyline && (
+          <ShareRideDialog sessionId={s.id} />
+        )}
+      </div>
 
       {/* Map */}
       <SessionMap encodedPolyline={s.encoded_polyline} />
@@ -100,6 +120,24 @@ export default async function SessionDetailPage({
         <Card label="Avg"      value={avg} />
         <Card label="Max"      value={max} />
       </div>
+
+      {/* Secondary metrics — elevation + calories */}
+      {(s.elevation_gain_m != null || s.kcal_estimate != null) && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Card label="↑ Climb"   value={s.elevation_gain_m != null ? `${s.elevation_gain_m} m` : "—"} subtle />
+          <Card label="↓ Descent" value={s.elevation_loss_m != null ? `${s.elevation_loss_m} m` : "—"} subtle />
+          <Card label="Calories"  value={s.kcal_estimate != null ? `${s.kcal_estimate} kcal` : "—"} subtle />
+          <Card label="Moving"    value={s.moving_seconds != null ? formatHMS(s.moving_seconds) : "—"} subtle />
+        </div>
+      )}
+
+      {/* Per-km splits — Strava staple */}
+      {s.splits_km && s.splits_km.length > 0 && (
+        <section className="bg-white rounded-2xl border border-ink-100 p-5 shadow-soft">
+          <h2 className="font-display text-lg text-navy-700 mb-4">Splits</h2>
+          <SplitsTable splits={s.splits_km} />
+        </section>
+      )}
 
       {/* Gait breakdown */}
       {s.gait_breakdown && (
@@ -128,13 +166,59 @@ export default async function SessionDetailPage({
   );
 }
 
-function Card({ label, value }: { label: string; value: string }) {
+function Card({ label, value, subtle }: { label: string; value: string; subtle?: boolean }) {
   return (
-    <div className="bg-white rounded-2xl border border-ink-100 p-5 shadow-soft text-center">
-      <div className="font-display text-2xl tabular-nums text-navy-700">{value}</div>
+    <div className={`rounded-2xl border border-ink-100 p-5 shadow-soft text-center ${
+      subtle ? "bg-cream-50" : "bg-white"
+    }`}>
+      <div className={`font-display tabular-nums text-navy-700 ${subtle ? "text-xl" : "text-2xl"}`}>{value}</div>
       <div className="text-[11px] uppercase tracking-wider text-ink-500 mt-1">{label}</div>
     </div>
   );
+}
+
+function SplitsTable({ splits }: { splits: Split[] }) {
+  // Fastest km — highlight in saddle accent.
+  const fastest = Math.max(0, ...splits.map((s) => s.avg_kmh));
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-[11px] uppercase tracking-wider text-ink-500 border-b border-ink-100">
+            <th className="text-left  py-2 pr-3 font-semibold">Km</th>
+            <th className="text-right py-2 px-3 font-semibold">Pace</th>
+            <th className="text-right py-2 px-3 font-semibold">Avg</th>
+            <th className="text-right py-2 pl-3 font-semibold">Elev</th>
+          </tr>
+        </thead>
+        <tbody>
+          {splits.map((sp) => (
+            <tr key={sp.km} className="border-b border-ink-100/60">
+              <td className="py-2.5 pr-3 font-medium text-ink-900 tabular-nums">{sp.km}</td>
+              <td className="py-2.5 px-3 text-right tabular-nums text-ink-700">{paceLabel(sp.pace_min_per_km)}</td>
+              <td className={`py-2.5 px-3 text-right tabular-nums ${
+                sp.avg_kmh === fastest ? "text-saddle font-semibold" : "text-ink-700"
+              }`}>
+                {sp.avg_kmh.toFixed(1)} km/h
+              </td>
+              <td className="py-2.5 pl-3 text-right tabular-nums text-ink-500">
+                {sp.elev_gain_m > 0 && <span className="text-emerald-700">↑{sp.elev_gain_m}m </span>}
+                {sp.elev_loss_m > 0 && <span className="text-amber-700">↓{sp.elev_loss_m}m</span>}
+                {sp.elev_gain_m === 0 && sp.elev_loss_m === 0 && "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function paceLabel(paceMinPerKm: number): string {
+  if (!Number.isFinite(paceMinPerKm) || paceMinPerKm <= 0) return "—";
+  const m = Math.floor(paceMinPerKm);
+  const s = Math.round((paceMinPerKm - m) * 60);
+  return `${m}:${String(s).padStart(2, "0")} /km`;
 }
 
 function GaitBar({ g }: { g: GaitBreakdown }) {

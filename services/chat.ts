@@ -61,16 +61,13 @@ const MAX_BODY_LEN = 4000;
  * getAvailableChatContacts. The DB function is the source of truth.
  */
 function canDm(callerRole: Role, targetRole: Role): boolean {
-  if (callerRole === "owner"    && targetRole === "employee") return true;
-  if (callerRole === "employee" && targetRole === "owner")    return true;
-  if (callerRole === "employee" && targetRole === "client")   return true;
-  if (callerRole === "client"   && targetRole === "employee") return true;
-  // Owners must reach their clients directly (lessons, billing, schedule
-  // questions). In small stables the owner IS the only trainer, so the
-  // "go through an employee" path doesn't exist.
-  if (callerRole === "owner"    && targetRole === "client")   return true;
-  if (callerRole === "client"   && targetRole === "owner")    return true;
-  return false;
+  // Stable-wide open chat (BUG #W fix). Any two members of the same
+  // stable can DM each other — the same-stable check is enforced server-
+  // side via chat_can_dm() against current_stable_id(). The role pair
+  // itself doesn't matter; we only return false when one side has no
+  // role at all (shouldn't happen for authenticated members).
+  void targetRole;
+  return callerRole === "owner" || callerRole === "employee" || callerRole === "client";
 }
 
 // ---- API -------------------------------------------------------

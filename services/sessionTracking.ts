@@ -34,7 +34,8 @@ export {
   type GaitBreakdown,
 } from "./sessionTracking.pure";
 import type { TrackPointInput, GaitBreakdown } from "./sessionTracking.pure";
-import { computeRollups } from "./sessionTracking.pure";
+import { computeRollups, estimateKcal } from "./sessionTracking.pure";
+export { estimateKcal };
 
 // ---------------- TYPES ----------------
 
@@ -189,23 +190,26 @@ export async function finalizeLiveSession(
     throw new Error("FORBIDDEN");
   }
 
-  // Load all points in chronological order.
+  // Load all points in chronological order — pull altitude too for
+  // elevation + smoothing math.
   const { data: pts, error: pErr } = await supabase
     .from("session_tracks")
-    .select("recorded_at, lat, lng, speed_mps")
+    .select("recorded_at, lat, lng, speed_mps, altitude_m")
     .eq("session_id", sessionId)
     .order("recorded_at", { ascending: true });
   if (pErr) throw pErr;
 
   const rollups = computeRollups((pts ?? []).map((p) => ({
-    t:     new Date(p.recorded_at).getTime(),
-    lat:   Number(p.lat),
-    lng:   Number(p.lng),
-    speed: p.speed_mps == null ? null : Number(p.speed_mps),
+    t:        new Date(p.recorded_at).getTime(),
+    lat:      Number(p.lat),
+    lng:      Number(p.lng),
+    speed:    p.speed_mps  == null ? null : Number(p.speed_mps),
+    altitude: p.altitude_m == null ? null : Number(p.altitude_m),
   })));
 
   const finishedAt = new Date().toISOString();
   const durationMin = Math.max(1, Math.round(rollups.elapsed_seconds / 60));
+  const kcal = estimateKcal(rollups.gait_breakdown);
 
   const update: Record<string, unknown> = {
     status:           "completed",
@@ -218,6 +222,11 @@ export async function finalizeLiveSession(
     encoded_polyline: rollups.encoded_polyline,
     gait_breakdown:   rollups.gait_breakdown,
     duration_minutes: durationMin,
+    // Tier 2 metrics
+    elevation_gain_m: rollups.elevation_gain_m,
+    elevation_loss_m: rollups.elevation_loss_m,
+    splits_km:        rollups.splits_km,
+    kcal_estimate:    kcal,
   };
   if (patch?.notes   !== undefined) update.notes   = patch.notes;
   if (patch?.rating  !== undefined) update.rating  = patch.rating;

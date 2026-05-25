@@ -26,7 +26,21 @@ export type GaitBreakdown = {
   gallop_s: number;   // 30+
 };
 
-type PointMs = { t: number; lat: number; lng: number; speed: number | null };
+export type PointMs = {
+  t: number;
+  lat: number;
+  lng: number;
+  speed: number | null;
+  altitude?: number | null;
+};
+
+export type SplitKm = {
+  km: number;            // 1-indexed (1 = first km)
+  pace_min_per_km: number; // minutes per km, float
+  avg_kmh: number;
+  elev_gain_m: number;
+  elev_loss_m: number;
+};
 
 type Rollups = {
   distance_m: number;
@@ -36,6 +50,9 @@ type Rollups = {
   max_speed_kmh: number | null;
   encoded_polyline: string;
   gait_breakdown: GaitBreakdown;
+  elevation_gain_m: number;
+  elevation_loss_m: number;
+  splits_km: SplitKm[];
 };
 
 /** Compute distance via Haversine, splits, polyline + gait buckets.
@@ -51,6 +68,9 @@ export function computeRollups(points: PointMs[]): Rollups {
       max_speed_kmh: null,
       encoded_polyline: "",
       gait_breakdown: { walk_s: 0, trot_s: 0, canter_s: 0, gallop_s: 0 },
+      elevation_gain_m: 0,
+      elevation_loss_m: 0,
+      splits_km: [],
     };
   }
 
@@ -58,6 +78,23 @@ export function computeRollups(points: PointMs[]): Rollups {
   let maxSpeedMps = 0;
   let movingMs = 0;
   const gaits: GaitBreakdown = { walk_s: 0, trot_s: 0, canter_s: 0, gallop_s: 0 };
+
+  // Elevation — smooth raw altitudes with a 5-point moving average so a
+  // single GPS spike doesn't add +60m of imaginary climb.
+  const elevSmoothed = smoothAltitudes(points);
+  let elevGain = 0;
+  let elevLoss = 0;
+  // Ignore micro-changes < 1m (GPS altitude noise floor).
+  const ELEV_NOISE_M = 1.0;
+
+  // Per-km splits — accumulate distance, when we cross a km boundary,
+  // emit a split for the kilometre we just completed.
+  const splits: SplitKm[] = [];
+  let kmAccDist  = 0;
+  let kmAccMs    = 0;
+  let kmAccGain  = 0;
+  let kmAccLoss  = 0;
+  let kmIndex    = 1;
 
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1];
@@ -82,6 +119,64 @@ export function computeRollups(points: PointMs[]): Rollups {
     else if (kmh < 17) gaits.trot_s   += segSec;
     else if (kmh < 30) gaits.canter_s += segSec;
     else               gaits.gallop_s += segSec;
+
+    // Elevation deltas via smoothed series.
+    let segGain = 0;
+    let segLoss = 0;
+    const aAlt = elevSmoothed[i - 1];
+    const bAlt = elevSmoothed[i];
+    if (aAlt != null && bAlt != null) {
+      const dAlt = bAlt - aAlt;
+      if (dAlt > ELEV_NOISE_M) {
+        segGain = dAlt;
+        elevGain += dAlt;
+      } else if (dAlt < -ELEV_NOISE_M) {
+        segLoss = -dAlt;
+        elevLoss += -dAlt;
+      }
+    }
+
+    // Splits — accumulate the segment into the current km bucket.
+    kmAccDist += dMeters;
+    kmAccMs   += dtMs;
+    kmAccGain += segGain;
+    kmAccLoss += segLoss;
+    while (kmAccDist >= 1000) {
+      // Distribute proportionally to the carry-over.
+      const carry = kmAccDist - 1000;
+      const portion = carry / kmAccDist;
+      const usedDist = 1000;
+      const usedMs   = kmAccMs   * (1 - portion);
+      const usedGain = kmAccGain * (1 - portion);
+      const usedLoss = kmAccLoss * (1 - portion);
+      const pace = usedMs > 0 ? (usedMs / 1000 / 60) / (usedDist / 1000) : 0;
+      const avgKmh = usedMs > 0 ? (usedDist / (usedMs / 1000)) * 3.6 : 0;
+      splits.push({
+        km:               kmIndex,
+        pace_min_per_km:  Number(pace.toFixed(2)),
+        avg_kmh:          Number(avgKmh.toFixed(2)),
+        elev_gain_m:      Math.round(usedGain),
+        elev_loss_m:      Math.round(usedLoss),
+      });
+      kmIndex   += 1;
+      kmAccDist  = carry;
+      kmAccMs    = kmAccMs   * portion;
+      kmAccGain  = kmAccGain * portion;
+      kmAccLoss  = kmAccLoss * portion;
+    }
+  }
+
+  // Emit the final partial km if it carries meaningful distance (>50m).
+  if (kmAccDist > 50) {
+    const pace = kmAccMs > 0 ? (kmAccMs / 1000 / 60) / (kmAccDist / 1000) : 0;
+    const avgKmh = kmAccMs > 0 ? (kmAccDist / (kmAccMs / 1000)) * 3.6 : 0;
+    splits.push({
+      km:               kmIndex,
+      pace_min_per_km:  Number(pace.toFixed(2)),
+      avg_kmh:          Number(avgKmh.toFixed(2)),
+      elev_gain_m:      Math.round(kmAccGain),
+      elev_loss_m:      Math.round(kmAccLoss),
+    });
   }
 
   const elapsedMs = points[points.length - 1].t - points[0].t;
@@ -121,7 +216,44 @@ export function computeRollups(points: PointMs[]): Rollups {
       canter_s: Math.round(gaits.canter_s),
       gallop_s: Math.round(gaits.gallop_s),
     },
+    elevation_gain_m: Math.round(elevGain),
+    elevation_loss_m: Math.round(elevLoss),
+    splits_km:        splits,
   };
+}
+
+/** Rider calorie estimate. Rough — uses MET values from ACSM:
+ *  walk 3.5, trot 5.5, canter 8.0, gallop 11.0.
+ *  kcal = MET * mass_kg * hours.
+ *  Default rider mass 65kg (we don't ask for weight — feature for later). */
+export function estimateKcal(gait: GaitBreakdown, riderMassKg = 65): number {
+  const METS = { walk: 3.5, trot: 5.5, canter: 8.0, gallop: 11.0 };
+  const hours = (s: number) => s / 3600;
+  const kcal =
+    METS.walk   * riderMassKg * hours(gait.walk_s)
+  + METS.trot   * riderMassKg * hours(gait.trot_s)
+  + METS.canter * riderMassKg * hours(gait.canter_s)
+  + METS.gallop * riderMassKg * hours(gait.gallop_s);
+  return Math.round(kcal);
+}
+
+/** 5-point centred moving average. Returns array same length; nulls preserved. */
+function smoothAltitudes(points: PointMs[]): Array<number | null> {
+  const n = points.length;
+  const raw: Array<number | null> = points.map((p) =>
+    p.altitude != null && Number.isFinite(p.altitude) ? Number(p.altitude) : null,
+  );
+  const out: Array<number | null> = new Array(n).fill(null);
+  for (let i = 0; i < n; i++) {
+    let sum = 0;
+    let count = 0;
+    for (let k = Math.max(0, i - 2); k <= Math.min(n - 1, i + 2); k++) {
+      const v = raw[k];
+      if (v != null) { sum += v; count += 1; }
+    }
+    out[i] = count > 0 ? sum / count : null;
+  }
+  return out;
 }
 
 /** Great-circle distance in meters (Earth radius 6371008.8m, WGS84 mean). */
