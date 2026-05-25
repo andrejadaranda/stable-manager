@@ -108,7 +108,8 @@ export async function GET(
           position: "relative",
         }}
       >
-        {/* Top brand row — uses stable's logo + name if set, falls back to Longrein wordmark */}
+        {/* Top row: stable brand LEFT + Longrein wordmark badge RIGHT.
+            Both visible — stable owns the moment, Longrein gets the acquisition. */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             {logoUrl && (
@@ -117,9 +118,23 @@ export async function GET(
             )}
             <span style={{ fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }}>{stableName}</span>
           </div>
-          <span style={{ fontSize: 18, color: "#6E6760", letterSpacing: "0.16em", textTransform: "uppercase", fontFamily: "sans-serif", fontWeight: 600 }}>
-            Live ride
-          </span>
+          {/* Longrein wordmark badge — pill with brand wordmark + saddle dot.
+              Same visual recipe as our logo elsewhere, always paddock-green +
+              saddle regardless of stable's chosen color so the wordmark is
+              instantly recognizable. */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: "#1E3A2A",
+              color: "#F4ECDF",
+              padding: "10px 18px",
+              borderRadius: 999,
+            }}
+          >
+            <span style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em" }}>Longrein</span>
+            <span style={{ fontSize: 22, color: "#B5793E" }}>.</span>
+          </div>
         </div>
 
         {/* Title */}
@@ -175,9 +190,27 @@ export async function GET(
           </div>
         )}
 
-        {/* Footer — Longrein attribution stays subtle but always there */}
-        <div style={{ display: "flex", marginTop: "auto", color: "#6E6760", fontSize: 20, fontFamily: "sans-serif" }}>
-          Tracked with Longrein · longrein.eu
+        {/* Footer — second Longrein touchpoint with URL.
+            Redundancy = harder to crop out, viewers always see where the
+            app lives. */}
+        <div
+          style={{
+            display: "flex",
+            marginTop: "auto",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingTop: 20,
+            borderTop: "1px solid rgba(110,103,96,0.2)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", color: "#6E6760", fontSize: 20, fontFamily: "sans-serif" }}>
+            Tracked with
+            <span style={{ marginLeft: 8, fontFamily: "serif", color: "#1E3A2A", fontSize: 22, fontWeight: 600 }}>Longrein</span>
+            <span style={{ color: "#B5793E", fontSize: 22, fontWeight: 600 }}>.</span>
+          </div>
+          <div style={{ display: "flex", color: "#1E3A2A", fontSize: 20, fontFamily: "sans-serif", fontWeight: 600 }}>
+            longrein.eu
+          </div>
         </div>
       </div>
     ),
