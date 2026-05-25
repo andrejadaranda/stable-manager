@@ -35,7 +35,7 @@ import {
   computeRollups,
   haversine,
   type TrackPointInput,
-} from "@/services/sessionTracking";
+} from "@/services/sessionTracking.pure";
 
 type HorseOpt = { id: string; name: string };
 

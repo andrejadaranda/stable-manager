@@ -7,7 +7,7 @@
 // bundler dep, no SSR concerns). The map mounts only on the client.
 
 import { useEffect, useRef } from "react";
-import { decodePolyline } from "@/services/sessionTracking";
+import { decodePolyline } from "@/services/sessionTracking.pure";
 
 // Minimal Leaflet types we touch — avoids pulling @types/leaflet for a
 // 60-line component.

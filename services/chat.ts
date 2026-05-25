@@ -65,6 +65,11 @@ function canDm(callerRole: Role, targetRole: Role): boolean {
   if (callerRole === "employee" && targetRole === "owner")    return true;
   if (callerRole === "employee" && targetRole === "client")   return true;
   if (callerRole === "client"   && targetRole === "employee") return true;
+  // Owners must reach their clients directly (lessons, billing, schedule
+  // questions). In small stables the owner IS the only trainer, so the
+  // "go through an employee" path doesn't exist.
+  if (callerRole === "owner"    && targetRole === "client")   return true;
+  if (callerRole === "client"   && targetRole === "owner")    return true;
   return false;
 }
 
