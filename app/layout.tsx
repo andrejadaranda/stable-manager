@@ -5,6 +5,7 @@
 // status bar color, and use the manifest's name/short_name.
 
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { CookieBanner } from "@/components/legal/cookie-banner";
 
@@ -61,6 +62,9 @@ export default function RootLayout({
       <body className="min-h-screen">
         {children}
         <CookieBanner />
+        {/* Vercel Web Analytics — counts visitors and page views.
+            Privacy-first (no cookies). Hobby tier: 2,500 events/mo. */}
+        <Analytics />
       </body>
     </html>
   );

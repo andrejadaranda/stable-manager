@@ -90,7 +90,7 @@ p { font-size: 15px; line-height: 1.55; color: #1B1B1B; margin: 0 0 14px; }
     <p class="wordmark">Longrein<span class="dot">.</span></p>
     <h1>You're on the list.</h1>
     <p>Thanks for signing up. Longrein is a stable management tool built in Europe for riding schools and livery yards &mdash; calendar, horses, clients, invoicing, and welfare workload in one place.</p>
-    <p>We open to the first fifteen yards as Founding Members on 24 May. Three months free, then &euro;25/month locked for life. No setup fee. No mandatory calls. The next note from us will tell you what's behind the door &mdash; feature walkthroughs, the offer, and how to step in if it's a fit.</p>
+    <p>The first fifteen yards onboard as Founding Members &mdash; <strong>12 months free</strong>, then &euro;25/month locked for life. One-time &euro;299 onboarding with the founder. No mandatory calls. The next note from us will tell you what's behind the door &mdash; feature walkthroughs, the offer, and how to step in if it's a fit.</p>
     <p class="muted">If you didn't sign up for this, ignore the email &mdash; your address won't be added to anything else.</p>
   </div>
   <div class="footer">
@@ -107,7 +107,7 @@ function welcomeText(): string {
 
 Thanks for signing up. Longrein is a stable management tool built in Europe for riding schools and livery yards — calendar, horses, clients, invoicing, and welfare workload in one place.
 
-We open to the first fifteen yards as Founding Members on 24 May. Three months free, then €25/month locked for life. No setup fee. No mandatory calls. The next note from us will tell you what's behind the door — feature walkthroughs, the offer, and how to step in if it's a fit.
+The first fifteen yards onboard as Founding Members — 12 months free, then €25/month locked for life. One-time €299 onboarding with the founder. No mandatory calls. The next note from us will tell you what's behind the door — feature walkthroughs, the offer, and how to step in if it's a fit.
 
 If you didn't sign up for this, ignore the email — your address won't be added to anything else.
 
