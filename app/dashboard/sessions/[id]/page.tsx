@@ -106,7 +106,23 @@ export default async function SessionDetailPage({
           subtitle={`${started.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${started.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}${finished ? ` → ${finished.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
         />
         {s.status !== "live" && s.encoded_polyline && (
-          <ShareRideDialog sessionId={s.id} />
+          <div className="flex items-center gap-2">
+            {/* GPX export — power-user retention vs Equilab / Garmin / Strava */}
+            <a
+              href={`/api/sessions/${s.id}/export.gpx`}
+              download
+              className="
+                inline-flex items-center justify-center gap-1.5
+                h-10 px-3.5 rounded-xl text-sm font-medium
+                bg-white border border-ink-200 text-ink-800
+                hover:bg-ink-50 active:bg-ink-100 transition-colors
+              "
+              title="Download a GPX file you can open in Garmin Connect, Strava, RideWithGPS, etc."
+            >
+              ⬇ GPX
+            </a>
+            <ShareRideDialog sessionId={s.id} />
+          </div>
         )}
       </div>
 
