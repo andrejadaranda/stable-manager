@@ -1,18 +1,20 @@
 "use client";
 
 // Client-side filter pills for the Sessions list.
-// Pure UI — wraps SessionList children with filter state, slices the
-// array, and renders. No round-trip to server, no URL state (simple).
+// Pure UI — wraps SessionList with filter state, slices the array,
+// renders. No round-trip to server, no URL state.
 //
-// Filters:
-//   - Range: this week / this month / 90 days (default) / all
-//   - Type:  any / flat / dressage / jumping / hack / canter-heavy / other
-//
-// Empty result inside an otherwise-non-empty list = "no matches" message
-// distinct from the page-level empty state.
+// IMPORTANT (BUG #Y fix): cannot use a render-prop children pattern
+// here — passing a function from a Server Component to a Client
+// Component violates the Next.js serialization boundary. Instead this
+// component imports SessionList directly and renders the filtered
+// subset itself. SessionList is plain JSX (no server IO) so this is
+// safe; the only client-only piece inside is DeleteSessionButton
+// which already has its own "use client" directive.
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import type { SessionWithLabels } from "@/services/sessions";
+import { SessionList } from "./session-list";
 
 type Range = "week" | "month" | "90d" | "all";
 
@@ -32,12 +34,10 @@ const RANGE_DAYS: Record<Range, number | null> = {
 
 export function SessionFilterBar({
   sessions,
-  children,
+  canDelete,
 }: {
   sessions: SessionWithLabels[];
-  /** Render function — receives the filtered subset for the existing
-   *  SessionList to render. */
-  children: (filtered: SessionWithLabels[]) => ReactNode;
+  canDelete?: boolean;
 }) {
   const [range, setRange] = useState<Range>("90d");
   const [horseId, setHorseId] = useState<string>("");
@@ -149,7 +149,7 @@ export function SessionFilterBar({
           <p className="text-xs text-ink-500 mt-1.5">Try widening the date range or clearing facets.</p>
         </div>
       ) : (
-        children(filtered)
+        <SessionList sessions={filtered} canDelete={canDelete} />
       )}
     </div>
   );

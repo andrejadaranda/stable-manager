@@ -15,7 +15,6 @@ import { getSession, requireRole } from "@/lib/auth/session";
 import { getStableFeatures } from "@/services/features";
 import Link from "next/link";
 import { LogSessionPanel } from "@/components/sessions/log-session-panel";
-import { SessionList } from "@/components/sessions/session-list";
 import { SessionFilterBar } from "@/components/sessions/session-filter-bar";
 import { SessionsHero } from "@/components/sessions/sessions-hero";
 import { FeatureDisabled, PageHeader, HelpHint } from "@/components/ui";
@@ -97,9 +96,7 @@ export default async function SessionsPage() {
 
       <section aria-label="Recent sessions" className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold tracking-tight text-navy-900">Recent</h2>
-        <SessionFilterBar sessions={recent}>
-          {(filtered) => <SessionList sessions={filtered} canDelete />}
-        </SessionFilterBar>
+        <SessionFilterBar sessions={recent} canDelete />
       </section>
     </div>
   );
