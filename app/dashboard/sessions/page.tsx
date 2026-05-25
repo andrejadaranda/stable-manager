@@ -13,6 +13,7 @@ import { listHorses } from "@/services/horses";
 import { listClients } from "@/services/clients";
 import { getSession, requireRole } from "@/lib/auth/session";
 import { getStableFeatures } from "@/services/features";
+import Link from "next/link";
 import { LogSessionPanel } from "@/components/sessions/log-session-panel";
 import { SessionList } from "@/components/sessions/session-list";
 import { SessionsHero } from "@/components/sessions/sessions-hero";
@@ -74,6 +75,17 @@ export default async function SessionsPage() {
                 </>
               }
             />
+            <Link
+              href="/dashboard/sessions/live"
+              className="
+                inline-flex items-center justify-center gap-1.5
+                h-10 px-4 rounded-xl text-sm font-semibold
+                bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:bg-emerald-800
+                transition-colors
+              "
+            >
+              ▶ Start live ride
+            </Link>
             <LogSessionPanel
               horses={horses.map((h) => ({ id: h.id, name: h.name }))}
               clients={clients.map((c) => ({ id: c.id, full_name: c.full_name }))}
