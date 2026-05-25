@@ -7,19 +7,11 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
 
-export type WorkingHour = {
-  day_of_week: number;
-  open_time:   string;  // HH:MM:SS
-  close_time:  string;  // HH:MM:SS
-};
-
-export type Holiday = {
-  id:          string;
-  closed_date: string;  // YYYY-MM-DD
-  label:       string | null;
-};
-
-export const DAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+// Pure types + constants live in .pure.ts so client components can
+// import them without pulling next/headers. Re-exported here for
+// existing server callers.
+export { DAY_LABELS, type WorkingHour, type Holiday } from "./workingHours.pure";
+import type { WorkingHour, Holiday } from "./workingHours.pure";
 
 export async function listWorkingHours(): Promise<WorkingHour[]> {
   const ctx = await getSession();

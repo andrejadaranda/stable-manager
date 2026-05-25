@@ -10,7 +10,7 @@ import {
   deleteTypeAction,
   type CrudState,
 } from "@/app/dashboard/settings/session-types/actions";
-import type { StableSessionType } from "@/services/stableSessionTypes";
+import type { StableSessionType } from "@/services/stableSessionTypes.pure";
 
 const PALETTE = ["#1E3A2A", "#B5793E", "#2C6BB5", "#7A1F2B", "#6B2C7A", "#588157", "#1B1B1B"];
 const initial: CrudState = { error: null, success: false };

@@ -7,7 +7,7 @@ import {
   addHolidayAction,
   removeHolidayAction,
 } from "@/app/dashboard/settings/hours/actions";
-import { DAY_LABELS, type WorkingHour, type Holiday } from "@/services/workingHours";
+import { DAY_LABELS, type WorkingHour, type Holiday } from "@/services/workingHours.pure";
 
 export function HoursEditor({
   initialHours,

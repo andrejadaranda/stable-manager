@@ -12,13 +12,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
 
-export type StableSessionType = {
-  id:         string;
-  label:      string;
-  color:      string | null;
-  sort_order: number;
-  active:     boolean;
-};
+// Pure types live in .pure.ts so client components can import them
+// without pulling next/headers. Re-exported here for server callers.
+export { type StableSessionType } from "./stableSessionTypes.pure";
+import type { StableSessionType } from "./stableSessionTypes.pure";
 
 export async function listStableSessionTypes(): Promise<StableSessionType[]> {
   const ctx = await getSession();
