@@ -28,6 +28,8 @@ import { HorseProfileTabs } from "@/components/horses/HorseProfileTabs";
 import { OverviewTab } from "@/components/horses/OverviewTab";
 import { SessionsTab } from "@/components/horses/SessionsTab";
 import { HealthTab } from "@/components/horses/HealthTab";
+import { GuestContributorsPanel } from "@/components/horses/GuestContributorsPanel";
+import { listGuestContributorTokens } from "@/services/guestContributors";
 import { BoardingTab } from "@/components/horses/BoardingTab";
 import { PhotoGallery } from "@/components/horses/PhotoGallery";
 import { ScheduleRail } from "@/components/horses/ScheduleRail";
@@ -133,11 +135,25 @@ export default async function HorseDetailPage({
       />
     );
   } else if (tab === "health") {
-    const [summary, records] = await Promise.all([
+    const canManageGuests = session.role === "owner" || session.role === "employee";
+    const [summary, records, guestTokens] = await Promise.all([
       getHealthSummary(params.id),
       listHealthRecords(params.id),
+      canManageGuests ? listGuestContributorTokens(params.id).catch(() => []) : Promise.resolve([]),
     ]);
-    tabContent = <HealthTab horseId={params.id} summary={summary} records={records} />;
+    const appOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.longrein.eu";
+    tabContent = (
+      <div className="flex flex-col gap-4">
+        <HealthTab horseId={params.id} summary={summary} records={records} />
+        {canManageGuests && (
+          <GuestContributorsPanel
+            horseId={params.id}
+            initialTokens={guestTokens}
+            appOrigin={appOrigin}
+          />
+        )}
+      </div>
+    );
   } else if (tab === "goals") {
     tabContent = (
       <ComingSoonTab
