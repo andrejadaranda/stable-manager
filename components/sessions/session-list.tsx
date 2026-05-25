@@ -9,6 +9,7 @@
 
 import Link from "next/link";
 import type { SessionWithLabels } from "@/services/sessions";
+import { EmptyState } from "@/components/ui";
 import { DeleteSessionButton } from "./delete-session-button";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -39,13 +40,12 @@ export function SessionList({
 }) {
   if (sessions.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-soft px-6 py-10 text-center">
-        <p className="text-sm font-semibold text-navy-900">No sessions yet</p>
-        <p className="text-[12.5px] text-ink-500 mt-1.5 max-w-sm mx-auto">
-          Every ride logged builds your horse&apos;s story and your training
-          arc. Log one above — the next will be one tap.
-        </p>
-      </div>
+      <EmptyState
+        title="No sessions yet"
+        body="Every ride logged builds your horse's story and your training arc. Start a live GPS ride or log a past session."
+        primary={{ label: "▶ Start live ride", href: "/dashboard/sessions/live" }}
+        secondary={{ label: "Log past session", href: "/dashboard/sessions?new=1" }}
+      />
     );
   }
 
