@@ -94,7 +94,7 @@ export function NewDmButton({ onCreated }: { onCreated: (threadId: string) => vo
             )}
             {!loading && contacts && contacts.length === 0 && (
               <p className="px-3 py-4 text-xs text-ink-500">
-                No contacts available. (Clients can only message trainers they've had lessons with.)
+                No one else in your stable yet. Invite teammates from Settings → Team.
               </p>
             )}
             {!loading && contacts && contacts.length > 0 && (

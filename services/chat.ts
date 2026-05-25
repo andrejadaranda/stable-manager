@@ -54,23 +54,10 @@ export type ChatContact = {
 
 const MAX_BODY_LEN = 4000;
 
-// ---- Helpers ---------------------------------------------------
-
-/**
- * Mirror of database `chat_can_dm` for early validation in
- * getAvailableChatContacts. The DB function is the source of truth.
- */
-function canDm(callerRole: Role, targetRole: Role): boolean {
-  // Stable-wide open chat (BUG #W fix). Any two members of the same
-  // stable can DM each other — the same-stable check is enforced server-
-  // side via chat_can_dm() against current_stable_id(). The role pair
-  // itself doesn't matter; we only return false when one side has no
-  // role at all (shouldn't happen for authenticated members).
-  void targetRole;
-  return callerRole === "owner" || callerRole === "employee" || callerRole === "client";
-}
-
 // ---- API -------------------------------------------------------
+// Note: client-side canDm helper removed in BUG #Z fix. The DB function
+// chat_can_dm() (migration 50) and list_chat_contacts() (migration 54)
+// are the source of truth — no mirror needed.
 
 /**
  * List every chat thread visible to the caller, sorted with the
@@ -274,51 +261,18 @@ export async function markThreadRead(threadId: string): Promise<void> {
  *   client   -> employees   (NEVER owner, NEVER other clients)
  */
 export async function getAvailableChatContacts(): Promise<ChatContact[]> {
-  const session = await getSession();
+  await getSession(); // ensures auth + sets pg context (current_user_id/current_stable_id)
   const supabase = createSupabaseServerClient();
 
-  // RLS: clients only see their OWN profile row. Staff see all in stable.
-  // For a client picker, staff visibility is required — which is the
-  // case for owner and employee. For clients, we restrict the candidate
-  // role set to 'employee' and rely on the staff_read policy not
-  // applying (clients won't see employees via that policy)...
-  //
-  // Wait: profiles_read_staff is owner/employee only. Clients can read
-  // ONLY themselves via profiles_read_self. So a client calling
-  // .from("profiles")... will get back only their own row.
-  //
-  // To let clients pick an employee/trainer to message, we use
-  // a side-channel: profiles_read_via_own_lesson (07_calendar_policies)
-  // exposes profiles of trainers a client has lessons with. That's the
-  // sensible candidate set for a client. For employees and owner, we
-  // can read all profiles in their stable.
-
-  if (session.role === "client") {
-    // The trainers a client has lessons with — already exposed by
-    // profiles_read_via_own_lesson — are the only profiles a client
-    // can see (besides themselves). Filter to role='employee' here.
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, role")
-      .eq("role", "employee");
-    if (error) throw error;
-    return ((data ?? []) as Array<{ id: string; full_name: string | null; role: Role }>)
-      .filter((p) => p.id !== session.userId && canDm(session.role, p.role))
-      .map((p) => ({ profile_id: p.id, full_name: p.full_name, role: p.role }));
-  }
-
-  // Staff (owner/employee): see all profiles in stable. RLS scopes
-  // by stable; we filter by allowed pair role.
-  const allowedTargetRoles: Role[] =
-    session.role === "owner" ? ["employee"] : ["owner", "client"];
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, role")
-    .in("role", allowedTargetRoles);
+  // BUG #Z fix — migration 50 made chat any-to-any within a stable.
+  // The old role-pair filter (owner→employee only, etc.) was incorrect
+  // and clients couldn't see other profiles at all because of
+  // profiles_read_self RLS. Migration 54 introduces list_chat_contacts(),
+  // a SECURITY DEFINER RPC that returns every other stable member
+  // matching chat_can_dm() semantics. One DB call, no role-pair guesswork.
+  const { data, error } = await supabase.rpc("list_chat_contacts");
   if (error) throw error;
 
-  return ((data ?? []) as Array<{ id: string; full_name: string | null; role: Role }>)
-    .filter((p) => p.id !== session.userId && canDm(session.role, p.role))
-    .map((p) => ({ profile_id: p.id, full_name: p.full_name, role: p.role }));
+  return ((data ?? []) as Array<{ profile_id: string; full_name: string | null; role: Role }>)
+    .map((p) => ({ profile_id: p.profile_id, full_name: p.full_name, role: p.role }));
 }
