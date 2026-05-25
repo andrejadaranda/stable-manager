@@ -6,13 +6,12 @@
 
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
+// IMPORTANT: A "use server" file can ONLY export async functions in
+// Next 14. The initial-state literal lives inline in form.tsx.
 export type GuestSubmitState = {
   error:    string | null;
   success:  boolean;
 };
-
-const initial: GuestSubmitState = { error: null, success: false };
-export { initial as initialGuestSubmitState };
 
 const ERROR_COPY: Record<string, string> = {
   INVALID_TOKEN:    "This link looks invalid.",

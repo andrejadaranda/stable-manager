@@ -7,14 +7,15 @@ import {
   type GuestContributorKind,
 } from "@/services/guestContributors";
 
+// IMPORTANT: A "use server" file can ONLY export async functions in
+// Next 14. Types are erased at compile time so they're fine to re-export,
+// but plain runtime constants are NOT. The initial-state literal lives
+// in the consuming client component (GuestContributorsPanel.tsx) inline.
 export type CreateGuestTokenState = {
   error:    string | null;
   token:    string | null;
   shareUrl: string | null;
 };
-
-const initial: CreateGuestTokenState = { error: null, token: null, shareUrl: null };
-export { initial as initialCreateGuestTokenState };
 
 const ERROR_COPY: Record<string, string> = {
   INVALID_CONTRIBUTOR_NAME:    "Add the contributor's name.",

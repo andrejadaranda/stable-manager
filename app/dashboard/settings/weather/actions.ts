@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { updateWeatherAlertConfig } from "@/services/weatherAlerts";
 
+// IMPORTANT: A "use server" file can ONLY export async functions in
+// Next 14. The initial-state literal lives inline in the consuming
+// client component (weather-alerts-editor.tsx) instead.
 export type UpdateWeatherState = { error: string | null; success: boolean };
 
 const ERROR_COPY: Record<string, string> = {
@@ -14,9 +17,6 @@ const ERROR_COPY: Record<string, string> = {
   FORBIDDEN:                "Only the stable owner can change weather alerts.",
   UNAUTHENTICATED:          "Your session expired. Sign in again.",
 };
-
-const initial: UpdateWeatherState = { error: null, success: false };
-export { initial as initialUpdateWeatherState };
 
 export async function updateWeatherAlertsAction(
   _prev: UpdateWeatherState,

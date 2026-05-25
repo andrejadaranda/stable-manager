@@ -3,9 +3,11 @@
 import { useFormState, useFormStatus } from "react-dom";
 import {
   submitGuestHealthEventAction,
-  initialGuestSubmitState,
   type GuestSubmitState,
 } from "./actions";
+
+// "use server" files cannot export runtime consts in Next 14.
+const initialGuestSubmitState: GuestSubmitState = { error: null, success: false };
 
 export function GuestLogForm({ token, kindLabel }: { token: string; kindLabel: string }) {
   // useFormState supports curried actions when the curry is server-side.

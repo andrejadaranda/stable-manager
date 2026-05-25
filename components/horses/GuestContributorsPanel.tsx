@@ -9,10 +9,15 @@ import { useFormState, useFormStatus } from "react-dom";
 import { useState, useTransition } from "react";
 import {
   createGuestTokenAction,
-  initialCreateGuestTokenState,
   revokeGuestTokenAction,
   type CreateGuestTokenState,
 } from "@/app/dashboard/horses/[id]/guest-actions";
+
+// "use server" files can only export async functions, so the initial-
+// state literal lives here instead of being imported. Single source.
+const initialCreateGuestTokenState: CreateGuestTokenState = {
+  error: null, token: null, shareUrl: null,
+};
 import {
   KIND_LABEL,
   type GuestContributorKind,

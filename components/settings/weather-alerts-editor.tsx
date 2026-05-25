@@ -7,7 +7,6 @@
 import { useFormState, useFormStatus } from "react-dom";
 import {
   updateWeatherAlertsAction,
-  initialUpdateWeatherState,
   type UpdateWeatherState,
 } from "@/app/dashboard/settings/weather/actions";
 import {
@@ -15,6 +14,9 @@ import {
   DEFAULT_HEAT_C,
   type WeatherAlertConfig,
 } from "@/services/weatherAlerts.pure";
+
+// "use server" files cannot export runtime consts. Inline the initial.
+const initialUpdateWeatherState: UpdateWeatherState = { error: null, success: false };
 
 export function WeatherAlertsEditor({
   initialConfig,
