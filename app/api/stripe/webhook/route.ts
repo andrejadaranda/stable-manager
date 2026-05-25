@@ -112,13 +112,23 @@ export async function POST(req: NextRequest) {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
-        await syncSubscription(supabase, sub);
+        // Rider Pro subscriptions live on clients table, not subscriptions/
+        // stables. Branch by metadata.kind tag we set at Checkout creation.
+        if (sub.metadata?.kind === "rider_pro") {
+          await syncRiderProSubscription(supabase, sub);
+        } else {
+          await syncSubscription(supabase, sub);
+        }
         break;
       }
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        await syncSubscription(supabase, sub, "cancelled");
+        if (sub.metadata?.kind === "rider_pro") {
+          await syncRiderProSubscription(supabase, sub, "canceled");
+        } else {
+          await syncSubscription(supabase, sub, "cancelled");
+        }
         break;
       }
 
@@ -303,6 +313,58 @@ async function syncSubscription(
       trial_ends_at: status === "trialing" ? periodEndIso : null,
     })
     .eq("id", stable.id);
+}
+
+// =============================================================
+// RIDER PRO — client-level €2/mo add-on. Lives on clients.* columns.
+// =============================================================
+
+async function syncRiderProSubscription(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  sub: Stripe.Subscription,
+  forcedStatus?: "canceled",
+) {
+  const clientId = sub.metadata?.client_id;
+  if (!clientId) {
+    console.error("[stripe-webhook] rider_pro sub missing client_id metadata", sub.id);
+    return;
+  }
+
+  const firstItem = sub.items.data[0];
+  const periodEndIso = firstItem?.current_period_end
+    ? new Date(firstItem.current_period_end * 1000).toISOString()
+    : null;
+  const trialEndIso = sub.trial_end
+    ? new Date(sub.trial_end * 1000).toISOString()
+    : null;
+
+  const status = forcedStatus ?? mapRiderProStatus(sub.status);
+
+  await supabase
+    .from("clients")
+    .update({
+      rider_pro_stripe_subscription_id: sub.id,
+      rider_pro_status:                 status,
+      rider_pro_trial_end:              trialEndIso,
+      rider_pro_period_end:             periodEndIso,
+      rider_pro_cancel_at_period_end:   Boolean(sub.cancel_at_period_end),
+    })
+    .eq("id", clientId);
+}
+
+function mapRiderProStatus(s: Stripe.Subscription.Status):
+  "trialing" | "active" | "past_due" | "canceled" | "incomplete" {
+  switch (s) {
+    case "trialing":           return "trialing";
+    case "active":             return "active";
+    case "past_due":           return "past_due";
+    case "canceled":           return "canceled";
+    case "unpaid":             return "past_due";
+    case "paused":             return "canceled";
+    case "incomplete":
+    case "incomplete_expired": return "incomplete";
+    default:                   return "incomplete";
+  }
 }
 
 function mapStripeStatus(s: Stripe.Subscription.Status):

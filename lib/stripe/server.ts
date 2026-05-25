@@ -22,7 +22,8 @@ export type Plan =
   | "premium"
   | "founding"          // €25/mo Founding 15 stable owner lifetime
   | "personal_mini"     // €9/mo, up to 2 horses (B2C)
-  | "personal_plus";    // €15/mo, up to 5 horses (B2C)
+  | "personal_plus"     // €15/mo, up to 5 horses (B2C)
+  | "rider_pro";        // €2/mo add-on for stable clients (live tracker)
 
 // Map plan → Stripe price id. Configure these in your Stripe dashboard
 // (Products → add product per tier) and copy the price ids into env.
@@ -33,6 +34,7 @@ export const PRICE_IDS: Record<Plan, string> = {
   founding:       process.env.STRIPE_PRICE_FOUNDING       ?? "",
   personal_mini:  process.env.STRIPE_PRICE_PERSONAL_MINI  ?? "",
   personal_plus:  process.env.STRIPE_PRICE_PERSONAL_PLUS  ?? "",
+  rider_pro:      process.env.STRIPE_RIDER_PRO_PRICE_ID   ?? "",
 };
 
 export function priceIdToPlan(priceId: string | null | undefined): "trial" | Plan {

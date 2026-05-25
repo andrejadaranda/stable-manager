@@ -60,14 +60,18 @@ export type FinalizeResult = {
 
 // ---------------- 1. START ----------------
 
-/** Open a new live session and return its id. */
+/** Open a new live session and return its id.
+ *
+ *  Entitlement enforcement (Rider Pro) happens at the page level via
+ *  hasRiderPro(). This service just validates basic auth + creates
+ *  the row with the right rider attribution per role. */
 export async function startLiveSession(input: {
   horseId?: string | null;
   type: SessionType;
   lessonId?: string | null;
 }): Promise<{ id: string }> {
   const ctx = await getSession();
-  requireRole(ctx, "owner", "employee");
+  requireRole(ctx, "owner", "employee", "client");
 
   // Refuse if this user already has a live session — they should resume
   // it or explicitly abandon before starting another.
@@ -79,15 +83,23 @@ export async function startLiveSession(input: {
   const supabase = createSupabaseServerClient();
   const horseId = input.horseId && input.horseId.trim() ? input.horseId.trim() : null;
 
+  // Rider attribution:
+  //   owner/employee: rider_profile_id = themselves (training ride)
+  //   client: rider_client_id = their client row (the linked rider)
+  // trainer_id is required NOT NULL on sessions. For client-initiated
+  // rides we attribute it to the same client's profile id since the
+  // session is the rider's own activity, not a trainer-led lesson.
+  const isClient = ctx.role === "client";
+  const riderClientId  = isClient ? ctx.clientId : null;
+  const riderProfileId = isClient ? null         : ctx.userId;
+
   const { data, error } = await supabase
     .from("sessions")
     .insert({
       stable_id:           ctx.stableId,
       horse_id:            horseId,
-      // For owner/personal the user IS the rider; for employees doing their
-      // own training ride likewise. We leave rider_client_id null — UI can
-      // attribute to a client later if it was a lesson.
-      rider_profile_id:    ctx.userId,
+      rider_client_id:     riderClientId,
+      rider_profile_id:    riderProfileId,
       trainer_id:          ctx.userId,
       lesson_id:           input.lessonId ?? null,
       started_at:          new Date().toISOString(),
@@ -113,7 +125,7 @@ export async function appendTrackPoints(
 ): Promise<{ inserted: number }> {
   if (points.length === 0) return { inserted: 0 };
   const ctx = await getSession();
-  requireRole(ctx, "owner", "employee");
+  requireRole(ctx, "owner", "employee", "client");
 
   const supabase = createSupabaseServerClient();
 
@@ -175,7 +187,7 @@ export async function finalizeLiveSession(
   patch?: { notes?: string | null; rating?: number | null; horseId?: string | null },
 ): Promise<FinalizeResult> {
   const ctx = await getSession();
-  requireRole(ctx, "owner", "employee");
+  requireRole(ctx, "owner", "employee", "client");
 
   const supabase = createSupabaseServerClient();
 
@@ -254,7 +266,7 @@ export async function finalizeLiveSession(
 
 export async function abandonLiveSession(sessionId: string): Promise<void> {
   const ctx = await getSession();
-  requireRole(ctx, "owner", "employee");
+  requireRole(ctx, "owner", "employee", "client");
 
   const supabase = createSupabaseServerClient();
   const { error } = await supabase
@@ -272,7 +284,7 @@ export async function abandonLiveSession(sessionId: string): Promise<void> {
  *  page load to offer a "Resume tracking" UI). */
 export async function getActiveLiveSession(): Promise<LiveSessionSummary | null> {
   const ctx = await getSession();
-  if (!["owner", "employee"].includes(ctx.role)) return null;
+  if (!["owner", "employee", "client"].includes(ctx.role)) return null;
 
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
