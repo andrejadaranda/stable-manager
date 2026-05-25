@@ -22,12 +22,14 @@ import {
 import { listSessions } from "@/services/sessions";
 import { listClients } from "@/services/clients";
 import { getHealthSummary, listHealthRecords } from "@/services/horseHealth";
+import { listHorsePhotos } from "@/services/horsePhotos";
 import { HorseProfileHero } from "@/components/horses/HorseProfileHero";
 import { HorseProfileTabs } from "@/components/horses/HorseProfileTabs";
 import { OverviewTab } from "@/components/horses/OverviewTab";
 import { SessionsTab } from "@/components/horses/SessionsTab";
 import { HealthTab } from "@/components/horses/HealthTab";
 import { BoardingTab } from "@/components/horses/BoardingTab";
+import { PhotoGallery } from "@/components/horses/PhotoGallery";
 import { ScheduleRail } from "@/components/horses/ScheduleRail";
 import { ComingSoonTab } from "@/components/horses/ComingSoonTab";
 import { listChargesForHorse } from "@/services/boarding";
@@ -39,7 +41,7 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = { tab?: string };
 
-const VALID_TABS = ["overview", "sessions", "boarding", "health", "goals", "media"] as const;
+const VALID_TABS = ["overview", "photos", "sessions", "boarding", "health", "goals", "media"] as const;
 type Tab = (typeof VALID_TABS)[number];
 
 // RFC-4122 UUID regex. We validate before touching the DB so a stray URL like
@@ -119,6 +121,15 @@ export default async function HorseDetailPage({
         isOwner={session.role === "owner"}
         accountType={session.accountType === "personal" ? "personal" : "business"}
         selfDisplayName={ownProfile?.full_name ?? undefined}
+      />
+    );
+  } else if (tab === "photos") {
+    const photos = await listHorsePhotos(params.id).catch(() => []);
+    tabContent = (
+      <PhotoGallery
+        horseId={params.id}
+        initialPhotos={photos}
+        canEdit={session.role === "owner" || session.role === "employee"}
       />
     );
   } else if (tab === "health") {

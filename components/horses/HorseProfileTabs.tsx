@@ -10,6 +10,7 @@ type Tab = { key: string; label: string };
 // broken even when the page renders a polite placeholder.
 const TABS: Tab[] = [
   { key: "overview", label: "Overview" },
+  { key: "photos",   label: "Photos" },
   { key: "sessions", label: "Sessions" },
   { key: "boarding", label: "Boarding" },
   { key: "health",   label: "Health" },
