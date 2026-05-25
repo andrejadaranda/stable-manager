@@ -14,18 +14,13 @@ import {
   createSessionAction,
   type CreateSessionState,
 } from "@/app/dashboard/sessions/actions";
-import { SESSION_TYPES, type SessionType } from "@/services/sessions.types";
+import { SESSION_TYPES, SESSION_TYPE_LABEL, type SessionType } from "@/services/sessions.types";
 
 const initialState: CreateSessionState = { error: null, success: false };
 
-const TYPE_LABEL: Record<SessionType, string> = {
-  flat: "Flat",
-  jumping: "Jumping",
-  lunging: "Lunging",
-  groundwork: "Groundwork",
-  hack: "Hack",
-  other: "Other",
-};
+// Re-export from the shared map so new disciplines (dressage, cross_country,
+// western, vaulting, rehab) don't have to be hand-maintained here too.
+const TYPE_LABEL: Record<SessionType, string> = SESSION_TYPE_LABEL;
 
 type ClientOpt = { id: string; full_name: string };
 

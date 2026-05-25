@@ -8,24 +8,22 @@ import type {
   TypeBreakdownSlice,
 } from "@/services/horseProfile";
 import type { SessionWithLabels, SessionType } from "@/services/sessions";
+import { SESSION_TYPE_LABEL } from "@/services/sessions.types";
 
-const SESSION_TYPE_LABEL: Record<SessionType, string> = {
-  flat: "Flat",
-  jumping: "Jumping",
-  lunging: "Lunging",
-  groundwork: "Groundwork",
-  hack: "Hack",
-  other: "Other",
-};
-
-// Earth-tone palette aligned with the design spec.
+// Earth-tone palette aligned with the design spec. New disciplines get
+// shades nearby their parent kind (dressage = darker flat, etc).
 const TYPE_COLORS: Record<SessionType, string> = {
-  flat:       "#B25430",
-  jumping:    "#D88E6A",
-  hack:       "#C2841A",
-  groundwork: "#5A7A3A",
-  lunging:    "#7A6E5A",
-  other:      "#B0A89E",
+  flat:          "#B25430",
+  dressage:      "#8E3B1F",
+  jumping:       "#D88E6A",
+  cross_country: "#9C6B2B",
+  hack:          "#C2841A",
+  western:       "#A0651C",
+  groundwork:    "#5A7A3A",
+  lunging:       "#7A6E5A",
+  vaulting:      "#705F8C",
+  rehab:         "#4A7A8A",
+  other:         "#B0A89E",
 };
 
 const HEATMAP_COLORS = ["#F1EFE8", "#F0C9B5", "#D88E6A", "#B25430"];

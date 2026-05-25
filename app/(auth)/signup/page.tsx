@@ -39,7 +39,7 @@ export default function SignupLandingPage() {
         <Card
           href="/signup/personal"
           title="Personal account"
-          body="For private horse owners without a stable. Log your own sessions, vet visits, expenses, and goals. €9/mo for up to 2 horses · €15/mo for up to 5."
+          body="For private horse owners without a stable. Log your own sessions, vet visits, expenses, and goals. €9/mo up to 2 horses · €15/mo up to 5. 7-day free trial."
           cta="Create personal account →"
           tone="secondary"
         />

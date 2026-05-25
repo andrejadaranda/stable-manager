@@ -120,22 +120,26 @@ export async function POST(req: Request) {
       .eq("id", stable.id);
   }
 
-  // No 14-day trial for personal — they get immediate access for ~€9/€15.
-  // Same hosted Checkout flow as business; only differences are the price
-  // and the success/cancel URLs (personal owners don't have a generic
-  // /settings/billing page in MVP, send them back to the dashboard).
+  // 7-day free trial for Personal (Stable plan gets 14-day). Card required
+  // at signup — trial converts into the €9 / €15 charge automatically unless
+  // cancelled in the Stripe Customer Portal before day 7. The trial-farming
+  // guards (SEC-13/14/15: disposable email block + IP rate limit + card-on-file)
+  // already cover Personal because signup goes through anti-abuse.ts.
+  // Subscription state is synced both via the Stripe webhook AND on the
+  // success_url redirect (lib/stripe/sync.ts) so the user is never stuck.
   const checkoutSession = await stripeServerClient.checkout.sessions.create({
     mode:                "subscription",
     customer:            customerId,
     line_items:          [{ price: priceId, quantity: 1 }],
     subscription_data: {
+      trial_period_days: 7,
       metadata:    { stable_id: stable.id, account_type: "personal", plan_tier: tier },
       description: `Longrein Personal ${tier === "mini" ? "Mini" : "Plus"} — ${stable.name}`,
     },
     custom_text: {
-      submit:              { message: "You'll be charged immediately and can cancel anytime." },
+      submit:              { message: "You'll only be charged after the 7-day free trial. Cancel any time before then." },
       terms_of_service_acceptance: {
-        message: "By subscribing you agree to the Longrein [Terms](https://longrein.eu/legal/terms) and [Privacy Policy](https://longrein.eu/legal/privacy).",
+        message: "By starting your subscription you agree to the Longrein [Terms](https://longrein.eu/legal/terms) and [Privacy Policy](https://longrein.eu/legal/privacy).",
       },
     },
     consent_collection:         { terms_of_service: "required" },

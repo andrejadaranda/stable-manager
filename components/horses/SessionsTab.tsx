@@ -3,27 +3,26 @@
 // (handled per-row in SessionRow).
 
 import type { SessionWithLabels, SessionType } from "@/services/sessions";
+import { SESSION_TYPE_LABEL } from "@/services/sessions.types";
 import { AddSessionFAB } from "./AddSessionSheet";
 import { SessionNoteEditor } from "./SessionNoteEditor";
 
 type ClientOpt = { id: string; full_name: string };
 
-const TYPE_LABEL: Record<SessionType, string> = {
-  flat: "Flat",
-  jumping: "Jumping",
-  lunging: "Lunging",
-  groundwork: "Groundwork",
-  hack: "Hack",
-  other: "Other",
-};
+const TYPE_LABEL: Record<SessionType, string> = SESSION_TYPE_LABEL;
 
 const TYPE_TONE: Record<SessionType, { bg: string; fg: string }> = {
-  flat:       { bg: "#FAECE7", fg: "#993C1D" },
-  jumping:    { bg: "#FAEEDA", fg: "#854F0B" },
-  hack:       { bg: "#EAF3DE", fg: "#3B6D11" },
-  groundwork: { bg: "#E1F5EE", fg: "#0F6E56" },
-  lunging:    { bg: "#F1EFE8", fg: "#444441" },
-  other:      { bg: "#F1EFE8", fg: "#5F5E5A" },
+  flat:          { bg: "#FAECE7", fg: "#993C1D" },
+  dressage:      { bg: "#F2E2DA", fg: "#7A2E15" },
+  jumping:       { bg: "#FAEEDA", fg: "#854F0B" },
+  cross_country: { bg: "#F5E6D0", fg: "#6E4811" },
+  hack:          { bg: "#EAF3DE", fg: "#3B6D11" },
+  western:       { bg: "#F0E4CC", fg: "#7B5410" },
+  groundwork:    { bg: "#E1F5EE", fg: "#0F6E56" },
+  lunging:       { bg: "#F1EFE8", fg: "#444441" },
+  vaulting:      { bg: "#EEE6F4", fg: "#5A3F7A" },
+  rehab:         { bg: "#E0EEF2", fg: "#26515E" },
+  other:         { bg: "#F1EFE8", fg: "#5F5E5A" },
 };
 
 function dayKey(iso: string): string {
