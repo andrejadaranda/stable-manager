@@ -40,9 +40,10 @@ export async function GET(
   const { data, error } = await supabase
     .from("sessions")
     .select(`
-      id, type, started_at, distance_m, elapsed_seconds,
+      id, type, started_at, distance_m, elapsed_seconds, stable_id,
       avg_speed_kmh, max_speed_kmh, encoded_polyline, gait_breakdown,
-      horse:horses(name)
+      horse:horses(name),
+      stable:stables(name, brand_color, logo_url)
     `)
     .eq("id", params.id)
     .maybeSingle();
@@ -62,7 +63,14 @@ export async function GET(
     encoded_polyline: string | null;
     gait_breakdown: GaitBreakdown | null;
     horse: { name: string } | null;
+    stable: { name: string; brand_color: string | null; logo_url: string | null } | null;
   };
+
+  // Brand kit — defaults to Longrein paddock-green + wordmark if stable
+  // hasn't set their own.
+  const brandColor = s.stable?.brand_color ?? "#1E3A2A";
+  const stableName = s.stable?.name        ?? "Longrein";
+  const logoUrl    = s.stable?.logo_url    ?? null;
 
   // Render the route as an SVG path normalised to the card's map area.
   const mapW = format === "post" ? 920 : 920;
@@ -96,15 +104,18 @@ export async function GET(
           background: "#F4ECDF",
           padding: "80px 80px 64px 80px",
           fontFamily: "serif",
-          color: "#1E3A2A",
+          color: brandColor,
           position: "relative",
         }}
       >
-        {/* Top brand row */}
+        {/* Top brand row — uses stable's logo + name if set, falls back to Longrein wordmark */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 0 }}>
-            <span style={{ fontSize: 42, fontWeight: 600, letterSpacing: "-0.02em" }}>Longrein</span>
-            <span style={{ fontSize: 42, color: "#B5793E" }}>.</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} width={56} height={56} alt="" style={{ borderRadius: 12, objectFit: "cover" }} />
+            )}
+            <span style={{ fontSize: 38, fontWeight: 600, letterSpacing: "-0.02em" }}>{stableName}</span>
           </div>
           <span style={{ fontSize: 18, color: "#6E6760", letterSpacing: "0.16em", textTransform: "uppercase", fontFamily: "sans-serif", fontWeight: 600 }}>
             Live ride
@@ -164,9 +175,9 @@ export async function GET(
           </div>
         )}
 
-        {/* Footer URL */}
-        <div style={{ display: "flex", marginTop: "auto", color: "#6E6760", fontSize: 22, fontFamily: "sans-serif" }}>
-          longrein.eu · Premium stable management
+        {/* Footer — Longrein attribution stays subtle but always there */}
+        <div style={{ display: "flex", marginTop: "auto", color: "#6E6760", fontSize: 20, fontFamily: "sans-serif" }}>
+          Tracked with Longrein · longrein.eu
         </div>
       </div>
     ),
