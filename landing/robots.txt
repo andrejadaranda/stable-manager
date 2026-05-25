@@ -1,0 +1,22 @@
+# https://longrein.eu — robots.txt
+# Allow all crawlers — we WANT to be indexed.
+# Disallowing only the things that should never be indexed.
+
+User-agent: *
+Allow: /
+
+# Don't index session-y or callback URLs even if linked publicly.
+Disallow: /auth/
+Disallow: /api/
+
+# AI training crawlers — uncomment to opt out (we ARE opting IN for now;
+# Longrein wants to surface in ChatGPT / Perplexity / etc. answers).
+# User-agent: GPTBot
+# Disallow: /
+# User-agent: ClaudeBot
+# Disallow: /
+# User-agent: PerplexityBot
+# Disallow: /
+
+# Sitemap — tells Google + Bing + Yandex + DuckDuckGo where the URL list is.
+Sitemap: https://longrein.eu/sitemap.xml

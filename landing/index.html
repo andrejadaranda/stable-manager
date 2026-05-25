@@ -3,8 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Longrein — Premium stable management for European riding clubs</title>
-<meta name="description" content="Schedule, payments, horse welfare, and client management — one premium platform built for European riding schools and livery yards. EU-hosted. 14-day free trial.">
+<title>Longrein — Stable management software for European riding schools, livery yards &amp; equestrian businesses</title>
+<meta name="description" content="Longrein is the premium stable management software for European riding schools, livery yards, and equestrian businesses. Schedule lessons, track payments, monitor horse welfare, and manage clients — one platform. EU-hosted, GDPR-ready, mobile-first. 14-day free trial.">
+<meta name="keywords" content="stable management software, equestrian software, horse welfare app, riding school software, livery yard management, equestrian SaaS, horse stable app, lesson scheduling software, žirgyno valdymas, jojimo klubo programa, žirgų sveikatos sekimas, stallmanagement, reitstall verwaltung, application gestion écurie">
+<meta name="author" content="Longrein">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+<meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta name="bingbot" content="index, follow">
+
+<!-- Canonical + hreflang (single-language for now; expand when /lt/ ships) -->
+<link rel="canonical" href="https://longrein.eu/">
+<link rel="alternate" hreflang="en" href="https://longrein.eu/">
+<link rel="alternate" hreflang="x-default" href="https://longrein.eu/">
 
 <!-- Favicons -->
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -36,7 +46,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<!-- Schema.org JSON-LD -->
+<!-- Schema.org JSON-LD — rich snippets for Google / Bing / AI search -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -45,37 +55,163 @@
       "@type": "Organization",
       "@id": "https://longrein.eu/#organization",
       "name": "Longrein",
+      "legalName": "Longrein",
       "url": "https://longrein.eu",
+      "logo": "https://longrein.eu/apple-touch-icon.png",
       "email": "hello@longrein.eu",
-      "address": { "@type": "PostalAddress", "addressCountry": "LT", "addressLocality": "Vilnius" },
-      "areaServed": ["LT","PL","DE","EE","LV","FI","SE"],
+      "foundingDate": "2026",
+      "founders": [
+        { "@type": "Person", "name": "Andreja Daranda" }
+      ],
+      "address": {
+        "@type": "PostalAddress",
+        "addressCountry": "LT",
+        "addressLocality": "Vilnius",
+        "addressRegion": "Vilnius County"
+      },
+      "areaServed": [
+        { "@type": "Country", "name": "Lithuania" },
+        { "@type": "Country", "name": "Latvia" },
+        { "@type": "Country", "name": "Estonia" },
+        { "@type": "Country", "name": "Poland" },
+        { "@type": "Country", "name": "Germany" },
+        { "@type": "Country", "name": "Finland" },
+        { "@type": "Country", "name": "Sweden" }
+      ],
       "sameAs": [
         "https://www.instagram.com/longreinapp/",
         "https://www.facebook.com/longreinapp"
-      ]
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "hello@longrein.eu",
+        "contactType": "customer support",
+        "availableLanguage": ["English", "Lithuanian"]
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://longrein.eu/#website",
+      "url": "https://longrein.eu",
+      "name": "Longrein",
+      "description": "Premium stable management software for European riding clubs",
+      "publisher": { "@id": "https://longrein.eu/#organization" },
+      "inLanguage": "en"
     },
     {
       "@type": "SoftwareApplication",
+      "@id": "https://longrein.eu/#software",
       "name": "Longrein",
+      "alternateName": "Longrein Stable Management",
       "url": "https://app.longrein.eu",
       "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "Stable Management Software",
       "operatingSystem": "Web, iOS, Android",
-      "description": "Premium stable management software for European riding schools and livery yards. Schedule, payments, welfare, and client management on one screen.",
-      "offers": [
-        { "@type": "Offer", "price": "49", "priceCurrency": "EUR", "name": "Stable plan (monthly)", "url": "https://app.longrein.eu/signup/owner" },
-        { "@type": "Offer", "price": "9",  "priceCurrency": "EUR", "name": "Personal plan (2 horses)", "url": "https://app.longrein.eu/signup/personal" },
-        { "@type": "Offer", "price": "15", "priceCurrency": "EUR", "name": "Personal plan (5 horses)", "url": "https://app.longrein.eu/signup/personal" }
+      "description": "Premium stable management software for European riding schools, livery yards, and equestrian businesses. Lesson scheduling, payments, horse welfare tracking, and client management on one screen. EU-hosted, GDPR-compliant.",
+      "featureList": [
+        "Lesson and session scheduling",
+        "Horse welfare monitoring and workload tracking",
+        "Client and trainer management",
+        "Payment processing via Stripe",
+        "Monthly boarding and invoicing",
+        "Health record tracking (vaccinations, vet, farrier)",
+        "Multi-role access (owner, trainer, client, horse owner)",
+        "Mobile-first responsive design",
+        "Real-time team chat",
+        "CSV import and export",
+        "Two-factor authentication",
+        "Audit logs"
       ],
-      "publisher": { "@id": "https://longrein.eu/#organization" }
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Stable plan",
+          "description": "For riding schools, livery yards, and equestrian businesses. 14-day free trial.",
+          "price": "49",
+          "priceCurrency": "EUR",
+          "priceValidUntil": "2027-12-31",
+          "url": "https://app.longrein.eu/signup/owner",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "@type": "Offer",
+          "name": "Personal Mini plan",
+          "description": "For solo horse owners with up to 2 horses. 7-day free trial.",
+          "price": "9",
+          "priceCurrency": "EUR",
+          "priceValidUntil": "2027-12-31",
+          "url": "https://app.longrein.eu/signup/personal",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "@type": "Offer",
+          "name": "Personal Plus plan",
+          "description": "For solo horse owners with up to 5 horses. 7-day free trial.",
+          "price": "15",
+          "priceCurrency": "EUR",
+          "priceValidUntil": "2027-12-31",
+          "url": "https://app.longrein.eu/signup/personal",
+          "availability": "https://schema.org/InStock"
+        },
+        {
+          "@type": "Offer",
+          "name": "Founding 15 plan",
+          "description": "First 15 stables onboard at €25/mo for life. 12 months free, then €25/mo locked forever. Limited to 15 stables.",
+          "price": "25",
+          "priceCurrency": "EUR",
+          "priceValidUntil": "2027-12-31",
+          "url": "mailto:hello@longrein.eu?subject=Founding%2015%20application",
+          "availability": "https://schema.org/LimitedAvailability"
+        }
+      ],
+      "publisher": { "@id": "https://longrein.eu/#organization" },
+      "inLanguage": "en",
+      "isAccessibleForFree": false,
+      "softwareHelp": "https://longrein.eu/#faq"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://longrein.eu/#service-stable",
+      "serviceType": "Stable Management Software",
+      "provider": { "@id": "https://longrein.eu/#organization" },
+      "name": "Longrein Stable Management",
+      "description": "All-in-one software for European riding schools and livery yards: lesson scheduling, client and trainer management, payments via Stripe, horse welfare tracking, and finance reporting.",
+      "areaServed": ["Lithuania", "Latvia", "Estonia", "Poland", "Germany", "Finland", "Sweden"],
+      "audience": {
+        "@type": "BusinessAudience",
+        "audienceType": "Riding schools, livery yards, equestrian businesses with 10-60 horses"
+      }
+    },
+    {
+      "@type": "Service",
+      "@id": "https://longrein.eu/#service-personal",
+      "serviceType": "Horse Owner Personal App",
+      "provider": { "@id": "https://longrein.eu/#organization" },
+      "name": "Longrein Personal",
+      "description": "Personal horse management for solo owners: log rides and sessions, track vet visits and farrier appointments, manage expenses per horse.",
+      "areaServed": ["Lithuania", "Latvia", "Estonia", "Poland", "Germany", "Finland", "Sweden"]
     },
     {
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Who is Longrein for?", "acceptedAnswer": { "@type": "Answer", "text": "European riding schools, livery yards, and equestrian businesses with 10–60 horses. Personal accounts available for solo horse owners without a stable." } },
-        { "@type": "Question", "name": "Is my data safe?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. EU-hosted in Frankfurt, GDPR-compliant from day one. Stripe handles all card data. One click to export everything, one click to delete everything." } },
-        { "@type": "Question", "name": "Will it work on my phone?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — Longrein is mobile-first. Trainers check in lessons from the arena, clients pay invoices on their commute, owners run the calendar from anywhere." } },
-        { "@type": "Question", "name": "Can I try it before paying?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. 14-day free trial. Card required at signup (cancel any time before day 14, never charged), then €49/month. Personal accounts start at €9/month." } },
-        { "@type": "Question", "name": "What about my existing data?", "acceptedAnswer": { "@type": "Answer", "text": "Import horses, clients, and lessons from CSV in Settings → Import. Most stables are operational in under an hour." } }
+        { "@type": "Question", "name": "What is Longrein?", "acceptedAnswer": { "@type": "Answer", "text": "Longrein is premium stable management software for European riding schools, livery yards, and equestrian businesses. It combines lesson scheduling, payments, horse welfare tracking, and client management in one mobile-first platform." } },
+        { "@type": "Question", "name": "Who is Longrein for?", "acceptedAnswer": { "@type": "Answer", "text": "European riding schools, livery yards, and equestrian businesses managing roughly 10 to 60 horses. Solo horse owners can use the Personal plan for tracking their own riding and care." } },
+        { "@type": "Question", "name": "How much does Longrein cost?", "acceptedAnswer": { "@type": "Answer", "text": "The Stable plan is €49/month with a 14-day free trial. Personal Mini is €9/month for up to 2 horses, Personal Plus is €15/month for up to 5 horses, both with a 7-day free trial. The first 15 founding stables get €25/month locked for life." } },
+        { "@type": "Question", "name": "Is Longrein GDPR-compliant?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Longrein is EU-hosted in Frankfurt and GDPR-compliant from day one. Stripe handles all card data. One click to export everything as CSV, one click to delete your account." } },
+        { "@type": "Question", "name": "Does Longrein work on mobile?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Longrein is mobile-first. Trainers check in lessons from the arena, clients pay invoices on their phones, owners run the calendar from anywhere. A native iOS app launches in summer 2026." } },
+        { "@type": "Question", "name": "Can I try Longrein before paying?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The Stable plan has a 14-day free trial, Personal plans have a 7-day free trial. Card required at signup to prevent abuse, but you are never charged before the trial ends. Cancel any time in one click." } },
+        { "@type": "Question", "name": "What about my existing horse and client data?", "acceptedAnswer": { "@type": "Answer", "text": "Import horses, clients, and lessons from CSV in Settings → Import. Most stables are operational in under an hour." } },
+        { "@type": "Question", "name": "Do my clients need to pay for an account?", "acceptedAnswer": { "@type": "Answer", "text": "No. Riders, clients, and horse owners use Longrein for free. You pay one flat €49/month and invite unlimited clients and horse owners to your stable." } },
+        { "@type": "Question", "name": "Where is Longrein based?", "acceptedAnswer": { "@type": "Answer", "text": "Longrein was built in Vilnius, Lithuania and serves stables across the European Union: Lithuania, Latvia, Estonia, Poland, Germany, Finland, and Sweden." } }
+      ]
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://longrein.eu/" },
+        { "@type": "ListItem", "position": 2, "name": "Features", "item": "https://longrein.eu/#features" },
+        { "@type": "ListItem", "position": 3, "name": "Pricing", "item": "https://longrein.eu/#pricing" },
+        { "@type": "ListItem", "position": 4, "name": "Sign up", "item": "https://app.longrein.eu/signup" }
       ]
     }
   ]
@@ -491,7 +627,7 @@
       Forget the spreadsheets.
     </h1>
     <p class="lead">
-      Longrein is the premium stable management platform for European riding schools and livery yards. Schedule, payments, horse welfare, and client management — on one screen. Built mobile-first, hosted in Frankfurt, designed for how Baltic and EU clubs actually work.
+      Longrein is the premium <strong>stable management software</strong> for European riding schools, livery yards, and equestrian businesses. Lesson scheduling, payments, horse welfare tracking, and client management — on one screen. Built mobile-first, hosted in Frankfurt, designed for how Baltic and EU clubs actually work.
     </p>
     <div class="ctas">
       <a href="https://app.longrein.eu/signup" class="btn btn-primary btn-lg">Start your 14-day free trial</a>
@@ -587,8 +723,8 @@
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">What's inside</span>
-      <h2 class="h-section">Everything a modern riding club needs. Nothing it doesn't.</h2>
-      <p class="lead">Six pillars that replace your spreadsheets, WhatsApp groups, paper diaries, and that one stuck-together notebook.</p>
+      <h2 class="h-section">Everything stable management software should do. Nothing it shouldn't.</h2>
+      <p class="lead">Six pillars built for riding schools and livery yards — replacing spreadsheets, WhatsApp groups, paper diaries, and that one stuck-together notebook.</p>
     </div>
     <div class="grid">
 
