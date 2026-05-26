@@ -108,11 +108,18 @@ export function SessionList({
             )}
           </div>
 
-          {canDelete && (
-            <div className="md:ml-2 shrink-0">
-              <DeleteSessionButton sessionId={s.id} />
-            </div>
-          )}
+          <div className="md:ml-2 shrink-0 flex items-center gap-2">
+            {/* BUG #EE fix — explicit View link so users can reach detail
+                page (map, GPX, beacon). A whole-row Link would conflict
+                with the nested horse-profile Link above. */}
+            <Link
+              href={`/dashboard/sessions/${s.id}`}
+              className="text-xs font-medium text-brand-700 hover:text-brand-800 underline-offset-2 hover:underline"
+            >
+              View →
+            </Link>
+            {canDelete && <DeleteSessionButton sessionId={s.id} />}
+          </div>
         </li>
       ))}
     </ul>

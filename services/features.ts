@@ -64,7 +64,7 @@ export const FEATURE_META: Record<
     group: "Schedule",
   },
   packages: {
-    label: "Lesson packages (abonements)",
+    label: "Lesson packages",
     description:
       "Sell prepaid lesson bundles (e.g. 8 lessons / month). Off if you charge per lesson only.",
     group: "Money",

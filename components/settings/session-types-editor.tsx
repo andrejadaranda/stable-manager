@@ -39,7 +39,7 @@ export function SessionTypesEditor({ initialTypes }: { initialTypes: StableSessi
             required
             minLength={2}
             maxLength={50}
-            placeholder="e.g. Vaikų natūralus jojimas"
+            placeholder="e.g. Therapy ride · Kids beginners · Pole work"
             className="flex-1 h-11 px-3 rounded-xl border border-ink-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           />
           <div className="flex items-center gap-2">

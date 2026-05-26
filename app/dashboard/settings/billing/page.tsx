@@ -59,8 +59,12 @@ export default async function BillingSettingsPage({
   const subscription = sub as SubscriptionRow | null;
   const hasActiveStripe = Boolean(subscription?.stripe_subscription_id);
   const statusIsTrialing = subscription?.status === "trialing";
-  const isActive   = subscription?.status === "active";
-  const isPastDue  = subscription?.status === "past_due";
+  // BUG #BB fix — `isActive` (and the green "Active" badge) must require
+  // a real Stripe subscription_id. Otherwise a stale `status='active'` row
+  // (e.g. seed/migration leftover with subscription_id=null) shows the
+  // Active pill simultaneously with the "Start your 14-day trial" CTA.
+  const isActive   = subscription?.status === "active" && hasActiveStripe;
+  const isPastDue  = subscription?.status === "past_due" && hasActiveStripe;
   const isCancelled = subscription?.status === "cancelled" || subscription?.plan === "cancelled";
 
   // "Effective" trial state — only treat as a real ongoing trial if:

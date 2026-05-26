@@ -109,7 +109,10 @@ export default async function SessionDetailPage({
         <div className="flex items-center gap-2">
           {/* Live safety beacon — mint a public share link while the ride is in progress */}
           {s.status === "live" && <BeaconShareDialog sessionId={s.id} />}
-          {s.status !== "live" && s.encoded_polyline && (
+          {/* BUG #FF guard — empty-string polylines (0m stationary rides)
+              pass the truthy check but produce no map/GPX/share content.
+              A real Google-encoded polyline is ≥10 chars for one point. */}
+          {s.status !== "live" && s.encoded_polyline && s.encoded_polyline.length >= 10 && (
             <>
               {/* GPX export — power-user retention vs Equilab / Garmin / Strava */}
               <a
