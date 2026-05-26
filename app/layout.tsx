@@ -8,6 +8,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { CookieBanner } from "@/components/legal/cookie-banner";
+import { InstallAppBanner } from "@/components/legal/install-app-banner";
 
 export const metadata: Metadata = {
   title: {
@@ -62,6 +63,9 @@ export default function RootLayout({
       <body className="min-h-screen">
         {children}
         <CookieBanner />
+        {/* PWA install nudge for iOS Safari + Android Chrome visitors.
+            Auto-hidden when already running in standalone mode. */}
+        <InstallAppBanner />
         {/* Vercel Web Analytics — counts visitors and page views.
             Privacy-first (no cookies). Hobby tier: 2,500 events/mo. */}
         <Analytics />
