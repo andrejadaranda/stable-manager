@@ -7,9 +7,18 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "types:gen": "supabase gen types typescript --linked > lib/types/database.ts"
+    "types:gen": "supabase gen types typescript --linked > lib/types/database.ts",
+    "cap:sync": "npx cap sync ios",
+    "cap:open": "npx cap open ios",
+    "cap:run": "npx cap run ios"
   },
   "dependencies": {
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/geolocation": "^6.0.1",
+    "@capacitor/ios": "^6.1.2",
+    "@capacitor/push-notifications": "^6.0.2",
+    "@capacitor/share": "^6.0.2",
+    "@capacitor/status-bar": "^6.0.1",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.0",
     "@vercel/analytics": "^2.0.0",
@@ -19,6 +28,7 @@
     "stripe": "^22.1.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
     "@types/node": "20.14.0",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",

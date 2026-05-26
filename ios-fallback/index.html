@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Longrein</title>
+  <style>
+    :root { color-scheme: light; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #F4ECDF; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; color: #1E3A2A; }
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; gap: 18px; }
+    .logo { font-family: Georgia, serif; font-size: 56px; font-weight: 600; letter-spacing: -0.02em; color: #1E3A2A; line-height: 1; }
+    .logo span { color: #B5793E; }
+    .tagline { font-size: 14px; color: #6E6760; letter-spacing: 0.02em; text-align: center; }
+    .spinner {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 3px solid #1E3A2A22; border-top-color: #1E3A2A;
+      animation: spin 0.9s linear infinite;
+    }
+    .retry { font-size: 13px; color: #1E3A2A; padding: 12px 22px; background: #1E3A2A; color: #F4ECDF; border: none; border-radius: 12px; font-weight: 600; margin-top: 8px; display: none; cursor: pointer; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <p class="logo">Longrein<span>.</span></p>
+  <div class="spinner" id="spin"></div>
+  <p class="tagline" id="msg">Connecting…</p>
+  <button class="retry" id="retry" onclick="window.location.reload()">Retry</button>
+  <script>
+    // After 8s, swap spinner for retry button — covers offline cold-start.
+    setTimeout(function() {
+      var s = document.getElementById("spin");
+      if (s) s.style.display = "none";
+      var m = document.getElementById("msg");
+      if (m) m.textContent = "Couldn't reach Longrein. Check your connection.";
+      var r = document.getElementById("retry");
+      if (r) r.style.display = "inline-block";
+    }, 8000);
+  </script>
+</body>
+</html>

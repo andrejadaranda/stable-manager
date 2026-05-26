@@ -58,10 +58,17 @@ export default async function BillingSettingsPage({
 
   const subscription = sub as SubscriptionRow | null;
   const hasActiveStripe = Boolean(subscription?.stripe_subscription_id);
-  // Demo guard — direct-inserted marketing-demo subscriptions have IDs
-  // like "sub_demo_..." and don't exist in Stripe. Disable portal CTA.
+  // Demo + founder guard — direct-inserted subscriptions (marketing demo
+  // or lifetime-founder comp) have IDs like "sub_demo_..." or
+  // "sub_founder_..." and don't exist in Stripe. Hitting the portal
+  // with one of those IDs returns 404. Disable the CTA + label clearly.
   const isDemoSubscription =
-    !!subscription?.stripe_subscription_id && subscription.stripe_subscription_id.startsWith("sub_demo_");
+    !!subscription?.stripe_subscription_id &&
+    (subscription.stripe_subscription_id.startsWith("sub_demo_") ||
+     subscription.stripe_subscription_id.startsWith("sub_founder_"));
+  const isFounderSubscription =
+    !!subscription?.stripe_subscription_id &&
+    subscription.stripe_subscription_id.startsWith("sub_founder_");
   const statusIsTrialing = subscription?.status === "trialing";
   // BUG #BB fix — `isActive` (and the green "Active" badge) must require
   // a real Stripe subscription_id. Otherwise a stale `status='active'` row

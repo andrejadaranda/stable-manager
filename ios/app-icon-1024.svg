@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Longrein App Icon — master 1024×1024.
+  Premium serif "L" in paddock green + saddle-tan dot.
+  Cream-cushion background reads warm even at 60×60 favicon size.
+  No transparent areas (Apple rejects icons with alpha channels).
+  Single-letter mark stays legible from Home Screen all the way down
+  to Safari tab favicon.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Background: warm cream gradient — matches /s/avalon hero -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"  stop-color="#FBF2E1"/>
+      <stop offset="100%" stop-color="#F4ECDF"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"  stop-color="#1E3A2A"/>
+      <stop offset="100%" stop-color="#16291E"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- Faint dotted pattern (very subtle) -->
+  <g opacity="0.04" fill="#1E3A2A">
+    <circle cx="120"  cy="180" r="3"/>
+    <circle cx="200"  cy="320" r="3"/>
+    <circle cx="320"  cy="120" r="3"/>
+    <circle cx="480"  cy="240" r="3"/>
+    <circle cx="640"  cy="160" r="3"/>
+    <circle cx="780"  cy="300" r="3"/>
+    <circle cx="900"  cy="200" r="3"/>
+    <circle cx="160"  cy="500" r="3"/>
+    <circle cx="380"  cy="720" r="3"/>
+    <circle cx="600"  cy="640" r="3"/>
+    <circle cx="820"  cy="780" r="3"/>
+    <circle cx="940"  cy="540" r="3"/>
+  </g>
+
+  <!-- Serif "L" — Georgia-style.
+       Stem 200px wide, height 600px from y=212→y=812.
+       Foot 380px wide from x=276→x=656. -->
+  <g fill="url(#ink)">
+    <!-- Vertical stem -->
+    <rect x="276" y="212" width="180" height="540" rx="14"/>
+    <!-- Foot serif (right extension) -->
+    <rect x="276" y="632" width="430" height="180" rx="14"/>
+    <!-- Top serif (small left/right ticks) -->
+    <rect x="216" y="212" width="300" height="46" rx="10"/>
+  </g>
+
+  <!-- Saddle-tan brand dot — diagonal accent to upper-right of L foot.
+       Read as the "period" of Longrein. wordmark continuity. -->
+  <circle cx="780" cy="752" r="62" fill="#B5793E"/>
+</svg>
