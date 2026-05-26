@@ -26,7 +26,7 @@ async function loadCapacitor(): Promise<any> {
   if (_capacitor) return _capacitor;
   if (typeof window === "undefined") return null;
   try {
-    // @ts-expect-error — Capacitor only installed in the iOS shell
+    // @ts-ignore — Capacitor only installed in the iOS shell
     _capacitor = await import("@capacitor/core");
     return _capacitor;
   } catch {
@@ -46,7 +46,7 @@ export async function isNative(): Promise<boolean> {
 export async function watchPositionNative(cb: (coords: Coords) => void): Promise<() => void> {
   const native = await isNative();
   if (native) {
-    // @ts-expect-error — only resolvable inside iOS shell
+    // @ts-ignore — only resolvable inside iOS shell
     const { Geolocation } = await import("@capacitor/geolocation");
     await Geolocation.requestPermissions({ permissions: ["location"] });
     const watchId = await Geolocation.watchPosition(
@@ -86,7 +86,7 @@ export async function watchPositionNative(cb: (coords: Coords) => void): Promise
 export async function shareNative(opts: { title?: string; text?: string; url: string }): Promise<void> {
   const native = await isNative();
   if (native) {
-    // @ts-expect-error
+    // @ts-ignore
     const { Share } = await import("@capacitor/share");
     await Share.share({ title: opts.title, text: opts.text, url: opts.url });
     return;
@@ -109,7 +109,7 @@ export async function shareNative(opts: { title?: string; text?: string; url: st
 export async function registerPushNative(): Promise<string | null> {
   const native = await isNative();
   if (!native) return null;
-  // @ts-expect-error
+  // @ts-ignore
   const { PushNotifications } = await import("@capacitor/push-notifications");
   const perm = await PushNotifications.requestPermissions();
   if (perm.receive !== "granted") return null;
