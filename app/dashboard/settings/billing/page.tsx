@@ -58,6 +58,10 @@ export default async function BillingSettingsPage({
 
   const subscription = sub as SubscriptionRow | null;
   const hasActiveStripe = Boolean(subscription?.stripe_subscription_id);
+  // Demo guard — direct-inserted marketing-demo subscriptions have IDs
+  // like "sub_demo_..." and don't exist in Stripe. Disable portal CTA.
+  const isDemoSubscription =
+    !!subscription?.stripe_subscription_id && subscription.stripe_subscription_id.startsWith("sub_demo_");
   const statusIsTrialing = subscription?.status === "trialing";
   // BUG #BB fix — `isActive` (and the green "Active" badge) must require
   // a real Stripe subscription_id. Otherwise a stale `status='active'` row
@@ -181,7 +185,7 @@ export default async function BillingSettingsPage({
               <p className="text-sm text-ink-500 leading-relaxed">
                 Cancel any time before then in one click — you won't be charged.
               </p>
-              <BillingActions kind="manage" />
+              <BillingActions kind="manage" isDemoSubscription={isDemoSubscription} />
             </>
           )}
 
@@ -198,7 +202,7 @@ export default async function BillingSettingsPage({
                   })}
                 </p>
               )}
-              <BillingActions kind="manage" />
+              <BillingActions kind="manage" isDemoSubscription={isDemoSubscription} />
             </>
           )}
 
@@ -208,7 +212,7 @@ export default async function BillingSettingsPage({
                 Your last payment didn't go through. Update your card to keep
                 your stable active — we'll retry automatically.
               </p>
-              <BillingActions kind="manage" />
+              <BillingActions kind="manage" isDemoSubscription={isDemoSubscription} />
             </>
           )}
 

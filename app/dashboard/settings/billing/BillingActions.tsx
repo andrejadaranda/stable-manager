@@ -14,16 +14,24 @@ type Props = {
   // used for the trial-expired / reactivate flow where the user IS being
   // charged immediately.
   immediateCharge?: boolean;
+  // Demo guard — when the underlying subscription was inserted directly
+  // (marketing-demo seed) without going through Stripe Checkout, the
+  // stripe_subscription_id is a placeholder like "sub_demo_...". Hitting
+  // the Stripe portal with one of those IDs returns a hard 404. Disable
+  // the button + show a tooltip instead of letting users fail.
+  isDemoSubscription?: boolean;
 };
 
-export function BillingActions({ kind, label, immediateCharge }: Props) {
+export function BillingActions({ kind, label, immediateCharge, isDemoSubscription }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const defaultLabel = kind === "start" ? "Start your 14-day trial" : "Manage subscription";
   const endpoint     = kind === "start" ? "/api/stripe/checkout"   : "/api/stripe/billing-portal";
+  const demoBlocked  = kind === "manage" && isDemoSubscription;
 
   async function onClick() {
+    if (demoBlocked) return;
     setBusy(true);
     setError(null);
     try {
@@ -44,11 +52,15 @@ export function BillingActions({ kind, label, immediateCharge }: Props) {
       <button
         type="button"
         onClick={onClick}
-        disabled={busy}
+        disabled={busy || demoBlocked}
+        title={demoBlocked ? "This is a demo subscription. Sign up a real account to manage billing." : undefined}
         className="inline-flex w-fit items-center gap-2 rounded-full bg-brand-700 px-6 py-3 text-sm font-medium text-surface hover:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
       >
         {busy ? "Opening…" : (label ?? defaultLabel)}
       </button>
+      {demoBlocked && (
+        <p className="text-[12px] text-ink-500 italic">Demo subscription — Stripe portal disabled.</p>
+      )}
       {kind === "start" && !immediateCharge && (
         <p className="text-[12px] text-ink-500 italic">No card charged during the trial — cancel any time before day 14.</p>
       )}
