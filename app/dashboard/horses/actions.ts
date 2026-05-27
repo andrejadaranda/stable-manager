@@ -88,7 +88,6 @@ export async function updateHorseAction(
   const colorRaw   = String(formData.get("color") ?? "").trim();
   const sexRaw     = String(formData.get("sex") ?? "").trim();
   const uniqueRaw  = String(formData.get("unique_number") ?? "").trim();
-  const heightRaw  = String(formData.get("height_hh") ?? "").trim();
   // Sprint 3b — bio expansion
   const microchipRaw = String(formData.get("microchip_id") ?? "").trim();
   const passportRaw  = String(formData.get("passport_no")  ?? "").trim();
@@ -121,8 +120,8 @@ export async function updateHorseAction(
       color:        colorRaw  === "" ? null : colorRaw,
       sex:          (["mare","gelding","stallion","colt","filly"] as const).includes(sexRaw as never) ? (sexRaw as "mare"|"gelding"|"stallion"|"colt"|"filly") : null,
       uniqueNumber: uniqueRaw === "" ? null : uniqueRaw,
-      heightHh:     heightRaw === "" ? null : (Number.isFinite(Number(heightRaw)) ? Number(heightRaw) : null),
-      // Sprint 3b — new bio columns (migration 53)
+      // Sprint 3b — new bio columns (migration 53). Height lives in `height_hands`.
+
       microchipId:  microchipRaw === "" ? null : microchipRaw,
       passportNo:   passportRaw  === "" ? null : passportRaw,
       feiId:        feiRaw       === "" ? null : feiRaw,

@@ -28,8 +28,8 @@ export type HorseRow = {
   sex:           "mare" | "gelding" | "stallion" | "colt" | "filly" | null;
   /** Stable-internal id, brand, microchip, or passport number. */
   unique_number: string | null;
-  /** Height in hands (e.g. 16.2 = 16 hands 2 inches). */
-  height_hh:     number | null;
+  /** Height in hands (e.g. 16.2 = 16 hands 2 inches). DB column = `height_hands`. */
+  height_hands:  number | null;
   created_at: string;
   updated_at: string;
 };
@@ -225,7 +225,6 @@ export type UpdateHorseInput = {
   color?:        string | null;
   sex?:          "mare" | "gelding" | "stallion" | "colt" | "filly" | null;
   uniqueNumber?: string | null;
-  heightHh?:     number | null;
   // Sprint 3b additions (migration 53)
   microchipId?:  string | null;
   passportNo?:   string | null;
@@ -256,7 +255,8 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
   if (input.color         !== undefined) update.color         = input.color;
   if (input.sex           !== undefined) update.sex           = input.sex;
   if (input.uniqueNumber  !== undefined) update.unique_number = input.uniqueNumber;
-  if (input.heightHh      !== undefined) update.height_hh     = input.heightHh;
+  // NOTE: height lives in `height_hands` (migration 53). Older code referenced
+  // a `height_hh` column from never-applied migration 34 — that path is gone.
   // Sprint 3b additions (DB columns from migration 53)
   if (input.microchipId   !== undefined) update.microchip_id  = input.microchipId;
   if (input.passportNo    !== undefined) update.passport_no   = input.passportNo;
