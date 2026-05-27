@@ -2,15 +2,81 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
 
-  <!-- Marketing pages (longrein.eu) -->
+  <!-- Homepage -->
   <url>
     <loc>https://longrein.eu/</loc>
-    <lastmod>2026-05-25</lastmod>
+    <lastmod>2026-05-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <!-- Legal pages (served from app domain — canonical) -->
+  <!-- Comparison pages (high commercial intent — "X vs Y" searches) -->
+  <url>
+    <loc>https://longrein.eu/vs-equilab.html</loc>
+    <lastmod>2026-05-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://longrein.eu/vs-equestrian-app.html</loc>
+    <lastmod>2026-05-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://longrein.eu/vs-stablebuzz.html</loc>
+    <lastmod>2026-05-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Use case pages (audience-targeted) -->
+  <url>
+    <loc>https://longrein.eu/for-riding-schools.html</loc>
+    <lastmod>2026-05-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://longrein.eu/for-livery-yards.html</loc>
+    <lastmod>2026-05-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://longrein.eu/for-dressage-stables.html</loc>
+    <lastmod>2026-05-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Country pages (local-language SEO) -->
+  <url>
+    <loc>https://longrein.eu/lithuania.html</loc>
+    <lastmod>2026-05-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="lt" href="https://longrein.eu/lithuania.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longrein.eu/lithuania.html"/>
+  </url>
+  <url>
+    <loc>https://longrein.eu/germany.html</loc>
+    <lastmod>2026-05-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="de" href="https://longrein.eu/germany.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longrein.eu/germany.html"/>
+  </url>
+  <url>
+    <loc>https://longrein.eu/poland.html</loc>
+    <lastmod>2026-05-27</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="pl" href="https://longrein.eu/poland.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://longrein.eu/poland.html"/>
+  </url>
+
+  <!-- Legal pages (proxied to app domain) -->
   <url>
     <loc>https://longrein.eu/legal/terms</loc>
     <lastmod>2026-05-25</lastmod>
@@ -30,7 +96,7 @@
     <priority>0.3</priority>
   </url>
 
-  <!-- App entry points (high SEO value — these are conversion targets) -->
+  <!-- App entry points (high conversion priority) -->
   <url>
     <loc>https://app.longrein.eu/signup</loc>
     <lastmod>2026-05-25</lastmod>
