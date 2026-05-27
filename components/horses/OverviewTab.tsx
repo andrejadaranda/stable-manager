@@ -58,7 +58,7 @@ function IdentificationCard({ horse }: { horse: HorseProfileSummary }) {
   const h = horse as HorseProfileSummary & {
     sex?: string | null;
     color?: string | null;
-    height_hands?: number | null;
+    height_cm?: number | null;
     discipline?: string | null;
     microchip_id?: string | null;
     passport_no?: string | null;
@@ -72,7 +72,7 @@ function IdentificationCard({ horse }: { horse: HorseProfileSummary }) {
     ["Sex",        h.sex],
     ["Breed",      h.breed],
     ["Color",      h.color],
-    ["Height",     h.height_hands != null ? `${h.height_hands} hh` : null],
+    ["Height",     h.height_cm != null ? `${h.height_cm} cm` : null],
     ["Discipline", h.discipline],
     ["Born",       h.date_of_birth ? new Date(h.date_of_birth).toLocaleDateString("en-GB") : null],
     ["Sire",       h.sire_name],

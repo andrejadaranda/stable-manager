@@ -28,8 +28,8 @@ export type HorseRow = {
   sex:           "mare" | "gelding" | "stallion" | "colt" | "filly" | null;
   /** Stable-internal id, brand, microchip, or passport number. */
   unique_number: string | null;
-  /** Height in hands (e.g. 16.2 = 16 hands 2 inches). DB column = `height_hands`. */
-  height_hands:  number | null;
+  /** Height in centimetres measured at the withers (European convention). Range 80-220. */
+  height_cm:     number | null;
   created_at: string;
   updated_at: string;
 };
@@ -231,7 +231,8 @@ export type UpdateHorseInput = {
   feiId?:        string | null;
   sireName?:     string | null;
   damName?:      string | null;
-  heightHands?:  number | null;
+  /** Height in centimetres at the withers. Range 80-220. */
+  heightCm?:     number | null;
   discipline?:   string | null;
 };
 
@@ -255,15 +256,15 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
   if (input.color         !== undefined) update.color         = input.color;
   if (input.sex           !== undefined) update.sex           = input.sex;
   if (input.uniqueNumber  !== undefined) update.unique_number = input.uniqueNumber;
-  // NOTE: height lives in `height_hands` (migration 53). Older code referenced
-  // a `height_hh` column from never-applied migration 34 — that path is gone.
-  // Sprint 3b additions (DB columns from migration 53)
+  // Sprint 3b additions (DB columns from migration 53).
+  // Height now lives in `height_cm` (migration 61, European convention).
   if (input.microchipId   !== undefined) update.microchip_id  = input.microchipId;
   if (input.passportNo    !== undefined) update.passport_no   = input.passportNo;
   if (input.feiId         !== undefined) update.fei_id        = input.feiId;
   if (input.sireName      !== undefined) update.sire_name     = input.sireName;
   if (input.damName       !== undefined) update.dam_name      = input.damName;
-  if (input.heightHands   !== undefined) update.height_hands  = input.heightHands;
+  // Horse height in centimetres (migration 61, European convention).
+  if (input.heightCm      !== undefined) update.height_cm     = input.heightCm;
   if (input.discipline    !== undefined) update.discipline    = input.discipline;
 
   const { data, error } = await supabase

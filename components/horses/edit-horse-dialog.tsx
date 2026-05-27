@@ -94,14 +94,14 @@ function EditHorseDialog({
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <Field
-              label="Height (hands)"
-              name="height_hands"
+              label="Height (cm)"
+              name="height_cm"
               type="number"
-              min="8"
-              max="20"
-              step="0.1"
-              defaultValue={(horse as HorseRow & { height_hands?: number | null }).height_hands != null ? String((horse as HorseRow & { height_hands?: number | null }).height_hands) : ""}
-              placeholder="16.2"
+              min="80"
+              max="220"
+              step="1"
+              defaultValue={(horse as HorseRow & { height_cm?: number | null }).height_cm != null ? String((horse as HorseRow & { height_cm?: number | null }).height_cm) : ""}
+              placeholder="165"
             />
             <Field
               label="Discipline"

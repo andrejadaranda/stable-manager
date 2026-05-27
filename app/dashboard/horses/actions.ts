@@ -94,7 +94,7 @@ export async function updateHorseAction(
   const feiRaw       = String(formData.get("fei_id")       ?? "").trim();
   const sireRaw      = String(formData.get("sire_name")    ?? "").trim();
   const damRaw       = String(formData.get("dam_name")     ?? "").trim();
-  const heightHandsRaw = String(formData.get("height_hands") ?? "").trim();
+  const heightCmRaw  = String(formData.get("height_cm") ?? "").trim();
   const disciplineRaw  = String(formData.get("discipline")   ?? "").trim();
 
   if (!id)   return { error: "Missing horse id.", success: false };
@@ -120,14 +120,14 @@ export async function updateHorseAction(
       color:        colorRaw  === "" ? null : colorRaw,
       sex:          (["mare","gelding","stallion","colt","filly"] as const).includes(sexRaw as never) ? (sexRaw as "mare"|"gelding"|"stallion"|"colt"|"filly") : null,
       uniqueNumber: uniqueRaw === "" ? null : uniqueRaw,
-      // Sprint 3b — new bio columns (migration 53). Height lives in `height_hands`.
-
+      // Sprint 3b — new bio columns (migration 53).
+      // Height in cm at the withers (migration 61, European convention).
       microchipId:  microchipRaw === "" ? null : microchipRaw,
       passportNo:   passportRaw  === "" ? null : passportRaw,
       feiId:        feiRaw       === "" ? null : feiRaw,
       sireName:     sireRaw      === "" ? null : sireRaw,
       damName:      damRaw       === "" ? null : damRaw,
-      heightHands:  heightHandsRaw === "" ? null : (Number.isFinite(Number(heightHandsRaw)) ? Number(heightHandsRaw) : null),
+      heightCm:     heightCmRaw === "" ? null : (Number.isFinite(Number(heightCmRaw)) ? Math.round(Number(heightCmRaw)) : null),
       discipline:   disciplineRaw  === "" ? null : disciplineRaw,
     });
   } catch (err: any) {

@@ -285,7 +285,7 @@ function horseAsHorseRow(h: HorseProfileSummary) {
     color:         null,
     sex:           null,
     unique_number: null,
-    height_hands:  null,
+    height_cm:     null,
     created_at: "",
     updated_at: "",
   };
