@@ -25,7 +25,8 @@ export default function SignupLandingPage() {
         <Card
           href="/signup/owner"
           title="I run a stable"
-          body="Manage horses, lessons, clients, and payments in one place. €49/mo with a 14-day free trial — card required, cancel any time. Founding 15 spots at €25/mo for life: write to hello@longrein.eu."
+          body="Manage horses, lessons, clients, and payments in one place. €49/mo."
+          trustLine="14 days free · no charge before day 14 · card required at signup · cancel in one click"
           cta="Create a stable →"
           tone="primary"
         />
@@ -39,7 +40,8 @@ export default function SignupLandingPage() {
         <Card
           href="/signup/personal"
           title="Personal account"
-          body="For private horse owners without a stable. Log your own sessions, vet visits, expenses, and goals. €9/mo up to 2 horses · €15/mo up to 5. 7-day free trial."
+          body="For private horse owners without a stable. €9/mo up to 2 horses · €15/mo up to 5."
+          trustLine="7 days free · no charge before day 7 · card required at signup · cancel in one click"
           cta="Create personal account →"
           tone="secondary"
         />
@@ -62,15 +64,19 @@ function Card({
   href,
   title,
   body,
+  trustLine,
   cta,
   tone,
   disabled,
 }: {
-  href:     string;
-  title:    string;
-  body:     string;
-  cta:      string;
-  tone:     "primary" | "secondary" | "muted";
+  href:      string;
+  title:     string;
+  body:      string;
+  /** Optional trust micro-copy under the body — used for paid plans
+   *  to make the trial promise unmissable (14/7 days, no charge, cancel). */
+  trustLine?: string;
+  cta:       string;
+  tone:      "primary" | "secondary" | "muted";
   disabled?: boolean;
 }) {
   const base =
@@ -88,20 +94,23 @@ function Card({
       ? "text-navy-900 group-hover:text-brand-700"
       : "text-ink-500";
 
-  if (disabled) {
-    return (
-      <div className={`${base} ${toneCls}`}>
-        <p className="font-semibold text-ink-900">{title}</p>
-        <p className="text-[13px] text-ink-600 mt-1 leading-relaxed">{body}</p>
-        <p className={`text-sm font-medium mt-3 ${ctaCls}`}>{cta}</p>
-      </div>
-    );
-  }
-  return (
-    <Link href={href} className={`group ${base} ${toneCls}`}>
+  const inner = (
+    <>
       <p className="font-semibold text-ink-900">{title}</p>
       <p className="text-[13px] text-ink-600 mt-1 leading-relaxed">{body}</p>
+      {trustLine && (
+        <p className="text-[12px] font-medium text-brand-700 mt-2 leading-snug">
+          ✓ {trustLine}
+        </p>
+      )}
       <p className={`text-sm font-medium mt-3 ${ctaCls}`}>{cta}</p>
+    </>
+  );
+
+  if (disabled) return <div className={`${base} ${toneCls}`}>{inner}</div>;
+  return (
+    <Link href={href} className={`group ${base} ${toneCls}`}>
+      {inner}
     </Link>
   );
 }

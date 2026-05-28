@@ -343,6 +343,20 @@
     70% { box-shadow: 0 0 0 12px rgba(181,121,62,0); }
     100% { box-shadow: 0 0 0 0 rgba(181,121,62,0); }
   }
+  section.hero .hero-trust {
+    margin: 18px 0 0; padding: 10px 14px;
+    display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: baseline;
+    font-size: 14px; line-height: 1.5;
+    color: var(--paddock);
+    background: rgba(30,58,42,0.06);
+    border: 1px solid rgba(30,58,42,0.14);
+    border-radius: 999px;
+  }
+  section.hero .hero-trust strong { font-weight: 700; color: var(--paddock); }
+  section.hero .hero-trust .dim { color: #4a5a4e; font-weight: 400; }
+  @media (max-width: 720px) {
+    section.hero .hero-trust { border-radius: 14px; font-size: 13px; padding: 10px 12px; }
+  }
   section.hero h1 { margin-bottom: 24px; max-width: 920px; }
   section.hero h1 .accent { color: var(--saddle); }
   section.hero .lead { margin-bottom: 36px; }
@@ -469,7 +483,16 @@
   section.pricing .plan .price { font-family: var(--serif); margin-bottom: 6px; }
   section.pricing .plan .price .amount { font-size: 44px; font-weight: 600; color: var(--paddock); letter-spacing: -0.02em; }
   section.pricing .plan .price .per { font-size: 16px; color: var(--stone); margin-left: 4px; }
-  section.pricing .plan .trial { font-size: 13px; color: var(--stone); margin: 0 0 24px; min-height: 20px; }
+  section.pricing .plan .trial { font-size: 13px; color: var(--stone); margin: 0 0 12px; min-height: 20px; }
+  section.pricing .plan .trust-pill {
+    font-size: 12.5px; line-height: 1.45; color: var(--paddock);
+    background: rgba(30,58,42,0.06);
+    border: 1px solid rgba(30,58,42,0.14);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin: 0 0 22px;
+  }
+  section.pricing .plan .trust-pill strong { color: var(--paddock); font-weight: 700; }
   section.pricing .plan ul { margin: 0 0 28px; padding: 0; list-style: none; font-size: 14px; color: var(--ink); flex: 1; }
   section.pricing .plan ul li { padding: 7px 0; position: relative; padding-left: 22px; line-height: 1.5; }
   section.pricing .plan ul li::before {
@@ -630,10 +653,13 @@
       Longrein is the premium <strong>stable management software</strong> for European riding schools, livery yards, and equestrian businesses. Lesson scheduling, payments, horse welfare tracking, and client management — on one screen. Built mobile-first, hosted in Frankfurt, designed for how Baltic and EU clubs actually work.
     </p>
     <div class="ctas">
-      <a href="https://app.longrein.eu/signup" class="btn btn-primary btn-lg">Start your 14-day free trial</a>
+      <a href="https://app.longrein.eu/signup" class="btn btn-primary btn-lg">Start 14-day free trial</a>
       <a href="#features" class="btn btn-secondary btn-lg">See what's inside</a>
-      <span class="small">No setup call. Card required, cancel any time before day 14.</span>
     </div>
+    <p class="hero-trust">
+      <span aria-hidden="true">✓</span>&nbsp;<strong>14 days free.</strong>
+      <span class="dim">No charge before day 14. Card required at signup. Cancel in one click. No setup call needed.</span>
+    </p>
   </div>
 </section>
 
@@ -872,7 +898,10 @@
         <div class="name">Personal</div>
         <div class="who">Solo horse owners without a stable</div>
         <div class="price"><span class="amount">€9</span><span class="per">/ month</span></div>
-        <div class="trial">€15/mo up to 5 horses · 7-day free trial · cancel any time</div>
+        <div class="trial">€15/mo up to 5 horses</div>
+        <div class="trust-pill">
+          <strong>7 days free.</strong> No charge before day 7. Card required at signup. Cancel in one click.
+        </div>
         <ul>
           <li>Log your own rides and sessions</li>
           <li>Vet, farrier, vaccination tracker</li>
@@ -880,7 +909,7 @@
           <li>Goals &amp; training plan</li>
           <li>Mobile-first</li>
         </ul>
-        <a href="https://app.longrein.eu/signup/personal" class="btn btn-secondary">Create personal account</a>
+        <a href="https://app.longrein.eu/signup/personal" class="btn btn-secondary">Start 7-day free trial</a>
       </div>
 
       <div class="plan featured">
@@ -888,7 +917,10 @@
         <div class="name">Stable</div>
         <div class="who">Riding schools, livery yards, equestrian businesses</div>
         <div class="price"><span class="amount">€49</span><span class="per">/ month</span></div>
-        <div class="trial">14-day free trial · card required · cancel any time</div>
+        <div class="trial">All features included · unlimited clients</div>
+        <div class="trust-pill">
+          <strong>14 days free.</strong> No charge before day 14. Card required at signup. Cancel in one click.
+        </div>
         <ul>
           <li>Everything in Personal, plus —</li>
           <li>Calendar, lessons, trainer management</li>
@@ -899,7 +931,7 @@
           <li>In-app chat, audit log, 2FA</li>
           <li>CSV import / export</li>
         </ul>
-        <a href="https://app.longrein.eu/signup/owner" class="btn btn-primary">Start your 14-day trial</a>
+        <a href="https://app.longrein.eu/signup/owner" class="btn btn-primary">Start 14-day free trial</a>
       </div>
 
       <div class="plan">
@@ -907,6 +939,9 @@
         <div class="who">First 15 stables · limited spots</div>
         <div class="price"><span class="amount">€25</span><span class="per">/ mo for life</span></div>
         <div class="trial">12 months free, then €25/mo locked forever</div>
+        <div class="trust-pill">
+          <strong>12 months free.</strong> Then €25/mo locked forever. Cancel any time.
+        </div>
         <ul>
           <li>Everything in Stable</li>
           <li>Locked €25/mo rate — for life</li>
