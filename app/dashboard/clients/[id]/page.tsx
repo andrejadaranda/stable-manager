@@ -98,7 +98,7 @@ export default async function ClientDetailPage({
             </div>
             <div className="flex-1 min-w-0 mt-3 md:mt-0 md:pb-1 text-center md:text-left">
               <h1
-                className="text-2xl md:text-[28px] leading-none text-ink-900 truncate"
+                className="text-2xl md:text-[28px] leading-none text-white truncate"
                 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: 500, letterSpacing: "-0.01em" }}
               >
                 {client.full_name}
