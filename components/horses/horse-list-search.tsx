@@ -33,44 +33,43 @@ export function HorseListWithSearch({ horses }: { horses: HorseWithWeeklyWorkloa
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
-        <div className="relative flex-1">
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={`Search ${horses.length} horse${horses.length === 1 ? "" : "s"} by name or breed…`}
-            className="
-              w-full h-10 pl-10 pr-3 rounded-xl border border-ink-200
-              text-sm bg-white text-ink-900 placeholder:text-ink-400
-              focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
-            "
-          />
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      {/* Chips above, search below — unified pattern with clients page. */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {(["all", "active", "retired"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setStatusFilter(s)}
+            className={`h-9 inline-flex items-center gap-2 px-3.5 rounded-full text-[12.5px] font-medium transition-colors ${
+              statusFilter === s
+                ? "bg-brand-700 text-white shadow-sm"
+                : "bg-white text-ink-700 hover:bg-ink-100/60 ring-1 ring-ink-200"
+            }`}
           >
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.35-4.35"/>
-          </svg>
-        </div>
-        <div className="flex gap-1.5 flex-wrap">
-          {(["all", "active", "retired"] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setStatusFilter(s)}
-              className={`h-9 px-3 rounded-full text-[12px] font-medium transition-colors ${
-                statusFilter === s
-                  ? "bg-brand-700 text-white shadow-sm"
-                  : "bg-white text-ink-700 hover:bg-ink-100/60 ring-1 ring-ink-200"
-              }`}
-            >
-              {s === "all" ? "All" : s === "active" ? "Active" : "Retired"}
-            </button>
-          ))}
-        </div>
+            {s === "all" ? "All" : s === "active" ? "Active" : "Retired"}
+          </button>
+        ))}
+      </div>
+      <div className="relative">
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={`Search ${horses.length} horse${horses.length === 1 ? "" : "s"} by name or breed…`}
+          className="
+            w-full h-10 pl-10 pr-3 rounded-xl border border-ink-200
+            text-sm bg-white text-ink-900 placeholder:text-ink-400
+            focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+          "
+        />
+        <svg
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400 pointer-events-none"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        >
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.35-4.35"/>
+        </svg>
       </div>
 
       {(q.trim() || statusFilter !== "all") && (
