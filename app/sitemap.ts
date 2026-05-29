@@ -66,8 +66,21 @@ async function publicStableSlugs(): Promise<Array<{ slug: string; lastmod: Date 
 
   if (error || !data) return [];
 
+  // Exclude test stables, personal-account auto-generated slugs,
+  // and the legacy TJK slug (founder owns it but doesn't publish
+  // a public page). Anything matching these patterns has no business
+  // surfacing in Google Search results.
+  const BLOCKED_SLUG_PATTERNS = [
+    /^test-/,        // test-stable, test-anything
+    /^launch-test/,  // launch-test-stable
+    /^andrejos-/,    // founder's personal test stables
+    /^p-/,           // personal-account auto-gen slugs (p-eb28b156f2)
+    /^tjk$/,         // founder's stable, intentionally not public
+  ];
+
   return data
     .filter((row) => typeof row.slug === "string" && row.slug.length > 0)
+    .filter((row) => !BLOCKED_SLUG_PATTERNS.some((re) => re.test(row.slug as string)))
     .map((row) => ({
       slug:    row.slug as string,
       lastmod: row.updated_at ? new Date(row.updated_at as string) : new Date(),
