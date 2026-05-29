@@ -548,8 +548,8 @@ export async function getCalendar(from: string, to: string): Promise<CalendarLes
     .select(
       `
       id, starts_at, ends_at, status, price, notes, package_id, service_id, over_limit_reason, max_participants, lesson_type, arena_id,
-      horse:horses(id, name),
-      client:clients(id, full_name),
+      horse:horses!lessons_horse_id_fkey(id, name),
+      client:clients!lessons_client_id_fkey(id, full_name),
       trainer:profiles(id, full_name),
       service:services(id, name),
       payments(amount)
@@ -634,7 +634,7 @@ export async function getClientLessons(
     .select(
       `
       id, starts_at, ends_at, status, price,
-      horse:horses(id, name),
+      horse:horses!lessons_horse_id_fkey(id, name),
       trainer:profiles(id, full_name)
       `,
     )
@@ -675,7 +675,7 @@ export async function getHorseLessons(
     .select(
       `
       id, starts_at, ends_at, status, price,
-      client:clients(id, full_name),
+      client:clients!lessons_client_id_fkey(id, full_name),
       trainer:profiles(id, full_name)
       `,
     )

@@ -87,7 +87,7 @@ export async function listPayments(opts?: {
       `
       id, stable_id, client_id, lesson_id, amount, method, paid_at, notes, created_at,
       client:clients(id, full_name),
-      lesson:lessons(id, starts_at, horse:horses(id, name))
+      lesson:lessons(id, starts_at, horse:horses!lessons_horse_id_fkey(id, name))
       `,
     )
     .order("paid_at", { ascending: false });

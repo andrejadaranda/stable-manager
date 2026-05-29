@@ -67,9 +67,9 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     .from("lessons")
     .select(`
       id, starts_at, ends_at, status,
-      horse:horses(id, name),
-      client:clients(id, full_name),
-      trainer:profiles(id, full_name)
+      horse:horses!lessons_horse_id_fkey(id, name),
+      client:clients!lessons_client_id_fkey(id, full_name),
+      trainer:profiles!lessons_trainer_id_fkey(id, full_name)
     `)
     .gte("starts_at", todayStart.toISOString())
     .lt("starts_at", todayEnd.toISOString())

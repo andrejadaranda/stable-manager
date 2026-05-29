@@ -294,7 +294,7 @@ export async function getHorseUpcomingLessons(
     .from("lessons")
     .select(
       `id, starts_at, ends_at, status,
-       client:clients(id, full_name),
+       client:clients!lessons_client_id_fkey(id, full_name),
        trainer:profiles!lessons_trainer_id_fkey(id, full_name)`,
     )
     .eq("horse_id", horseId)
