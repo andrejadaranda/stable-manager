@@ -48,6 +48,7 @@ const GROUPS: Group[] = [
     title: "Billing",
     tabs: [
       { href: "/dashboard/settings/billing",  label: "Subscription", ownerOnly: true },
+      { href: "/dashboard/settings/issuer",   label: "Issuer (invoices)", ownerOnly: true },
     ],
   },
   {
