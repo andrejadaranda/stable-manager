@@ -49,14 +49,16 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: SECURITY_HEADERS,
       },
+      // app.longrein.eu — noindex AUTHENTICATED + private routes ONLY.
+      // PUBLIC routes (/signup*, /login, /s/*, /legal/*, /guest/*, root)
+      // MUST be indexable so Google can rank them for brand + intent
+      // queries and so public stable pages can surface in search.
+      // Negative-lookahead matches everything that ISN'T a public path.
       {
-        // The Next.js app itself never needs to be indexed — only the
-        // marketing landing at longrein.eu should appear in search results.
-        source: "/(.*)",
+        source: "/:path((?!signup|login|s/|legal/|guest/|_next/|favicon|apple-icon|icon\\.|manifest|robots|sitemap).*)",
         headers: [
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
-        // Apply only when host is app.longrein.eu
         has: [{ type: "host", value: "app.longrein.eu" }],
       },
     ];

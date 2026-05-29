@@ -56,8 +56,16 @@ const nextConfig = {
         source: "/(.*)",
         headers: SECURITY_HEADERS,
       },
+      // app.longrein.eu — noindex AUTHENTICATED + private routes ONLY.
+      // PUBLIC routes (/signup*, /login, /s/*, /legal/*, /, /guest/*)
+      // must be indexable so Google can rank them for brand + intent
+      // queries and so public stable pages can surface in search.
+      //
+      // Negative lookahead: match anything that DOESN'T start with one
+      // of the public path roots. Equivalent of "noindex dashboard, api,
+      // auth, invite, reset-password, live, but leave the rest alone".
       {
-        source: "/(.*)",
+        source: "/:path((?!signup|login|s/|legal/|guest/|_next/|favicon|apple-icon|icon\\.|manifest|robots|sitemap).*)",
         headers: [
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
         ],
