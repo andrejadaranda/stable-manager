@@ -96,36 +96,8 @@
     <priority>0.3</priority>
   </url>
 
-  <!-- App entry points (high conversion priority) -->
-  <url>
-    <loc>https://app.longrein.eu/signup</loc>
-    <lastmod>2026-05-25</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://app.longrein.eu/signup/owner</loc>
-    <lastmod>2026-05-25</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://app.longrein.eu/signup/personal</loc>
-    <lastmod>2026-05-25</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://app.longrein.eu/signup/join</loc>
-    <lastmod>2026-05-25</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://app.longrein.eu/login</loc>
-    <lastmod>2026-05-25</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
+  <!-- NOTE: app.longrein.eu URLs are intentionally NOT included here.
+       Per sitemaps.org spec, all URLs in a sitemap must share the same host.
+       app.longrein.eu needs its own sitemap (served from that domain). -->
 
 </urlset>
