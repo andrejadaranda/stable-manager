@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { listClientsWithUpcomingCount } from "@/services/clients";
-import { ClientList } from "@/components/clients/client-list";
+import { ClientListWithSearch } from "@/components/clients/client-list-search";
 import { CreateClientPanel } from "@/components/clients/create-client-form";
 import { PageHeader } from "@/components/ui";
 
@@ -49,7 +49,7 @@ export default async function ClientsPage({
         <FilterChip href="/dashboard/clients?filter=owners" label="Horse owners"  count={counts.owners} active={filter === "owners"} />
       </div>
 
-      <ClientList
+      <ClientListWithSearch
         clients={filtered}
         showInviteButton={session.role === "owner"}
       />

@@ -21,10 +21,10 @@ Anna Mueller,anna@example.com,+491701111111,intermediate,30,Loves Bella
 Tom Becker,tom@example.com,,beginner,25,
 Sophie Lambert,,+491702222222,advanced,35,Show prep`;
 
-const HORSE_TEMPLATE = `name,breed,date_of_birth,daily_lesson_limit,weekly_lesson_limit,notes
-Bella,Trakehner,2015-03-12,4,18,Calm with kids
-Apollo,Hanoverian,2012-07-04,3,15,Strong jumper
-Atlas,Heavy draft,2017-09-01,5,20,`;
+const HORSE_TEMPLATE = `name,breed,date_of_birth,height_cm,daily_lesson_limit,weekly_lesson_limit,notes
+Bella,Trakehner,2015-03-12,165,4,18,Calm with kids
+Apollo,Hanoverian,2012-07-04,172,3,15,Strong jumper
+Atlas,Heavy draft,2017-09-01,158,5,20,Beginner-safe`;
 
 export function ImportPanel() {
   return (
@@ -111,6 +111,16 @@ function ImportSection({
             <p className="font-semibold">
               Imported {state.inserted} of {(state.inserted ?? 0) + (state.skipped ?? 0)}.
             </p>
+            {/* Show invite breakdown only for the client importer */}
+            {typeof state.invited === "number" && (
+              <p className="mt-1 opacity-90">
+                Sent {state.invited} portal invite{state.invited === 1 ? "" : "s"}
+                {typeof state.noEmail === "number" && state.noEmail > 0 && (
+                  <> · {state.noEmail} without email (no invite sent)</>
+                )}
+                .
+              </p>
+            )}
             {(state.skipped ?? 0) > 0 && state.errors && state.errors.length > 0 && (
               <>
                 <p className="mt-1 mb-1 opacity-90">Sample errors:</p>

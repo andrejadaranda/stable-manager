@@ -183,7 +183,156 @@ export async function createLesson(input: CreateLessonInput) {
     if (error.code === "23P01") throw new Error("HORSE_OR_TRAINER_DOUBLE_BOOKED");
     throw error;
   }
+
+  // Mirror the lesson into lesson_participants as a 1-rider entry.
+  // Group lessons (max_participants > 1) get extra participants added
+  // separately via addLessonParticipant. We skip the mirror when horse
+  // is TBD because lesson_participants.horse_id is NOT NULL — the row
+  // is created later when both client + horse are confirmed.
+  if (data && horseId) {
+    await supabase.from("lesson_participants").insert({
+      lesson_id: data.id,
+      client_id: input.clientId,
+      horse_id:  horseId,
+      status:    "confirmed",
+    }).then((res) => {
+      // Don't fail the lesson creation if the mirror insert fails — the
+      // lesson itself (with client_id + horse_id) is still the source of
+      // truth for individual lessons. Log + continue.
+      if (res.error) console.warn("[lessons] participant mirror failed:", res.error.message);
+    });
+  }
+
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// GROUP LESSONS — participants management
+// ---------------------------------------------------------------------------
+
+/** Add a rider+horse pair to an existing lesson. Throws if the lesson
+ *  is at capacity or if the horse double-books. Used by the "+ Add rider"
+ *  button in the edit-lesson dialog. */
+export async function addLessonParticipant(
+  lessonId: string,
+  clientId: string,
+  horseId:  string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  void session;
+
+  const supabase = createSupabaseServerClient();
+
+  // Capacity check.
+  const { data: lesson } = await supabase
+    .from("lessons")
+    .select("max_participants")
+    .eq("id", lessonId)
+    .single();
+
+  if (!lesson) return { ok: false, reason: "LESSON_NOT_FOUND" };
+
+  const { count } = await supabase
+    .from("lesson_participants")
+    .select("client_id", { count: "exact", head: true })
+    .eq("lesson_id", lessonId)
+    .eq("status", "confirmed");
+
+  if ((count ?? 0) >= (lesson.max_participants ?? 1)) {
+    return { ok: false, reason: "LESSON_FULL" };
+  }
+
+  const { error } = await supabase.from("lesson_participants").insert({
+    lesson_id: lessonId,
+    client_id: clientId,
+    horse_id:  horseId,
+    status:    "confirmed",
+  });
+
+  if (error) {
+    if (error.code === "23P01") return { ok: false, reason: "HORSE_DOUBLE_BOOKED" };
+    if (error.code === "23505") return { ok: false, reason: "CLIENT_ALREADY_IN_LESSON" };
+    return { ok: false, reason: error.message };
+  }
+
+  return { ok: true };
+}
+
+/** Remove a rider from a lesson. The last participant cannot be removed
+ *  — the caller should delete the whole lesson instead. */
+export async function removeLessonParticipant(
+  lessonId: string,
+  clientId: string,
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  void session;
+
+  const supabase = createSupabaseServerClient();
+
+  const { count } = await supabase
+    .from("lesson_participants")
+    .select("client_id", { count: "exact", head: true })
+    .eq("lesson_id", lessonId);
+
+  if ((count ?? 0) <= 1) {
+    throw new Error("CANNOT_REMOVE_LAST_PARTICIPANT");
+  }
+
+  const { error } = await supabase
+    .from("lesson_participants")
+    .delete()
+    .eq("lesson_id", lessonId)
+    .eq("client_id", clientId);
+
+  if (error) throw error;
+}
+
+/** Promote a lesson to "group" by raising max_participants. */
+export async function setLessonCapacity(
+  lessonId: string,
+  maxParticipants: number,
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  void session;
+
+  if (maxParticipants < 1 || maxParticipants > 20) {
+    throw new Error("INVALID_CAPACITY");
+  }
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("lessons")
+    .update({
+      max_participants: maxParticipants,
+      lesson_type:      maxParticipants > 1 ? "group" : "individual",
+    })
+    .eq("id", lessonId);
+
+  if (error) throw error;
+}
+
+/** List participants of a lesson, joined with rider + horse names. */
+export async function listLessonParticipants(lessonId: string) {
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("lesson_participants")
+    .select(`
+      client_id,
+      horse_id,
+      status,
+      no_show,
+      joined_at,
+      clients:client_id ( id, full_name ),
+      horses:horse_id   ( id, name )
+    `)
+    .eq("lesson_id", lessonId)
+    .order("joined_at");
+
+  if (error) throw error;
+  return data ?? [];
 }
 
 // Owner + employee.

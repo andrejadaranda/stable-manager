@@ -3,7 +3,7 @@ import { requirePageRole } from "@/lib/auth/redirects";
 import { listHorsesWithWeeklyWorkload } from "@/services/horses";
 import { listClients } from "@/services/clients";
 import { startOfWeek, addDays } from "@/lib/utils/dates";
-import { HorseList } from "@/components/horses/horse-list";
+import { HorseListWithSearch } from "@/components/horses/horse-list-search";
 import { CreateHorsePanel } from "@/components/horses/create-horse-form";
 import { PageHeader } from "@/components/ui";
 
@@ -44,7 +44,7 @@ export default async function HorsesPage() {
           </>
         }
       />
-      <HorseList horses={horses} />
+      <HorseListWithSearch horses={horses} />
     </div>
   );
 }
