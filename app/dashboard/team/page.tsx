@@ -23,6 +23,12 @@ export default async function TeamPage() {
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
+          <a
+            href="/dashboard/team/substitute"
+            className="h-10 px-3.5 inline-flex items-center rounded-xl text-sm font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 transition-colors"
+          >
+            Substitute trainer
+          </a>
           <InviteEmployeePanel />
         </div>
       </div>

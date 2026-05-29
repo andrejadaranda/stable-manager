@@ -357,6 +357,66 @@ export async function updateLessonStatus(
   return data;
 }
 
+// ---------------------------------------------------------------------------
+// SUBSTITUTE TRAINER — bulk reassign scheduled lessons from A to B.
+// Used when a trainer is sick / on holiday and another trainer covers their
+// roster for a window. Only `scheduled` lessons are moved; completed ones
+// stay attached to whoever ran them. trainer_id exclusion constraint catches
+// any conflicts where the substitute already has a lesson at that time.
+// ---------------------------------------------------------------------------
+
+export type ReassignResult = {
+  reassigned: number;
+  skipped:    Array<{ lesson_id: string; starts_at: string; reason: string }>;
+};
+
+export async function bulkReassignTrainer(
+  fromTrainerId: string,
+  toTrainerId:   string,
+  periodStart:   string,    // ISO
+  periodEnd:     string,    // ISO
+): Promise<ReassignResult> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  void session;
+
+  if (fromTrainerId === toTrainerId) {
+    throw new Error("SAME_TRAINER");
+  }
+
+  const supabase = createSupabaseServerClient();
+
+  const { data: lessons, error } = await supabase
+    .from("lessons")
+    .select("id, starts_at")
+    .eq("trainer_id", fromTrainerId)
+    .eq("status", "scheduled")
+    .gte("starts_at", periodStart)
+    .lte("starts_at", periodEnd)
+    .order("starts_at");
+  if (error) throw error;
+
+  const result: ReassignResult = { reassigned: 0, skipped: [] };
+  for (const lRaw of lessons ?? []) {
+    const l = lRaw as { id: string; starts_at: string };
+    const { error: updErr } = await supabase
+      .from("lessons")
+      .update({ trainer_id: toTrainerId })
+      .eq("id", l.id);
+    if (updErr) {
+      // 23P01 = exclusion violation — substitute is already busy at that time.
+      const reason =
+        updErr.code === "23P01" ? "Substitute has a conflicting lesson" :
+        updErr.message ?? "Update failed";
+      result.skipped.push({ lesson_id: l.id, starts_at: l.starts_at, reason });
+    } else {
+      result.reassigned += 1;
+    }
+  }
+
+  return result;
+}
+
 // Owner + employee. Edit any of: status / time window / price / notes.
 // Time changes get a horse-availability preflight to surface friendly
 // errors before hitting the exclusion constraint.
