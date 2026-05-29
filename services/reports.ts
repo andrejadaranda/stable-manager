@@ -59,17 +59,20 @@ export async function trainerMonthly(period: string): Promise<TrainerMonthlyRow[
 
   const map = new Map<string, TrainerMonthlyRow>();
   for (const rowRaw of data ?? []) {
-    const row = rowRaw as {
+    const row = rowRaw as unknown as {
       trainer_id: string | null;
       starts_at: string;
       ends_at: string;
       price: number | null;
-      trainer: { id: string; full_name: string | null } | null;
+      // PostgREST can return the embed as either an object or a single-
+      // element array depending on the FK shape; normalise here.
+      trainer: { id: string; full_name: string | null } | Array<{ id: string; full_name: string | null }> | null;
     };
+    const trainerObj = Array.isArray(row.trainer) ? row.trainer[0] ?? null : row.trainer;
     const key = row.trainer_id ?? "(unassigned)";
     const cur = map.get(key) ?? {
       trainer_id:   row.trainer_id,
-      trainer_name: row.trainer?.full_name ?? "(unassigned)",
+      trainer_name: trainerObj?.full_name ?? "(unassigned)",
       lessons: 0, minutes: 0, hours: 0, revenue: 0,
     };
     cur.lessons += 1;
