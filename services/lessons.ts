@@ -501,6 +501,9 @@ export type CalendarLesson = {
   notes: string | null;
   package_id: string | null;
   service_id: string | null;
+  /** Group-lesson capacity (1 = individual). Migrated in Sprint 5 #1. */
+  max_participants?: number;
+  lesson_type?: "individual" | "group";
   /** Non-null when the trainer overrode the welfare cap. Reason is
    *  the trainer's stated justification; surfaced in the lesson card
    *  badge + audit reports. */
@@ -535,7 +538,7 @@ export async function getCalendar(from: string, to: string): Promise<CalendarLes
     .from("lessons")
     .select(
       `
-      id, starts_at, ends_at, status, price, notes, package_id, service_id, over_limit_reason,
+      id, starts_at, ends_at, status, price, notes, package_id, service_id, over_limit_reason, max_participants, lesson_type,
       horse:horses(id, name),
       client:clients(id, full_name),
       trainer:profiles(id, full_name),

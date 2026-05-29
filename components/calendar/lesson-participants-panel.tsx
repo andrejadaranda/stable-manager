@@ -1,0 +1,219 @@
+"use client";
+
+// Participants panel for the edit-lesson dialog.
+//
+// Renders the rider × horse pairs already attached to a lesson, lets
+// the owner/employee add another rider+horse (subject to capacity),
+// remove an existing rider, and adjust capacity.
+//
+// Foundation lives in services/lessons.ts (Sprint 5 #1) — this panel
+// just exposes those functions as UI without rewriting the rest of
+// the edit dialog. Wires server actions defined in
+// app/dashboard/calendar/participants-actions.ts.
+
+import { useEffect, useState, useTransition } from "react";
+import {
+  addParticipantAction,
+  removeParticipantAction,
+  setCapacityAction,
+  loadParticipants,
+} from "@/app/dashboard/calendar/participants-actions";
+
+type Participant = {
+  client_id: string;
+  horse_id:  string;
+  status:    string;
+  no_show:   boolean;
+  joined_at: string;
+  clients:   { id: string; full_name: string } | null;
+  horses:    { id: string; name: string }      | null;
+};
+
+export function LessonParticipantsPanel({
+  lessonId,
+  maxParticipants: initialMax,
+  clientOptions,
+  horseOptions,
+}: {
+  lessonId: string;
+  maxParticipants: number;
+  clientOptions: Array<{ id: string; full_name: string }>;
+  horseOptions:  Array<{ id: string; name: string }>;
+}) {
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [capacity,     setCapacity]     = useState(initialMax);
+  const [pickerOpen,   setPickerOpen]   = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+  const [pending,      startTransition] = useTransition();
+
+  const refresh = async () => {
+    const rows = await loadParticipants(lessonId);
+    setParticipants(rows as unknown as Participant[]);
+  };
+
+  useEffect(() => {
+    if (!lessonId) return;
+    refresh().catch(() => { /* table may be empty pre-mirror */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
+  const filled = participants.filter((p) => p.status === "confirmed").length;
+  const hasRoom = filled < capacity;
+
+  // Riders / horses not yet in this lesson — picker source.
+  const usedClientIds = new Set(participants.map((p) => p.client_id));
+  const availableClients = clientOptions.filter((c) => !usedClientIds.has(c.id));
+  // We don't block horses already in the lesson — same horse in the
+  // same slot is rare but the trigger will catch overlap with other
+  // lessons; in-slot dup would be unusual and server returns
+  // CLIENT_ALREADY_IN_LESSON which the user sees as a clear error.
+
+  async function handleAdd(formData: FormData) {
+    setError(null);
+    formData.set("lesson_id", lessonId);
+    const result = await addParticipantAction({ error: null, success: false }, formData);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setPickerOpen(false);
+      await refresh();
+    }
+  }
+
+  async function handleRemove(clientId: string) {
+    setError(null);
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    fd.set("client_id", clientId);
+    const result = await removeParticipantAction({ error: null, success: false }, fd);
+    if (result.error) setError(result.error);
+    else              await refresh();
+  }
+
+  async function handleCapacity(newCap: number) {
+    setError(null);
+    setCapacity(newCap); // optimistic
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    fd.set("max_participants", String(newCap));
+    const result = await setCapacityAction({ error: null, success: false }, fd);
+    if (result.error) setError(result.error);
+  }
+
+  return (
+    <section className="rounded-xl border border-ink-200 bg-white p-4 flex flex-col gap-3">
+      <header className="flex items-center justify-between gap-2">
+        <div>
+          <h4 className="text-[13px] font-semibold text-navy-900">Riders &amp; horses</h4>
+          <p className="text-[11px] text-ink-500 mt-0.5">
+            {filled}/{capacity} confirmed
+            {capacity > 1 && <span className="text-brand-700 font-medium ml-1">· Group lesson</span>}
+          </p>
+        </div>
+        <label className="flex items-center gap-1.5 text-[11px] text-ink-600">
+          Capacity
+          <select
+            value={capacity}
+            onChange={(e) => startTransition(() => handleCapacity(Number(e.target.value)))}
+            className="h-7 rounded-md border border-ink-200 bg-white text-[12px] px-1.5 tabular-nums"
+          >
+            {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </label>
+      </header>
+
+      {error && (
+        <p className="text-[12px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+          {error}
+        </p>
+      )}
+
+      <ul className="flex flex-col divide-y divide-ink-100/80">
+        {participants.length === 0 && (
+          <li className="py-2 text-[12px] text-ink-500">No riders yet.</li>
+        )}
+        {participants.map((p) => (
+          <li key={p.client_id} className="py-2 flex items-center justify-between gap-2">
+            <div className="text-[13px] text-ink-900">
+              <span className="font-medium">{p.clients?.full_name ?? "Unknown rider"}</span>
+              <span className="text-ink-500"> on </span>
+              <span className="font-medium">{p.horses?.name ?? "Unknown horse"}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => startTransition(() => handleRemove(p.client_id))}
+              disabled={pending}
+              className="h-7 px-2 text-[11px] text-ink-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors disabled:opacity-50"
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {hasRoom && !pickerOpen && (
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="h-9 self-start px-3 rounded-xl text-[12px] font-medium bg-brand-50 text-brand-800 hover:bg-brand-100 transition-colors"
+        >
+          + Add another rider
+        </button>
+      )}
+
+      {pickerOpen && (
+        <form
+          action={(fd) => startTransition(() => { handleAdd(fd); })}
+          className="flex flex-col gap-2 rounded-lg bg-ink-50/40 p-3"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label className="flex flex-col gap-1 text-[11px] text-ink-600">
+              Rider
+              <select
+                name="client_id"
+                required
+                className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+              >
+                <option value="">Pick a rider…</option>
+                {availableClients.map((c) => (
+                  <option key={c.id} value={c.id}>{c.full_name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] text-ink-600">
+              Horse
+              <select
+                name="horse_id"
+                required
+                className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+              >
+                <option value="">Pick a horse…</option>
+                {horseOptions.map((h) => (
+                  <option key={h.id} value={h.id}>{h.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => { setPickerOpen(false); setError(null); }}
+              className="h-8 px-3 text-[12px] text-ink-600 hover:bg-ink-100 rounded-md"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="h-8 px-3 text-[12px] font-medium bg-brand-600 text-white hover:bg-brand-700 rounded-md disabled:opacity-50"
+            >
+              {pending ? "Adding…" : "Add rider"}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}

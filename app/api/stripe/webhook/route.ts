@@ -267,6 +267,29 @@ async function syncSubscription(
     return;
   }
 
+  // GUARD: never overwrite a founder/demo stamp. BUG #OO (2026-05-28):
+  // when a founder cancels the trial copy of their Stripe subscription
+  // — or a demo subscription is cleaned up in Stripe — the resulting
+  // 'customer.subscription.deleted' webhook would reset the canonical
+  // subscription row from 'sub_founder_*' / 'sub_demo_*' back to the
+  // Stripe id with status='cancelled', revoking founder access.
+  // If the existing row carries a founder/demo marker, leave it alone.
+  // Owners can always relink a real Stripe subscription later by going
+  // through Checkout again.
+  const { data: existing } = await supabase
+    .from("subscriptions")
+    .select("stripe_subscription_id")
+    .eq("stable_id", stable.id)
+    .maybeSingle();
+  const existingSubId = existing?.stripe_subscription_id ?? "";
+  if (existingSubId.startsWith("sub_founder_") || existingSubId.startsWith("sub_demo_")) {
+    console.info(
+      "[stripe-webhook] skipping subscription sync — stable has founder/demo stamp",
+      { stable: stable.id, marker: existingSubId },
+    );
+    return;
+  }
+
   // In the Stripe 2026-04-22.dahlia API, current_period_start/end moved off
   // the Subscription root and onto each Subscription Item. We have a single
   // line item per subscription (one plan per stable), so reading item[0] is

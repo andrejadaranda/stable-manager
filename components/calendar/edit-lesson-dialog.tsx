@@ -22,6 +22,7 @@ import type { CalendarLesson } from "@/services/lessons";
 import type { PackageSummaryRow } from "@/services/packages";
 import type { ServiceRow } from "@/services/services";
 import { fmtTime } from "@/lib/utils/dates";
+import { LessonParticipantsPanel } from "./lesson-participants-panel";
 
 type Status = CalendarLesson["status"];
 
@@ -36,6 +37,8 @@ export function EditLessonDialog({
   lesson,
   services = [],
   activePackage,
+  clients = [],
+  horses = [],
   onClose,
 }: {
   lesson: CalendarLesson;
@@ -44,6 +47,10 @@ export function EditLessonDialog({
   /** Active package for this lesson's client — used to offer "Use package"
    *  on a lesson that isn't currently package-covered. Null if none. */
   activePackage?: PackageSummaryRow | null;
+  /** Roster for the group-lesson participants panel — "+ Add another rider". */
+  clients?: Array<{ id: string; full_name: string }>;
+  /** Active, lesson-eligible horses for the participants panel. */
+  horses?:  Array<{ id: string; name: string }>;
   onClose: () => void;
 }) {
   const [editState,   editAction]   = useFormState<UpdateLessonState, FormData>(
@@ -339,6 +346,16 @@ export function EditLessonDialog({
               "
             />
           </label>
+
+          {/* Group lesson participants — multi-rider picker. Always
+              rendered: solo lessons show as 1/1, owner can raise capacity
+              to turn this into a group. */}
+          <LessonParticipantsPanel
+            lessonId={lesson.id}
+            maxParticipants={(lesson as CalendarLesson & { max_participants?: number }).max_participants ?? 1}
+            clientOptions={clients}
+            horseOptions={horses}
+          />
 
           <label className="flex flex-col gap-1.5 text-sm">
             <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Notes</span>

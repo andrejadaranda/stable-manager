@@ -311,6 +311,8 @@ export function CalendarShell({
           lesson={selected}
           services={services}
           activePackage={activePackagesByClient[selected.client?.id ?? ""] ?? null}
+          clients={clients}
+          horses={horses}
           onClose={() => setSelected(null)}
         />
       )}
