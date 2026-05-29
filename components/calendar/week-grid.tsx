@@ -306,6 +306,11 @@ export function DayColumn({
         const widthPct = 100 / p.cols;
         const leftPct  = p.col * widthPct;
         const payment = p.lesson.payment_status;
+        // Sprint 5e: arena color overrides the status stripe colour so
+        // multi-arena yards can pick a lesson's arena at a glance.
+        const arenaColor =
+          (p.lesson as typeof p.lesson & { arena?: { color?: string } | null })
+            .arena?.color ?? null;
         return (
           <button
             key={p.lesson.id}
@@ -341,6 +346,7 @@ export function DayColumn({
               height: Math.max(p.height, 22),
               left:   `calc(${leftPct}% + 2px)`,
               width:  `calc(${widthPct}% - 4px)`,
+              ...(arenaColor ? { borderLeftColor: arenaColor } : {}),
             }}
           >
             {/* Tiny payment indicator — top-right corner. Uses one

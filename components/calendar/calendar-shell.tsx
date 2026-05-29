@@ -131,9 +131,20 @@ export function CalendarShell({
     });
   }, [lessons, optimistic]);
 
+  // Sprint 5e: arena filter — null = all arenas, otherwise arena.id.
+  const [arenaFilter, setArenaFilter] = useState<string | null>(null);
+
+  const filteredByArena = useMemo(() => {
+    if (!arenaFilter) return visibleLessons;
+    return visibleLessons.filter((l) => {
+      const aId = (l as typeof l & { arena_id?: string | null }).arena_id;
+      return aId === arenaFilter;
+    });
+  }, [visibleLessons, arenaFilter]);
+
   const byDay = useMemo(() => {
     const m = new Map<string, CalendarLesson[]>();
-    for (const l of visibleLessons) {
+    for (const l of filteredByArena) {
       const k = fmtISODate(new Date(l.starts_at));
       const arr = m.get(k) ?? [];
       arr.push(l);
@@ -219,6 +230,47 @@ export function CalendarShell({
           handleCreateAt(seed.startsLocal, seed.endsLocal);
         }}
       />
+
+      {/* Arena filter chips — only when stable has more than the default
+          single arena. Owners on a single-arena yard never see noise. */}
+      {arenas.length > 1 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setArenaFilter(null)}
+            className={`h-8 px-3 rounded-full text-[12px] font-medium transition-colors ${
+              arenaFilter === null
+                ? "bg-brand-700 text-white shadow-sm"
+                : "bg-white text-ink-700 hover:bg-ink-100/60 ring-1 ring-ink-200"
+            }`}
+          >
+            All arenas
+          </button>
+          {arenas.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => setArenaFilter(a.id)}
+              className={`h-8 px-3 rounded-full text-[12px] font-medium inline-flex items-center gap-1.5 transition-colors ${
+                arenaFilter === a.id
+                  ? "text-white shadow-sm"
+                  : "bg-white text-ink-700 hover:bg-ink-100/60 ring-1 ring-ink-200"
+              }`}
+              style={
+                arenaFilter === a.id
+                  ? { background: a.color }
+                  : undefined
+              }
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-sm"
+                style={{ background: a.color }}
+              />
+              {a.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Drag-error toast (banner) — clears on next successful reschedule */}
       {dropError && (
