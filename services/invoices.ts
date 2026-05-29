@@ -4,7 +4,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
-import { getStableIssuer, isIssuerReady } from "@/services/stableIssuer";
+import { getStableIssuer, isIssuerReady, type StableIssuer } from "@/services/stableIssuer";
 
 export type InvoiceRow = {
   id:           string;
@@ -29,6 +29,62 @@ export type GenerateResult = {
   skippedClients: number;
   warning?:       string;
 };
+
+export type InvoiceItemRow = {
+  id:           string;
+  invoice_id:   string;
+  lesson_id:    string | null;
+  description:  string;
+  quantity:     number;
+  unit_price:   number;
+  line_total:   number;
+  position:     number;
+};
+
+export type InvoiceDetail = {
+  invoice: InvoiceRow & { client: { id: string; full_name: string; email: string | null; phone: string | null } | null };
+  items:   InvoiceItemRow[];
+  issuer:  StableIssuer;
+};
+
+export async function getInvoiceDetail(invoiceId: string): Promise<InvoiceDetail | null> {
+  await getSession();
+  const supabase = createSupabaseServerClient();
+  const [invRes, itemsRes, issuer] = await Promise.all([
+    supabase.from("invoices")
+      .select("*, client:clients(id, full_name, email, phone)")
+      .eq("id", invoiceId)
+      .maybeSingle(),
+    supabase.from("invoice_items")
+      .select("*")
+      .eq("invoice_id", invoiceId)
+      .order("position"),
+    getStableIssuer(),
+  ]);
+  if (invRes.error)   throw invRes.error;
+  if (itemsRes.error) throw itemsRes.error;
+  if (!invRes.data)   return null;
+  return {
+    invoice: invRes.data as never,
+    items:   (itemsRes.data ?? []) as InvoiceItemRow[],
+    issuer,
+  };
+}
+
+export async function setInvoiceStatus(
+  invoiceId: string,
+  status: "issued" | "paid" | "overdue" | "cancelled",
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  void session;
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("invoices")
+    .update({ status })
+    .eq("id", invoiceId);
+  if (error) throw error;
+}
 
 export async function listInvoices(opts: { limit?: number } = {}): Promise<Array<InvoiceRow & { client: { id: string; full_name: string } | null }>> {
   await getSession();

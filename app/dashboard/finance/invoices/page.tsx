@@ -63,25 +63,30 @@ export default async function InvoicesPage({
         ) : (
           <ul className="divide-y divide-ink-100/80">
             {invoices.map((inv) => (
-              <li key={inv.id} className="py-2.5 flex items-center justify-between gap-3 text-[13px]">
-                <div className="flex flex-col">
-                  <span className="font-medium text-ink-900">{inv.number}</span>
-                  <span className="text-ink-500 text-[12px]">
-                    {inv.client?.full_name ?? "(client removed)"} ·
-                    {" "}{new Date(inv.issued_at).toLocaleDateString("en-GB")}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                    inv.status === "paid" ? "bg-emerald-50 text-emerald-700" :
-                    inv.status === "overdue" ? "bg-rose-50 text-rose-700" :
-                    inv.status === "cancelled" ? "bg-ink-100 text-ink-600" :
-                    "bg-amber-50 text-amber-800"
-                  }`}>{inv.status}</span>
-                  <span className="tabular-nums font-semibold text-ink-900">
-                    €{Number(inv.total).toFixed(2)}
-                  </span>
-                </div>
+              <li key={inv.id}>
+                <Link
+                  href={`/dashboard/finance/invoices/${inv.id}`}
+                  className="py-2.5 flex items-center justify-between gap-3 text-[13px] hover:bg-ink-50/60 -mx-2 px-2 rounded-md transition-colors"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium text-ink-900">{inv.number}</span>
+                    <span className="text-ink-500 text-[12px]">
+                      {inv.client?.full_name ?? "(client removed)"} ·
+                      {" "}{new Date(inv.issued_at).toLocaleDateString("en-GB")}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                      inv.status === "paid" ? "bg-emerald-50 text-emerald-700" :
+                      inv.status === "overdue" ? "bg-rose-50 text-rose-700" :
+                      inv.status === "cancelled" ? "bg-ink-100 text-ink-600" :
+                      "bg-amber-50 text-amber-800"
+                    }`}>{inv.status}</span>
+                    <span className="tabular-nums font-semibold text-ink-900">
+                      €{Number(inv.total).toFixed(2)}
+                    </span>
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>
