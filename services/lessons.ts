@@ -213,14 +213,19 @@ export async function createLesson(input: CreateLessonInput) {
 // GROUP LESSONS — participants management
 // ---------------------------------------------------------------------------
 
-/** Add a rider+horse pair to an existing lesson. Throws if the lesson
- *  is at capacity or if the horse double-books. Used by the "+ Add rider"
- *  button in the edit-lesson dialog. */
+/** Add a rider+horse pair to an existing lesson. When the lesson is at
+ *  capacity:
+ *   - if forceWaitlist (or auto-detect by caller): row is inserted with
+ *     status='waitlist' instead of failing.
+ *   - otherwise: returns {ok:false, reason:'LESSON_FULL'} so the caller
+ *     can ask the user "Join waitlist?" interactively.
+ *  Sprint 6 #4 adds the waitlist path. */
 export async function addLessonParticipant(
   lessonId: string,
   clientId: string,
   horseId:  string,
-): Promise<{ ok: true } | { ok: false; reason: string }> {
+  opts: { forceWaitlist?: boolean } = {},
+): Promise<{ ok: true; status: "confirmed" | "waitlist" } | { ok: false; reason: string }> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
   void session;
@@ -242,15 +247,18 @@ export async function addLessonParticipant(
     .eq("lesson_id", lessonId)
     .eq("status", "confirmed");
 
-  if ((count ?? 0) >= (lesson.max_participants ?? 1)) {
+  const isFull = (count ?? 0) >= (lesson.max_participants ?? 1);
+  if (isFull && !opts.forceWaitlist) {
     return { ok: false, reason: "LESSON_FULL" };
   }
+
+  const status = isFull || opts.forceWaitlist ? "waitlist" : "confirmed";
 
   const { error } = await supabase.from("lesson_participants").insert({
     lesson_id: lessonId,
     client_id: clientId,
     horse_id:  horseId,
-    status:    "confirmed",
+    status,
   });
 
   if (error) {
@@ -259,6 +267,49 @@ export async function addLessonParticipant(
     return { ok: false, reason: error.message };
   }
 
+  return { ok: true, status };
+}
+
+/** Promote a waitlisted rider to confirmed. Capacity is re-checked; if
+ *  the lesson is still full, the call is refused. */
+export async function promoteFromWaitlist(
+  lessonId: string,
+  clientId: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  void session;
+
+  const supabase = createSupabaseServerClient();
+
+  const { data: lesson } = await supabase
+    .from("lessons")
+    .select("max_participants")
+    .eq("id", lessonId)
+    .single();
+  if (!lesson) return { ok: false, reason: "LESSON_NOT_FOUND" };
+
+  const { count } = await supabase
+    .from("lesson_participants")
+    .select("client_id", { count: "exact", head: true })
+    .eq("lesson_id", lessonId)
+    .eq("status", "confirmed");
+
+  if ((count ?? 0) >= (lesson.max_participants ?? 1)) {
+    return { ok: false, reason: "LESSON_FULL" };
+  }
+
+  const { error } = await supabase
+    .from("lesson_participants")
+    .update({ status: "confirmed" })
+    .eq("lesson_id", lessonId)
+    .eq("client_id", clientId)
+    .eq("status", "waitlist");
+
+  if (error) {
+    if (error.code === "23P01") return { ok: false, reason: "HORSE_DOUBLE_BOOKED" };
+    return { ok: false, reason: error.message };
+  }
   return { ok: true };
 }
 

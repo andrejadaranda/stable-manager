@@ -9,6 +9,7 @@ import {
   removeLessonParticipant,
   setLessonCapacity,
   listLessonParticipants,
+  promoteFromWaitlist,
 } from "@/services/lessons";
 
 export type ParticipantsActionState = {
@@ -25,16 +26,36 @@ export async function addParticipantAction(
   const lessonId = String(fd.get("lesson_id") ?? "");
   const clientId = String(fd.get("client_id") ?? "");
   const horseId  = String(fd.get("horse_id")  ?? "");
+  const waitlist = String(fd.get("waitlist")  ?? "") === "1";
 
   if (!lessonId || !clientId || !horseId) {
     return { ...initial, error: "Pick a rider and horse." };
   }
 
-  const result = await addLessonParticipant(lessonId, clientId, horseId);
+  const result = await addLessonParticipant(lessonId, clientId, horseId, { forceWaitlist: waitlist });
   if (!result.ok) {
-    if (result.reason === "LESSON_FULL")              return { ...initial, error: "Lesson is full — raise capacity first." };
+    if (result.reason === "LESSON_FULL")              return { ...initial, error: "Lesson is full — raise capacity or join the waitlist." };
     if (result.reason === "HORSE_DOUBLE_BOOKED")      return { ...initial, error: "That horse already has a lesson at this time." };
     if (result.reason === "CLIENT_ALREADY_IN_LESSON") return { ...initial, error: "Rider is already in this lesson." };
+    return { ...initial, error: result.reason };
+  }
+
+  revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
+
+export async function promoteWaitlistAction(
+  _prev: ParticipantsActionState,
+  fd: FormData,
+): Promise<ParticipantsActionState> {
+  const lessonId = String(fd.get("lesson_id") ?? "");
+  const clientId = String(fd.get("client_id") ?? "");
+  if (!lessonId || !clientId) return { ...initial, error: "Missing rider." };
+
+  const result = await promoteFromWaitlist(lessonId, clientId);
+  if (!result.ok) {
+    if (result.reason === "LESSON_FULL") return { ...initial, error: "Lesson is full — remove someone or raise capacity first." };
+    if (result.reason === "HORSE_DOUBLE_BOOKED") return { ...initial, error: "Promote blocked: horse conflicts at that time." };
     return { ...initial, error: result.reason };
   }
 

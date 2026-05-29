@@ -17,6 +17,7 @@ import {
   removeParticipantAction,
   setCapacityAction,
   loadParticipants,
+  promoteWaitlistAction,
 } from "@/app/dashboard/calendar/participants-actions";
 
 type Participant = {
@@ -100,6 +101,19 @@ export function LessonParticipantsPanel({
     if (result.error) setError(result.error);
   }
 
+  async function handlePromote(clientId: string) {
+    setError(null);
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    fd.set("client_id", clientId);
+    const result = await promoteWaitlistAction({ error: null, success: false }, fd);
+    if (result.error) setError(result.error);
+    else              await refresh();
+  }
+
+  const confirmed = participants.filter((p) => p.status === "confirmed");
+  const waitlist  = participants.filter((p) => p.status === "waitlist");
+
   return (
     <section className="rounded-xl border border-ink-200 bg-white p-4 flex flex-col gap-3">
       <header className="flex items-center justify-between gap-2">
@@ -131,10 +145,10 @@ export function LessonParticipantsPanel({
       )}
 
       <ul className="flex flex-col divide-y divide-ink-100/80">
-        {participants.length === 0 && (
+        {confirmed.length === 0 && (
           <li className="py-2 text-[12px] text-ink-500">No riders yet.</li>
         )}
-        {participants.map((p) => (
+        {confirmed.map((p) => (
           <li key={p.client_id} className="py-2 flex items-center justify-between gap-2">
             <div className="text-[13px] text-ink-900">
               <span className="font-medium">{p.clients?.full_name ?? "Unknown rider"}</span>
@@ -153,21 +167,72 @@ export function LessonParticipantsPanel({
         ))}
       </ul>
 
-      {hasRoom && !pickerOpen && (
+      {/* Waitlist section — only visible when at least one waitlisted */}
+      {waitlist.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2.5">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-amber-800 font-semibold mb-1">
+            Waitlist · {waitlist.length}
+          </p>
+          <ul className="flex flex-col divide-y divide-amber-100/80">
+            {waitlist.map((p) => (
+              <li key={p.client_id} className="py-1.5 flex items-center justify-between gap-2">
+                <div className="text-[13px] text-amber-900">
+                  <span className="font-medium">{p.clients?.full_name ?? "Unknown rider"}</span>
+                  <span className="text-amber-700"> on </span>
+                  <span className="font-medium">{p.horses?.name ?? "Unknown horse"}</span>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => startTransition(() => handlePromote(p.client_id))}
+                    disabled={pending || !hasRoom}
+                    title={!hasRoom ? "Raise capacity or remove someone first" : "Promote to confirmed"}
+                    className="h-7 px-2 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100 rounded-md transition-colors disabled:opacity-40"
+                  >
+                    Promote
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startTransition(() => handleRemove(p.client_id))}
+                    disabled={pending}
+                    className="h-7 px-2 text-[11px] text-ink-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!pickerOpen && (
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
-          className="h-9 self-start px-3 rounded-xl text-[12px] font-medium bg-brand-50 text-brand-800 hover:bg-brand-100 transition-colors"
+          className={`h-9 self-start px-3 rounded-xl text-[12px] font-medium transition-colors ${
+            hasRoom
+              ? "bg-brand-50 text-brand-800 hover:bg-brand-100"
+              : "bg-amber-50 text-amber-900 hover:bg-amber-100"
+          }`}
         >
-          + Add another rider
+          {hasRoom ? "+ Add another rider" : "+ Add to waitlist"}
         </button>
       )}
 
       {pickerOpen && (
         <form
           action={(fd) => startTransition(() => { handleAdd(fd); })}
-          className="flex flex-col gap-2 rounded-lg bg-ink-50/40 p-3"
+          className={`flex flex-col gap-2 rounded-lg p-3 ${
+            hasRoom ? "bg-ink-50/40" : "bg-amber-50/40 border border-amber-200"
+          }`}
         >
+          {!hasRoom && <input type="hidden" name="waitlist" value="1" />}
+          {!hasRoom && (
+            <p className="text-[11px] text-amber-800">
+              Lesson is full. This rider will join the waitlist.
+            </p>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label className="flex flex-col gap-1 text-[11px] text-ink-600">
               Rider
