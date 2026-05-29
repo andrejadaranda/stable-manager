@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   saveIssuerAction,
@@ -69,9 +70,15 @@ export function IssuerForm({ initial: issuer }: { initial: StableIssuer }) {
         </p>
       )}
       {state.success && (
-        <p className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-2 text-[13px]">
-          Saved.
-        </p>
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 px-3 py-2.5 text-[13px] flex items-center justify-between gap-3 flex-wrap">
+          <span><strong>Saved.</strong> Bulk invoice generation is now enabled.</span>
+          <Link
+            href="/dashboard/finance/invoices"
+            className="h-8 px-3 inline-flex items-center rounded-lg bg-emerald-700 text-white text-[12px] font-medium hover:bg-emerald-800"
+          >
+            Generate invoices now →
+          </Link>
+        </div>
       )}
 
       <div className="flex justify-end">

@@ -320,7 +320,7 @@ function CareSection({ items }: { items: CareRequestWithContext[] }) {
                   <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700">
                     {CARE_STATUS_LABEL[r.status]}
                   </span>
-                  <RespondButton requestId={r.id} defaultStatus={r.status} />
+                  <RespondButton requestId={r.id} defaultStatus={r.status} urgent={r.urgency === "high" && r.status === "pending"} />
                 </div>
               </div>
             </li>

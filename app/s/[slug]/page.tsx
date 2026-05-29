@@ -88,6 +88,17 @@ export default async function PublicStablePage({
           <p className="text-base text-white/80 mt-5 max-w-xl leading-relaxed">
             Lessons, livery, and horse care done with attention.
           </p>
+          {/* Conversion CTA — visible above the fold so every visitor
+              who came from Instagram / WhatsApp lands on a clear next
+              step. Routes into the stable-scoped join signup. */}
+          <div className="mt-7">
+            <Link
+              href={`/signup/join/${stable.slug}`}
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-white text-navy-900 text-[14px] font-semibold shadow-sm hover:bg-ink-50 transition-colors"
+            >
+              Book a trial lesson →
+            </Link>
+          </div>
         </div>
       </header>
 

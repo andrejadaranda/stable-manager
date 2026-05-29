@@ -123,13 +123,19 @@ export async function horseUtilization(period: string): Promise<HorseUtilization
     const h = hRaw as { id: string; name: string };
     const c = counts.get(h.id) ?? { lessons: 0, minutes: 0, last_used: null };
     const dailyAvg = c.lessons / Math.max(1, periodDays);
-    // Thresholds tuned for a typical riding school:
-    // < 0.3 lessons/day = under-used, > 3.5/day = over-used, 0 = idle.
+    // Thresholds expressed as lessons-per-WEEK so the period length
+    // doesn't push everything to "under" on long ranges. A typical
+    // riding school horse:
+    //   0 lessons        = idle
+    //   < 3 per week     = under (less than every other day)
+    //   3-20 per week    = ok    (1-3 per day, healthy workload)
+    //   > 20 per week    = over  (>3 per day, welfare concern)
+    const lessonsPerWeek = dailyAvg * 7;
     const status: HorseUtilizationRow["status"] =
-      c.lessons === 0   ? "idle"  :
-      dailyAvg  < 0.3   ? "under" :
-      dailyAvg  > 3.5   ? "over"  :
-                          "ok";
+      c.lessons === 0       ? "idle"  :
+      lessonsPerWeek < 3    ? "under" :
+      lessonsPerWeek > 20   ? "over"  :
+                              "ok";
     return {
       horse_id:   h.id,
       horse_name: h.name,

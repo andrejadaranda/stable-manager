@@ -14,9 +14,13 @@ import { Button, Field, Input, Textarea } from "@/components/ui";
 export function RespondButton({
   requestId,
   defaultStatus = "acknowledged",
+  urgent = false,
 }: {
   requestId: string;
   defaultStatus?: CareRequestStatus;
+  /** When true (high-urgency pending request) the button paints
+   *  red so it stands out next to the matching Urgent badge. */
+  urgent?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -24,10 +28,11 @@ export function RespondButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="
-          h-8 px-3 rounded-lg text-[12px] font-medium
-          bg-navy-900 text-white hover:bg-navy-800 transition-colors
-        "
+        className={`h-8 px-3 rounded-lg text-[12px] font-medium transition-colors ${
+          urgent
+            ? "bg-rose-600 text-white hover:bg-rose-700"
+            : "bg-navy-900 text-white hover:bg-navy-800"
+        }`}
       >
         Respond
       </button>

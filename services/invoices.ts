@@ -47,6 +47,56 @@ export type InvoiceDetail = {
   issuer:  StableIssuer;
 };
 
+export type GeneratePreview = {
+  eligibleClients: number;
+  totalLessons:    number;
+  totalAmount:     number;
+};
+
+/** Same scan as generateMonthlyInvoices but read-only — used to populate
+ *  the "Confirm generation" dialog with a preview. */
+export async function previewMonthlyInvoices(periodStart: string, periodEnd: string): Promise<GeneratePreview> {
+  await getSession();
+  const supabase = createSupabaseServerClient();
+
+  const { data: lessons } = await supabase
+    .from("lessons")
+    .select("id, client_id, price")
+    .gte("starts_at", periodStart)
+    .lte("starts_at", periodEnd)
+    .eq("status", "completed");
+
+  const ids = (lessons ?? []).map((l) => (l as { id: string }).id);
+  const invoicedSet = new Set<string>();
+  if (ids.length > 0) {
+    const { data: items } = await supabase
+      .from("invoice_items")
+      .select("lesson_id")
+      .in("lesson_id", ids);
+    for (const it of (items ?? []) as Array<{ lesson_id: string }>) invoicedSet.add(it.lesson_id);
+  }
+
+  const clientTotals = new Map<string, number>();
+  let totalLessons = 0;
+  for (const lRaw of lessons ?? []) {
+    const l = lRaw as { id: string; client_id: string; price: number | null };
+    if (invoicedSet.has(l.id)) continue;
+    const p = Number(l.price ?? 0);
+    if (p <= 0) continue;
+    clientTotals.set(l.client_id, (clientTotals.get(l.client_id) ?? 0) + p);
+    totalLessons += 1;
+  }
+
+  let totalAmount = 0;
+  for (const t of clientTotals.values()) totalAmount += t;
+
+  return {
+    eligibleClients: clientTotals.size,
+    totalLessons,
+    totalAmount,
+  };
+}
+
 export async function getInvoiceDetail(invoiceId: string): Promise<InvoiceDetail | null> {
   await getSession();
   const supabase = createSupabaseServerClient();

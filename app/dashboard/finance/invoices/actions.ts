@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { generateMonthlyInvoices, type GenerateResult } from "@/services/invoices";
+import {
+  generateMonthlyInvoices,
+  previewMonthlyInvoices,
+  type GenerateResult,
+  type GeneratePreview,
+} from "@/services/invoices";
 
 export type InvoicesActionState = {
   error:   string | null;
@@ -9,6 +14,19 @@ export type InvoicesActionState = {
 };
 
 const initial: InvoicesActionState = { error: null, result: null };
+
+/** Server-side preview for the confirm dialog. Read-only. */
+export async function getGeneratePreview(period: string): Promise<GeneratePreview | { error: string }> {
+  if (!/^\d{4}-\d{2}$/.test(period)) return { error: "Invalid period." };
+  const [y, m] = period.split("-").map((s) => Number(s));
+  const start = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0)).toISOString();
+  const end   = new Date(Date.UTC(y, m,     0, 23, 59, 59)).toISOString();
+  try {
+    return await previewMonthlyInvoices(start, end);
+  } catch (err) {
+    return { error: (err as Error)?.message ?? "Preview failed." };
+  }
+}
 
 /** Generate invoices for the period passed in (YYYY-MM). The period
  *  spans the first to the last day of that month inclusive. */
