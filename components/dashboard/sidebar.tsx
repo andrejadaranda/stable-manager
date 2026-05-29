@@ -44,6 +44,8 @@ const NAV: Record<Role, Item[]> = {
     { href: "/dashboard/chat",            label: "Chat",            icon: <IconChat />, feature: "chat" },
     { href: "/dashboard/payments",        label: "Payments",        icon: <IconCash /> },
     { href: "/dashboard/expenses",      label: "Expenses",      icon: <IconReceipt /> },
+    { href: "/dashboard/finance/invoices", label: "Invoices",   icon: <IconReceipt /> },
+    { href: "/dashboard/reports",       label: "Reports",       icon: <IconActivity /> },
     { href: "/dashboard/team",          label: "Team",          icon: <IconShield /> },
   ],
   employee: [
