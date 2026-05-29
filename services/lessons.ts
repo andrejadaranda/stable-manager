@@ -548,6 +548,7 @@ export async function getCalendar(from: string, to: string): Promise<CalendarLes
     .select(
       `
       id, starts_at, ends_at, status, price, notes, package_id, service_id, over_limit_reason, max_participants, lesson_type, arena_id,
+      arena:arenas!lessons_arena_id_fkey(id, name, color),
       horse:horses!lessons_horse_id_fkey(id, name),
       client:clients!lessons_client_id_fkey(id, full_name),
       trainer:profiles(id, full_name),

@@ -65,6 +65,7 @@ export function CreateLessonPanel({
   horses,
   trainers,
   services = [],
+  arenas   = [],
   activePackagesByClient = {},
   label = "+ New lesson",
 }: {
@@ -72,6 +73,7 @@ export function CreateLessonPanel({
   horses: HorseOpt[];
   trainers: TrainerOpt[];
   services?: ServiceRow[];
+  arenas?:   Array<{ id: string; name: string; color: string }>;
   activePackagesByClient?: Record<string, PackageSummaryRow>;
   label?: string;
 }) {
@@ -95,6 +97,7 @@ export function CreateLessonPanel({
           horses={horses}
           trainers={trainers}
           services={services}
+          arenas={arenas}
           activePackagesByClient={activePackagesByClient}
           onClose={() => setOpen(false)}
         />
@@ -110,6 +113,7 @@ export function CreateLessonForm({
   horses,
   trainers,
   services = [],
+  arenas   = [],
   activePackagesByClient = {},
   onClose,
   initial,
@@ -121,6 +125,8 @@ export function CreateLessonForm({
    *  seeds price + suggests duration. Empty array => no service picker
    *  (back-compat with stables that haven't curated a list yet). */
   services?: ServiceRow[];
+  /** Active arenas — feeds the arena dropdown. Migration 63. */
+  arenas?:   Array<{ id: string; name: string; color: string }>;
   /** Keyed by client_id; one active (non-expired, has remaining) package
    *  per client. Used to render a "Use package" toggle when applicable. */
   activePackagesByClient?: Record<string, PackageSummaryRow>;
@@ -136,6 +142,9 @@ export function CreateLessonForm({
   const [horseId, setHorseId]   = useState("");
   const [trainerId, setTrainerId] = useState("");
   const [serviceId, setServiceId] = useState("");
+  // Default to the first active arena (typically "Main arena") so single-
+  // arena stables don't need to touch the picker at all.
+  const [arenaId,   setArenaId]   = useState(arenas[0]?.id ?? "");
   // Quick-add: trainer can type a new client name + phone right here
   // instead of switching pages. The server creates (or finds-by-phone
   // dedup) and uses that id for the lesson.
@@ -374,6 +383,17 @@ export function CreateLessonForm({
                 label: `${s.name} · ${s.default_duration_minutes} min · €${Number(s.base_price).toFixed(2)}`,
               }))}
               placeholder="Pick from price list…"
+            />
+          )}
+
+          {arenas.length > 0 && (
+            <Select
+              label="Arena"
+              name="arena_id"
+              value={arenaId}
+              onChange={setArenaId}
+              options={arenas.map((a) => ({ id: a.id, label: a.name }))}
+              placeholder="TBD arena"
             />
           )}
 

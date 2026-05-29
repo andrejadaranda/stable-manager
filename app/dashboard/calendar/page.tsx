@@ -5,6 +5,7 @@ import { listHorses } from "@/services/horses";
 import { listTrainers } from "@/services/profiles";
 import { listActivePackagesForStable } from "@/services/packages";
 import { listServices } from "@/services/services";
+import { listArenas } from "@/services/arenas";
 import { startOfWeek, addDays } from "@/lib/utils/dates";
 import { CalendarShell } from "@/components/calendar/calendar-shell";
 import { EmptyState } from "@/components/ui";
@@ -24,13 +25,14 @@ export default async function CalendarPage({
   // Horse list is filtered to lesson-eligible: stable-owned or
   // client-owned-and-opted-in. Boarding-only horses are hidden so the
   // calendar dropdown stays clean.
-  const [lessons, clients, horses, trainers, activePackages, services] = await Promise.all([
+  const [lessons, clients, horses, trainers, activePackages, services, arenas] = await Promise.all([
     getCalendar(start.toISOString(), end.toISOString()),
     listClients({ activeOnly: true }),
     listHorses({ activeOnly: true, lessonsOnly: true }),
     listTrainers(),
     listActivePackagesForStable(),
     listServices({ activeOnly: true }),
+    listArenas({ activeOnly: true }).catch(() => []),
   ]);
 
   // Fresh-stable nudge: if no horses or no clients, calendar can't book
@@ -67,6 +69,7 @@ export default async function CalendarPage({
       horses={horses ?? []}
       trainers={trainers ?? []}
       services={services ?? []}
+      arenas={arenas ?? []}
       activePackagesByClient={activePackages}
       editable
     />

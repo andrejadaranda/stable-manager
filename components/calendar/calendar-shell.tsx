@@ -48,6 +48,7 @@ export function CalendarShell({
   horses = [],
   trainers = [],
   services = [],
+  arenas = [],
   activePackagesByClient = {},
   editable = true,
 }: {
@@ -60,6 +61,9 @@ export function CalendarShell({
   trainers?: TrainerOpt[];
   /** Active services from the stable price list. */
   services?: ServiceRow[];
+  /** Active arenas from migration 63 — feeds the per-lesson dropdown
+   *  and the calendar filter chips. */
+  arenas?: Array<{ id: string; name: string; color: string }>;
   /** {clientId -> active package} for the "Use package" toggle. */
   activePackagesByClient?: ActivePackagesMap;
   editable?: boolean;
@@ -298,6 +302,7 @@ export function CalendarShell({
           horses={horses}
           trainers={trainers}
           services={services}
+          arenas={arenas}
           activePackagesByClient={activePackagesByClient}
           onClose={() => setSlot(null)}
           initial={slot.startsLocal ? slot : undefined}
@@ -313,6 +318,7 @@ export function CalendarShell({
           activePackage={activePackagesByClient[selected.client?.id ?? ""] ?? null}
           clients={clients}
           horses={horses}
+          arenas={arenas}
           onClose={() => setSelected(null)}
         />
       )}

@@ -61,6 +61,7 @@ export async function createLessonAction(
   const notesRaw  = String(formData.get("notes") ?? "").trim();
   const packageRaw = String(formData.get("package_id") ?? "").trim();
   const serviceRaw = String(formData.get("service_id") ?? "").trim();
+  const arenaRaw   = String(formData.get("arena_id") ?? "").trim();
   const overLimitReason = String(formData.get("over_limit_reason") ?? "").trim();
   const repeatRaw = String(formData.get("repeat_count") ?? "").trim();
   const repeatIntervalRaw = String(formData.get("repeat_interval_weeks") ?? "1").trim();
@@ -124,6 +125,7 @@ export async function createLessonAction(
           notes: notesRaw || undefined,
           packageId: packageRaw || null,
           serviceId: serviceRaw || null,
+          arenaId:   arenaRaw || null,
           overLimitReason: overLimitReason || null,
         },
         { intervalWeeks: repeatInterval, count: repeatCount },
@@ -172,6 +174,7 @@ export async function createLessonAction(
       notes: notesRaw || undefined,
       packageId: packageRaw || null,
       serviceId: serviceRaw || null,
+      arenaId:   arenaRaw || null,
       overLimitReason: overLimitReason || null,
     });
   } catch (err: any) {
@@ -229,6 +232,7 @@ export async function updateLessonAction(
   const notesRaw = String(formData.get("notes") ?? "");
   const packageRaw = String(formData.get("package_id") ?? "").trim();
   const serviceRaw = String(formData.get("service_id") ?? "").trim();
+  const arenaRaw   = String(formData.get("arena_id") ?? "").trim();
   const overLimitReason = String(formData.get("over_limit_reason") ?? "").trim();
   // "" means "leave unchanged"; "__none__" means "detach package".
   const packageId =
@@ -239,6 +243,10 @@ export async function updateLessonAction(
     serviceRaw === "" ? undefined :
     serviceRaw === "__none__" ? null :
     serviceRaw;
+  const arenaId =
+    arenaRaw === "" ? undefined :
+    arenaRaw === "__none__" ? null :
+    arenaRaw;
 
   if (!lessonId) return { error: "Missing lesson id.", success: false };
   if (!VALID_STATUSES.includes(status as LessonStatus)) {
@@ -275,6 +283,7 @@ export async function updateLessonAction(
       notes:     notesRaw.trim() === "" ? null : notesRaw.trim(),
       packageId,
       serviceId,
+      arenaId,
       overLimitReason: overLimitReason || null,
     });
 

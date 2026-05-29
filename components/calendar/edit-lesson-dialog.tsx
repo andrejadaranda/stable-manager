@@ -39,6 +39,7 @@ export function EditLessonDialog({
   activePackage,
   clients = [],
   horses = [],
+  arenas = [],
   onClose,
 }: {
   lesson: CalendarLesson;
@@ -51,6 +52,8 @@ export function EditLessonDialog({
   clients?: Array<{ id: string; full_name: string }>;
   /** Active, lesson-eligible horses for the participants panel. */
   horses?:  Array<{ id: string; name: string }>;
+  /** Active arenas — feeds the arena dropdown. Migration 63. */
+  arenas?:  Array<{ id: string; name: string; color: string }>;
   onClose: () => void;
 }) {
   const [editState,   editAction]   = useFormState<UpdateLessonState, FormData>(
@@ -70,6 +73,7 @@ export function EditLessonDialog({
   const [startsLocal, setStartsLocal] = useState<string>(toLocalInput(lesson.starts_at));
   const [endsLocal,   setEndsLocal]   = useState<string>(toLocalInput(lesson.ends_at));
   const [serviceId,   setServiceId]   = useState<string>(lesson.service_id ?? "");
+  const [arenaId,     setArenaId]     = useState<string>((lesson as CalendarLesson & { arena_id?: string | null }).arena_id ?? "");
 
   // Use-package toggle. Initial state matches the lesson's current state
   // (package_id non-null = currently using a package).
@@ -181,6 +185,16 @@ export function EditLessonDialog({
               serviceId
             }
           />
+          {/* arena_id — same encoding pattern */}
+          <input
+            type="hidden"
+            name="arena_id"
+            value={
+              arenaId === ((lesson as CalendarLesson & { arena_id?: string | null }).arena_id ?? "") ? "" :
+              arenaId === "" ? "__none__" :
+              arenaId
+            }
+          />
           {packageIdValue && <input type="hidden" name="package_id" value={packageIdValue} />}
 
           {/* Payment / package status panel ------------------- */}
@@ -274,6 +288,26 @@ export function EditLessonDialog({
                   <option key={s.id} value={s.id}>
                     {s.name} · {s.default_duration_minutes} min · €{Number(s.base_price).toFixed(2)}
                   </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {arenas.length > 0 && (
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Arena</span>
+              <select
+                value={arenaId}
+                onChange={(e) => setArenaId(e.target.value)}
+                className="
+                  rounded-xl border border-ink-200 bg-white text-sm text-ink-900
+                  px-3 py-2.5
+                  focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+                "
+              >
+                <option value="">— TBD arena —</option>
+                {arenas.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>
             </label>
