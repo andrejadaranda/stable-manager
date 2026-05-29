@@ -39,6 +39,7 @@ const GROUPS: Group[] = [
       { href: "/dashboard/settings/services",      label: "Services", ownerOnly: true, feature: "services" },
       { href: "/dashboard/settings/boarding",      label: "Boarding", ownerOnly: true, feature: "boarding" },
       { href: "/dashboard/settings/session-types", label: "Session types", ownerOnly: true },
+      { href: "/dashboard/settings/arenas",        label: "Arenas", ownerOnly: true },
       { href: "/dashboard/settings/weather",       label: "Weather alerts", ownerOnly: true },
       { href: "/dashboard/settings/features",      label: "Features", ownerOnly: true },
     ],

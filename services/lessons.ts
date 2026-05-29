@@ -12,6 +12,8 @@ export type CreateLessonInput = {
    *  double-booking preflight and welfare cap check are both skipped. */
   horseId?: string | null;
   clientId: string;
+  /** Arena assignment. Optional — null = TBD arena. Migration 63. */
+  arenaId?: string | null;
   /** Trainer for this lesson. Optional — a lesson can be booked before
    *  the weekly trainer rota is set ("TBD trainer"). When null/empty,
    *  the trainer-double-booking preflight check is skipped. */
@@ -172,6 +174,7 @@ export async function createLesson(input: CreateLessonInput) {
       notes: input.notes ?? null,
       package_id: input.packageId ?? null,
       service_id: input.serviceId ?? null,
+      arena_id:   input.arenaId ?? null,    // migration 63
       over_limit_reason: reason || null,
       series_id: input.seriesId ?? null,
     })
@@ -367,6 +370,8 @@ export type UpdateLessonInput = {
   packageId?: string | null;
   /** Pass `null` to clear the service link. */
   serviceId?: string | null;
+  /** Pass `null` to clear arena assignment. Migration 63. */
+  arenaId?: string | null;
   /** When moving a lesson into a day that pushes the horse over its
    *  cap, the trainer must supply a reason. Saved verbatim. */
   overLimitReason?: string | null;
@@ -470,6 +475,7 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
   if (input.notes     !== undefined) update.notes     = input.notes;
   if (input.packageId !== undefined) update.package_id = input.packageId;
   if (input.serviceId !== undefined) update.service_id = input.serviceId;
+  if (input.arenaId   !== undefined) update.arena_id   = input.arenaId;
   if (input.overLimitReason !== undefined) {
     update.over_limit_reason = input.overLimitReason;
   }
@@ -504,6 +510,9 @@ export type CalendarLesson = {
   /** Group-lesson capacity (1 = individual). Migrated in Sprint 5 #1. */
   max_participants?: number;
   lesson_type?: "individual" | "group";
+  /** Arena assignment. Migration 63. */
+  arena_id?: string | null;
+  arena?: { id: string; name: string; color: string } | null;
   /** Non-null when the trainer overrode the welfare cap. Reason is
    *  the trainer's stated justification; surfaced in the lesson card
    *  badge + audit reports. */
@@ -538,7 +547,8 @@ export async function getCalendar(from: string, to: string): Promise<CalendarLes
     .from("lessons")
     .select(
       `
-      id, starts_at, ends_at, status, price, notes, package_id, service_id, over_limit_reason, max_participants, lesson_type,
+      id, starts_at, ends_at, status, price, notes, package_id, service_id, over_limit_reason, max_participants, lesson_type, arena_id,
+      arena:arenas(id, name, color),
       horse:horses(id, name),
       client:clients(id, full_name),
       trainer:profiles(id, full_name),
