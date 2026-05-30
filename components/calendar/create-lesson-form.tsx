@@ -188,7 +188,13 @@ export function CreateLessonForm({
   // can still override either field afterwards.
   useEffect(() => {
     if (!selectedService) return;
-    setPrice(String(selectedService.base_price));
+    // A lesson is ONE session. If the service is a bundle/club
+    // (sessions_included > 1) seed the per-lesson price, not the total.
+    const perLesson =
+      selectedService.sessions_included > 1
+        ? Number(selectedService.base_price) / selectedService.sessions_included
+        : Number(selectedService.base_price);
+    setPrice(String(Number(perLesson.toFixed(2))));
     setPriceManuallyEdited(false);
     if (!endsManuallyEdited && startsLocal) {
       const d = selectedService.default_duration_minutes;
@@ -380,7 +386,10 @@ export function CreateLessonForm({
               onChange={setServiceId}
               options={services.map((s) => ({
                 id: s.id,
-                label: `${s.name} · ${s.default_duration_minutes} min · €${Number(s.base_price).toFixed(2)}`,
+                label:
+                  s.sessions_included > 1
+                    ? `${s.name} · ${s.default_duration_minutes} min · €${(Number(s.base_price) / s.sessions_included).toFixed(2)}/lesson (${s.sessions_included}× = €${Number(s.base_price).toFixed(2)})`
+                    : `${s.name} · ${s.default_duration_minutes} min · €${Number(s.base_price).toFixed(2)}`,
               }))}
               placeholder="Pick from price list…"
             />

@@ -84,6 +84,15 @@ function CreateServiceCard() {
       </FieldRow>
       <FieldRow>
         <FormField
+          label="Sessions included"
+          name="sessions_included"
+          type="number"
+          min="1"
+          step="1"
+          defaultValue="1"
+          hint="1 = single lesson. For a club, set the TOTAL price above and how many lessons it covers — the per-lesson price is worked out automatically."
+        />
+        <FormField
           label="Default duration (min)"
           name="default_duration_minutes"
           type="number"
@@ -184,7 +193,11 @@ function ServiceRowCard({ service }: { service: ServiceRow }) {
             )}
           </div>
           <p className="text-[11.5px] text-ink-500 mt-0.5">
-            {FMT_EUR.format(Number(service.base_price))} · {service.default_duration_minutes} min
+            {FMT_EUR.format(Number(service.base_price))}
+            {service.sessions_included > 1
+              ? ` · ${service.sessions_included} lessons · ${FMT_EUR.format(Number(service.base_price) / service.sessions_included)}/lesson`
+              : ""}
+            {" "}· {service.default_duration_minutes} min
             {service.description ? ` · ${service.description}` : ""}
           </p>
         </div>
@@ -231,6 +244,17 @@ function EditServiceForm({
         <FormField label="Price · €" name="base_price" type="number" min="0" step="0.01" required defaultValue={Number(service.base_price).toFixed(2)} />
       </FieldRow>
       <FieldRow>
+        <FormField
+          label="Sessions included"
+          name="sessions_included"
+          type="number"
+          min="1"
+          step="1"
+          defaultValue={String(service.sessions_included ?? 1)}
+          hint={service.sessions_included > 1
+            ? `€${(Number(service.base_price) / service.sessions_included).toFixed(2)} per lesson`
+            : "1 = single lesson"}
+        />
         <FormField
           label="Default duration (min)"
           name="default_duration_minutes"

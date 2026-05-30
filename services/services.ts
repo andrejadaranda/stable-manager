@@ -21,6 +21,9 @@ export type ServiceRow = {
   name: string;
   description: string | null;
   base_price: number;
+  /** How many lessons base_price covers. 1 = single session.
+   *  >1 = a bundle/club; per-session price = base_price / sessions_included. */
+  sessions_included: number;
   default_duration_minutes: number;
   active: boolean;
   sort_order: number;
@@ -32,6 +35,7 @@ export type CreateServiceInput = {
   name: string;
   description?: string | null;
   basePrice: number;
+  sessionsIncluded?: number;
   defaultDurationMinutes?: number;
   sortOrder?: number;
 };
@@ -40,6 +44,7 @@ export type UpdateServiceInput = {
   name?: string;
   description?: string | null;
   basePrice?: number;
+  sessionsIncluded?: number;
   defaultDurationMinutes?: number;
   active?: boolean;
   sortOrder?: number;
@@ -57,6 +62,10 @@ export async function createService(input: CreateServiceInput): Promise<ServiceR
   if (input.basePrice < 0) throw new Error("INVALID_AMOUNT");
   const duration = input.defaultDurationMinutes ?? 45;
   if (duration < 5 || duration > 600) throw new Error("INVALID_DURATION");
+  const sessions = input.sessionsIncluded ?? 1;
+  if (!Number.isInteger(sessions) || sessions < 1 || sessions > 100) {
+    throw new Error("INVALID_SESSIONS");
+  }
 
   const supabase = createSupabaseServerClient();
   const { data, error } = await supabase
@@ -66,6 +75,7 @@ export async function createService(input: CreateServiceInput): Promise<ServiceR
       name,
       description:              input.description ?? null,
       base_price:               input.basePrice,
+      sessions_included:        sessions,
       default_duration_minutes: duration,
       sort_order:               input.sortOrder ?? 0,
     })
@@ -98,11 +108,17 @@ export async function updateService(
       throw new Error("INVALID_DURATION");
     }
   }
+  if (input.sessionsIncluded !== undefined) {
+    if (!Number.isInteger(input.sessionsIncluded) || input.sessionsIncluded < 1 || input.sessionsIncluded > 100) {
+      throw new Error("INVALID_SESSIONS");
+    }
+  }
 
   const update: Record<string, unknown> = {};
   if (input.name        !== undefined) update.name        = input.name.trim();
   if (input.description !== undefined) update.description = input.description;
   if (input.basePrice   !== undefined) update.base_price  = input.basePrice;
+  if (input.sessionsIncluded !== undefined) update.sessions_included = input.sessionsIncluded;
   if (input.defaultDurationMinutes !== undefined) {
     update.default_duration_minutes = input.defaultDurationMinutes;
   }

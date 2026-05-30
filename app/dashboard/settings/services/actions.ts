@@ -20,6 +20,7 @@ function parseInputs(formData: FormData) {
     name:        String(formData.get("name") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim(),
     basePriceR:  String(formData.get("base_price") ?? "").trim(),
+    sessionsR:   String(formData.get("sessions_included") ?? "").trim(),
     durationR:   String(formData.get("default_duration_minutes") ?? "").trim(),
     sortOrderR:  String(formData.get("sort_order") ?? "").trim(),
     activeR:     String(formData.get("active") ?? "true"),
@@ -39,12 +40,14 @@ export async function createServiceAction(
   }
 
   const duration = Number.parseInt(i.durationR, 10) || 45;
+  const sessionsIncluded = Number.parseInt(i.sessionsR, 10) || 1;
 
   try {
     await createService({
       name: i.name,
       description: i.description || null,
       basePrice,
+      sessionsIncluded,
       defaultDurationMinutes: duration,
       sortOrder: Number.parseInt(i.sortOrderR, 10) || 0,
     });
@@ -73,6 +76,7 @@ export async function updateServiceAction(
   }
 
   const duration = Number.parseInt(i.durationR, 10) || 45;
+  const sessionsIncluded = Number.parseInt(i.sessionsR, 10) || 1;
   const active = i.activeR !== "false";
 
   try {
@@ -80,6 +84,7 @@ export async function updateServiceAction(
       name: i.name,
       description: i.description || null,
       basePrice,
+      sessionsIncluded,
       defaultDurationMinutes: duration,
       sortOrder: Number.parseInt(i.sortOrderR, 10) || 0,
       active,
