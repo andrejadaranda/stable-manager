@@ -16,6 +16,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
 import { getClient } from "@/services/clients";
 import { getOwnStable } from "@/services/stables";
+import { getBrandKit } from "@/services/brandKit";
 import { sendClientInviteEmail } from "@/lib/email/client-invite";
 
 /** Row shape returned by listInvitationsForClient. */
@@ -142,8 +143,9 @@ export async function sendClientInvite(input: {
   try {
     // Fetch stable name + inviter name in parallel — both are needed
     // for personalised body copy.
-    const [stable, inviter] = await Promise.all([
+    const [stable, brand, inviter] = await Promise.all([
       getOwnStable(),
+      getBrandKit(),
       supabase
         .from("profiles")
         .select("full_name")
@@ -157,6 +159,8 @@ export async function sendClientInvite(input: {
       stableName:  stable.name,
       inviterName: inviter ?? "Your trainer",
       inviteUrl,
+      brandColor:  brand.brand_color,
+      logoUrl:     brand.logo_url,
     });
     emailSent = true;
   } catch (err) {

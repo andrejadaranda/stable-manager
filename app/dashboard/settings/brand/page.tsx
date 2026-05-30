@@ -14,7 +14,7 @@ export default async function BrandSettingsPage() {
       <header>
         <h2 className="font-display text-xl text-navy-700">Brand kit</h2>
         <p className="text-sm text-ink-500 mt-1.5">
-          Your logo and accent color show up in emails, share cards, and the app header.
+          Your logo and accent color show up in client invitation emails and the app header.
           Riders see <strong>your brand</strong> first — not Longrein.
         </p>
       </header>

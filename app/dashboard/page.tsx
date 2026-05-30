@@ -101,13 +101,6 @@ export default async function DashboardHome({
       ? Math.round((s.weekLessonsCompleted / s.weekLessonsCount) * 100)
       : 0;
 
-  const utilizationPct = Math.min(
-    100,
-    s.weekLessonsCount > 0 && s.activeHorses > 0
-      ? Math.round((s.weekLessonsCount / (s.activeHorses * 6)) * 100)
-      : 0,
-  );
-
   const collectionPct =
     s.monthlyRevenue + s.outstandingBalance > 0
       ? Math.round(
@@ -372,13 +365,20 @@ export default async function DashboardHome({
                 color="#1E2A47"
               />
             </>
-          ) : (
+          ) : s.isOwner ? (
             <>
+              {/* Owner: real completion + money. "Utilization" was a fabricated
+                  ratio (lessons / horses×6) — replaced with the honest
+                  scheduled-vs-completed rate for the week. */}
               <KpiRing
-                label="Utilization"
-                value={`${utilizationPct}%`}
-                sub={`${s.weekLessonsCount} lessons${completedRatio > 0 ? ` · ${completedRatio}% completed` : ""}`}
-                pct={utilizationPct}
+                label="Lessons this week"
+                value={`${s.weekLessonsCount}`}
+                sub={
+                  s.weekLessonsCompleted > 0
+                    ? `${completedRatio}% completed`
+                    : "Scheduled"
+                }
+                pct={completedRatio}
                 color="#E04E25"
               />
               <KpiRing
@@ -395,6 +395,29 @@ export default async function DashboardHome({
                 pct={s.outstandingBalance > 0 ? Math.min(100, Math.round((s.outstandingBalance / Math.max(1, s.monthlyRevenue + s.outstandingBalance)) * 100)) : 0}
                 color="#B23838"
                 inverted
+              />
+            </>
+          ) : (
+            <>
+              {/* Employees / trainers: operational only — never the stable's
+                  money (collection % + outstanding balance are owner-only). */}
+              <KpiRing
+                label="Lessons this week"
+                value={`${s.weekLessonsCount}`}
+                sub={
+                  s.weekLessonsCompleted > 0
+                    ? `${completedRatio}% completed`
+                    : "Scheduled"
+                }
+                pct={completedRatio}
+                color="#E04E25"
+              />
+              <KpiRing
+                label="Horses in care"
+                value={`${s.activeHorses}`}
+                sub={s.activeHorses === 0 ? "None active yet" : "Currently active"}
+                pct={s.activeHorses > 0 ? 100 : 0}
+                color="#1E2A47"
               />
             </>
           )}

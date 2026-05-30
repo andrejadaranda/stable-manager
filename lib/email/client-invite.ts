@@ -23,10 +23,24 @@ type SendClientInviteArgs = {
   inviterName:  string;
   /** Absolute URL the client clicks. https://app.longrein.eu/invite/<token>. */
   inviteUrl:    string;
+  /** Stable brand colour (hex). Falls back to paddock-green when absent/invalid. */
+  brandColor?:  string | null;
+  /** Stable logo URL. Rendered in the header when present; else the stable name. */
+  logoUrl?:     string | null;
 };
 
 export async function sendClientInviteEmail(args: SendClientInviteArgs): Promise<void> {
   const subject = `${args.stableName} invited you to Longrein`;
+
+  // Per-stable brand: owners who set a colour/logo in Settings → Brand see
+  // it applied here. Validate the hex so a bad value can't break the markup.
+  const accent =
+    args.brandColor && /^#[0-9a-fA-F]{6}$/.test(args.brandColor)
+      ? args.brandColor
+      : "#1E3A2A";
+  const headerBlock = args.logoUrl
+    ? `<img src="${args.logoUrl}" alt="${escapeHtml(args.stableName)}" height="40" style="height:40px;width:auto;display:block;margin:0 0 20px;">`
+    : `<div style="font-size:15px;font-weight:600;color:${accent};margin:0 0 20px;">${escapeHtml(args.stableName)}</div>`;
 
   // Plain-text fallback first — improves inbox placement vs. HTML-only.
   const text = `Hi ${args.clientName},
@@ -55,7 +69,8 @@ longrein.eu`;
     <tr><td align="center" style="padding:32px 16px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#FFFFFF;border-radius:12px;overflow:hidden;">
         <tr><td style="padding:32px 32px 8px;">
-          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;line-height:1.3;color:#1E3A2A;">
+          ${headerBlock}
+          <h1 style="margin:0 0 16px;font-size:22px;font-weight:600;line-height:1.3;color:${accent};">
             ${escapeHtml(args.stableName)} invited you to Longrein
           </h1>
           <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#3F4A42;">
@@ -67,7 +82,7 @@ longrein.eu`;
             Click the button to set your password and finish signing in.
           </p>
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 24px;">
-            <tr><td style="border-radius:8px;background:#1E3A2A;">
+            <tr><td style="border-radius:8px;background:${accent};">
               <a href="${args.inviteUrl}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:8px;">
                 Accept invitation
               </a>

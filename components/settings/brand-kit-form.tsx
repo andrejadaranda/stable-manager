@@ -79,7 +79,7 @@ export function BrandKitForm({
           <span className="ml-auto text-xs uppercase tracking-wider opacity-80 font-semibold">Preview</span>
         </div>
         <div className="px-5 py-4 bg-cream-50 text-sm text-ink-700">
-          <strong>Live preview</strong> — this is how your clients will see your brand in emails, the app header, and ride share cards.
+          <strong>Live preview</strong> — this is how your clients will see your brand in invitation emails and the app header.
         </div>
       </section>
 
