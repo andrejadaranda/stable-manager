@@ -5,16 +5,26 @@
 // status bar color, and use the manifest's name/short_name.
 
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { CookieBanner } from "@/components/legal/cookie-banner";
 import { InstallAppBanner } from "@/components/legal/install-app-banner";
 
 export const metadata: Metadata = {
+  // Resolves OG/canonical/relative URLs against the production host.
+  metadataBase: new URL("https://app.longrein.eu"),
   title: {
     default:  "Longrein.",
     template: "%s · Longrein.",
   },
+  // GSC HTML-tag fallback. Paste the token from Search Console into the
+  // GSC_SITE_VERIFICATION env var (Vercel → Settings → Environment Vars)
+  // if you verify by meta tag instead of DNS. Renders
+  // <meta name="google-site-verification" ...> only when the var is set.
+  verification: process.env.GSC_SITE_VERIFICATION
+    ? { google: process.env.GSC_SITE_VERIFICATION }
+    : undefined,
   description:
     "Schedule lessons, track payments, and protect your horses. Built for European riding stables.",
   applicationName: "Longrein.",
@@ -58,6 +68,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // GA4 measurement ID. Set NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX in Vercel env
+  // (both projects) once the GA4 web stream exists. Until then the gtag
+  // scripts don't render, so there's zero overhead and no broken pixel.
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+
   return (
     <html lang="en">
       <body className="min-h-screen">
@@ -69,6 +84,22 @@ export default function RootLayout({
         {/* Vercel Web Analytics — counts visitors and page views.
             Privacy-first (no cookies). Hobby tier: 2,500 events/mo. */}
         <Analytics />
+        {/* Google Analytics 4 — loads only when NEXT_PUBLIC_GA_ID is set.
+            afterInteractive keeps it off the critical render path. */}
+        {gaId ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${gaId}', { anonymize_ip: true });`}
+            </Script>
+          </>
+        ) : null}
       </body>
     </html>
   );
