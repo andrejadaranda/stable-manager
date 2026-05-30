@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   generateMonthlyInvoices,
   previewMonthlyInvoices,
+  setInvoiceStatusBulk,
   type GenerateResult,
   type GeneratePreview,
 } from "@/services/invoices";
@@ -57,5 +58,23 @@ export async function bulkGenerateAction(
     return { error: null, result };
   } catch (err) {
     return { error: (err as Error)?.message ?? "Generation failed.", result: null };
+  }
+}
+
+/** Multi-select bulk action from the invoices list — flips every selected
+ *  invoice to "paid" in one round-trip. Returns how many rows changed. */
+export async function bulkMarkInvoicesPaidAction(
+  ids: string[],
+): Promise<{ error: string | null; updated: number }> {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { error: "Nothing selected.", updated: 0 };
+  }
+  try {
+    const updated = await setInvoiceStatusBulk(ids, "paid");
+    revalidatePath("/dashboard/finance");
+    revalidatePath("/dashboard/finance/invoices");
+    return { error: null, updated };
+  } catch (err) {
+    return { error: (err as Error)?.message ?? "Update failed.", updated: 0 };
   }
 }

@@ -136,6 +136,29 @@ export async function setInvoiceStatus(
   if (error) throw error;
 }
 
+/** Bulk status change — one UPDATE … WHERE id IN (...). Used by the
+ *  invoices list multi-select "Mark paid" action. RLS still scopes the
+ *  update to the caller's stable, so a forged id from another stable is
+ *  a no-op. Returns the number of rows actually changed. */
+export async function setInvoiceStatusBulk(
+  invoiceIds: string[],
+  status: "issued" | "paid" | "overdue" | "cancelled",
+): Promise<number> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  void session;
+  const ids = Array.from(new Set(invoiceIds)).filter(Boolean);
+  if (ids.length === 0) return 0;
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .update({ status })
+    .in("id", ids)
+    .select("id");
+  if (error) throw error;
+  return (data ?? []).length;
+}
+
 export async function listInvoices(opts: { limit?: number } = {}): Promise<Array<InvoiceRow & { client: { id: string; full_name: string } | null }>> {
   await getSession();
   const supabase = createSupabaseServerClient();

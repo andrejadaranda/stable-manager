@@ -2,6 +2,7 @@ import { requirePageRole } from "@/lib/auth/redirects";
 import { listInvoices } from "@/services/invoices";
 import { getStableIssuer, isIssuerReady } from "@/services/stableIssuer";
 import { BulkInvoicePanel } from "@/components/finance/bulk-invoice-panel";
+import { InvoiceBulkList } from "@/components/finance/invoice-bulk-list";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -58,39 +59,7 @@ export default async function InvoicesPage({
         <h2 className="text-sm font-semibold text-navy-900 mb-3">
           Recent invoices · {invoices.length}
         </h2>
-        {invoices.length === 0 ? (
-          <p className="text-[13px] text-ink-500">No invoices yet.</p>
-        ) : (
-          <ul className="divide-y divide-ink-100/80">
-            {invoices.map((inv) => (
-              <li key={inv.id}>
-                <Link
-                  href={`/dashboard/finance/invoices/${inv.id}`}
-                  className="py-2.5 flex items-center justify-between gap-3 text-[13px] hover:bg-ink-50/60 -mx-2 px-2 rounded-md transition-colors"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium text-ink-900">{inv.number}</span>
-                    <span className="text-ink-500 text-[12px]">
-                      {inv.client?.full_name ?? "(client removed)"} ·
-                      {" "}{new Date(inv.issued_at).toLocaleDateString("en-GB")}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                      inv.status === "paid" ? "bg-emerald-50 text-emerald-700" :
-                      inv.status === "overdue" ? "bg-rose-50 text-rose-700" :
-                      inv.status === "cancelled" ? "bg-ink-100 text-ink-600" :
-                      "bg-amber-50 text-amber-800"
-                    }`}>{inv.status}</span>
-                    <span className="tabular-nums font-semibold text-ink-900">
-                      €{Number(inv.total).toFixed(2)}
-                    </span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <InvoiceBulkList invoices={invoices} />
       </section>
     </div>
   );
