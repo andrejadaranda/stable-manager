@@ -234,6 +234,7 @@ export type UpdateHorseInput = {
   /** Height in centimetres at the withers. Range 80-220. */
   heightCm?:     number | null;
   discipline?:   string | null;
+  breed?:        string | null;
 };
 
 export async function updateHorse(id: string, input: UpdateHorseInput) {
@@ -266,6 +267,7 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
   // Horse height in centimetres (migration 61, European convention).
   if (input.heightCm      !== undefined) update.height_cm     = input.heightCm;
   if (input.discipline    !== undefined) update.discipline    = input.discipline;
+  if (input.breed         !== undefined) update.breed         = input.breed;
 
   const { data, error } = await supabase
     .from("horses")

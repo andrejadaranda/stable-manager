@@ -96,6 +96,7 @@ export async function updateHorseAction(
   const damRaw       = String(formData.get("dam_name")     ?? "").trim();
   const heightCmRaw  = String(formData.get("height_cm") ?? "").trim();
   const disciplineRaw  = String(formData.get("discipline")   ?? "").trim();
+  const breedRaw       = String(formData.get("breed")        ?? "").trim();
 
   if (!id)   return { error: "Missing horse id.", success: false };
   if (!name) return { error: "Name is required.", success: false };
@@ -129,6 +130,7 @@ export async function updateHorseAction(
       damName:      damRaw       === "" ? null : damRaw,
       heightCm:     heightCmRaw === "" ? null : (Number.isFinite(Number(heightCmRaw)) ? Math.round(Number(heightCmRaw)) : null),
       discipline:   disciplineRaw  === "" ? null : disciplineRaw,
+      breed:        breedRaw === "" ? null : breedRaw,
     });
   } catch (err: any) {
     const message = err?.message ?? "";
