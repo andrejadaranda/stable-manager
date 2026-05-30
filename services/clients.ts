@@ -50,6 +50,11 @@ export type ClientWithUpcomingCount = ClientRow & {
    *  an account they should sign in with, not be re-invited into a new
    *  one. Owner-only field; employees always see false. */
   has_longrein_account: boolean;
+  /** Outstanding account balance (total_paid − total_charged). Negative
+   *  means the client owes money. Owner-only — defaults to 0 for
+   *  employees, who must never see client money (same rule as the
+   *  dashboard KPI gating). */
+  balance: number;
 };
 
 // ------- list -------------------------------------------------------------
@@ -101,7 +106,16 @@ export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcoming
           .gt("expires_at", now)
       : Promise.resolve({ data: [] as { client_id: string }[], error: null });
 
-  const [clientsRes, lessonsRes, invitesRes, ownedHorsesRes] = await Promise.all([
+  // Outstanding balance per client — owner-only. Pulled from the
+  // client_account_summary view in ONE query (not N), so the list can
+  // sort/flag "who owes" without opening each profile. Employees skip it
+  // entirely; balance defaults to 0 for them.
+  const balancePromise =
+    session.role === "owner"
+      ? supabase.from("client_account_summary").select("client_id, balance")
+      : Promise.resolve({ data: [] as { client_id: string; balance: number }[], error: null });
+
+  const [clientsRes, lessonsRes, invitesRes, ownedHorsesRes, balanceRes] = await Promise.all([
     supabase.from("clients").select("*").order("full_name"),
     supabase
       .from("lessons")
@@ -115,11 +129,18 @@ export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcoming
       .from("horses")
       .select("owner_client_id")
       .not("owner_client_id", "is", null),
+    balancePromise,
   ]);
   if (clientsRes.error)      throw clientsRes.error;
   if (lessonsRes.error)      throw lessonsRes.error;
   if (invitesRes.error)      throw invitesRes.error;
   if (ownedHorsesRes.error)  throw ownedHorsesRes.error;
+  if (balanceRes.error)      throw balanceRes.error;
+
+  const balances = new Map<string, number>();
+  for (const r of (balanceRes.data ?? []) as Array<{ client_id: string; balance: number | string }>) {
+    balances.set(r.client_id, Number(r.balance ?? 0));
+  }
 
   const horseOwnerIds = new Set<string>();
   for (const h of (ownedHorsesRes.data ?? []) as Array<{ owner_client_id: string }>) {
@@ -174,6 +195,7 @@ export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcoming
       upcoming_count:        counts.get(c.id) ?? 0,
       has_pending_invite:    pending.has(c.id),
       has_longrein_account:  emailHit || phoneHit,
+      balance:               balances.get(c.id) ?? 0,
     };
   });
 }

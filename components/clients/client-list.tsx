@@ -10,13 +10,15 @@ const SKILL_LABEL: Record<SkillLevel, string> = {
   pro: "Pro",
 };
 
-/** Owner-only props: invite button hidden for employees. */
+/** Owner-only props: invite button + balance hidden for employees. */
 export function ClientList({
   clients,
   showInviteButton = false,
+  showBalance = false,
 }: {
   clients: ClientWithUpcomingCount[];
   showInviteButton?: boolean;
+  showBalance?: boolean;
 }) {
   if (clients.length === 0) {
     return (
@@ -68,7 +70,14 @@ export function ClientList({
               `}
             >
               <div className="flex items-center justify-between md:block min-w-0">
-                <span className="font-semibold text-neutral-900 truncate">{c.full_name}</span>
+                <span className="font-semibold text-neutral-900 truncate">
+                  {c.full_name}
+                  {showBalance && c.balance < 0 && (
+                    <span className="hidden md:inline-flex ml-2 items-center px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold bg-rose-50 text-rose-700 ring-1 ring-rose-200 tabular-nums align-middle">
+                      Owes {fmtOwes(-c.balance)}
+                    </span>
+                  )}
+                </span>
                 <span className="md:hidden ml-2 shrink-0"><StatusPill active={c.active} /></span>
               </div>
               <div className="text-neutral-700 hidden md:block truncate">{c.phone ?? <Dash />}</div>
@@ -102,6 +111,11 @@ export function ClientList({
                 <span className="text-neutral-500 tabular-nums">
                   {c.upcoming_count} {c.upcoming_count === 1 ? "lesson" : "lessons"}
                 </span>
+                {showBalance && c.balance < 0 && (
+                  <span className="font-semibold text-rose-700 tabular-nums">
+                    Owes {fmtOwes(-c.balance)}
+                  </span>
+                )}
               </div>
             </Link>
 
@@ -141,6 +155,15 @@ export function ClientList({
 
 function Dash() {
   return <span className="text-neutral-300">—</span>;
+}
+
+/** Compact EUR for the owes badge — no decimals (e.g. "€480"). */
+function fmtOwes(n: number): string {
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 
 function StatusPill({ active }: { active: boolean }) {

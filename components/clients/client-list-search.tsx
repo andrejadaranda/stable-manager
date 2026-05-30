@@ -11,9 +11,11 @@ import { ClientList } from "./client-list";
 export function ClientListWithSearch({
   clients,
   showInviteButton = false,
+  showBalance = false,
 }: {
   clients: ClientWithUpcomingCount[];
   showInviteButton?: boolean;
+  showBalance?: boolean;
 }) {
   const [q, setQ] = useState("");
 
@@ -58,7 +60,7 @@ export function ClientListWithSearch({
         </p>
       )}
 
-      <ClientList clients={filtered} showInviteButton={showInviteButton} />
+      <ClientList clients={filtered} showInviteButton={showInviteButton} showBalance={showBalance} />
     </div>
   );
 }
