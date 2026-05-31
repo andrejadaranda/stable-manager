@@ -44,6 +44,33 @@ export async function addPayment(input: AddPaymentInput) {
   return data;
 }
 
+/** Edit an existing payment (owner-only). Only the fields the owner can
+ *  reasonably change: amount, method, paid date, note. Client/lesson links
+ *  stay put — delete + re-add if those are wrong. */
+export async function updatePayment(input: {
+  id: string;
+  amount?: number;
+  method?: "cash" | "card" | "transfer" | "other";
+  paidAt?: string;
+  notes?: string | null;
+}): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  void session;
+  const update: Record<string, unknown> = {};
+  if (input.amount !== undefined) {
+    if (!Number.isFinite(input.amount) || input.amount <= 0) throw new Error("INVALID_AMOUNT");
+    update.amount = input.amount;
+  }
+  if (input.method !== undefined) update.method = input.method;
+  if (input.paidAt !== undefined) update.paid_at = input.paidAt;
+  if (input.notes  !== undefined) update.notes  = input.notes;
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase.from("payments").update(update).eq("id", input.id);
+  if (error) throw error;
+}
+
 /** Delete a payment. Owner-only. Used by the payments list to remove a
  *  wrong/duplicate entry — the client balance recomputes automatically. */
 export async function deletePayment(paymentId: string): Promise<void> {

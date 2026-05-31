@@ -1,7 +1,7 @@
 import type { PaymentRow } from "@/services/payments";
 import { fmtDayLabel, fmtTime } from "@/lib/utils/dates";
 import { EmptyState, Badge } from "@/components/ui";
-import { DeletePaymentButton } from "./delete-payment-button";
+import { PaymentRowActions } from "./payment-row-actions";
 
 const METHOD_TONE: Record<PaymentRow["method"], "success" | "info" | "brand" | "muted"> = {
   cash:     "success",
@@ -93,14 +93,14 @@ export function PaymentList({
             <div className="hidden md:block text-neutral-500 truncate">{p.notes ?? <Dash />}</div>
             {showClientName && (
               <div className="hidden md:flex md:justify-end">
-                <DeletePaymentButton paymentId={p.id} />
+                <PaymentRowActions payment={{ id: p.id, amount: p.amount, method: p.method, paid_at: p.paid_at, notes: p.notes }} />
               </div>
             )}
 
-            {/* Mobile delete */}
+            {/* Mobile edit/delete */}
             {showClientName && (
               <div className="md:hidden mt-1.5 flex justify-end">
-                <DeletePaymentButton paymentId={p.id} />
+                <PaymentRowActions payment={{ id: p.id, amount: p.amount, method: p.method, paid_at: p.paid_at, notes: p.notes }} />
               </div>
             )}
 

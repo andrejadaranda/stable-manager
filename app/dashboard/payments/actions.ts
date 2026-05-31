@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addPayment, deletePayment } from "@/services/payments";
+import { addPayment, deletePayment, updatePayment } from "@/services/payments";
 import { createClient } from "@/services/clients";
 
 export type AddPaymentState = { error: string | null; success: boolean };
@@ -76,6 +76,45 @@ export async function addPaymentAction(
 
   revalidatePath("/dashboard/payments");
   // Detail pages show the same client's balance; bust their cache too.
+  revalidatePath("/dashboard/clients", "layout");
+  return { error: null, success: true };
+}
+
+/** Edit a payment (owner-only): amount, method, date, note. */
+export async function updatePaymentAction(
+  _prev: AddPaymentState,
+  formData: FormData,
+): Promise<AddPaymentState> {
+  const id = String(formData.get("payment_id") ?? "");
+  if (!id) return { error: "Missing payment id.", success: false };
+  const amount = Number(String(formData.get("amount") ?? "").trim());
+  const paidAt = String(formData.get("paid_at") ?? "");
+  const method = String(formData.get("method") ?? "cash");
+  const notes  = String(formData.get("notes") ?? "").trim();
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { error: "Amount must be a positive number.", success: false };
+  }
+  const validMethods = ["cash", "card", "transfer", "other"] as const;
+  if (!validMethods.includes(method as (typeof validMethods)[number])) {
+    return { error: "Invalid payment method.", success: false };
+  }
+
+  try {
+    await updatePayment({
+      id,
+      amount,
+      method: method as "cash" | "card" | "transfer" | "other",
+      paidAt: paidAt || undefined,
+      notes: notes || null,
+    });
+  } catch (err: any) {
+    const message = err?.message ?? "";
+    if (message === "INVALID_AMOUNT") return { error: "Amount must be a positive number.", success: false };
+    return { error: `Could not update payment: ${message || "unknown error"}.`, success: false };
+  }
+
+  revalidatePath("/dashboard/payments");
   revalidatePath("/dashboard/clients", "layout");
   return { error: null, success: true };
 }
