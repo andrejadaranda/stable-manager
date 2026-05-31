@@ -1,6 +1,7 @@
 import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { listPayments } from "@/services/payments";
 import { listClients } from "@/services/clients";
+import { listHorses } from "@/services/horses";
 import { getCalendar } from "@/services/lessons";
 import { PaymentList } from "@/components/payments/payment-list";
 import { CreatePaymentPanel } from "@/components/payments/create-payment-form";
@@ -16,10 +17,11 @@ export default async function PaymentsPage() {
   const to = new Date();
   to.setDate(to.getDate() + 60);
 
-  const [payments, clients, lessons] = await Promise.all([
+  const [payments, clients, lessons, horses] = await Promise.all([
     listPayments(),
     listClients({ activeOnly: true }),
     getCalendar(from.toISOString(), to.toISOString()),
+    listHorses({ activeOnly: true }).catch(() => []),
   ]);
 
   return (
@@ -33,6 +35,7 @@ export default async function PaymentsPage() {
             <CreatePaymentPanel
               clients={clients ?? []}
               lessons={lessons ?? []}
+              horses={(horses ?? []).map((h) => ({ id: h.id, name: h.name }))}
             />
           </div>
         }

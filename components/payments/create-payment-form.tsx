@@ -10,6 +10,7 @@ import {
 const addPaymentInitialState: AddPaymentState = { error: null, success: false };
 
 type ClientOpt = { id: string; full_name: string };
+type HorseOpt = { id: string; name: string };
 type LessonOpt = {
   id: string;
   starts_at: string;
@@ -20,9 +21,11 @@ type LessonOpt = {
 export function CreatePaymentPanel({
   clients,
   lessons,
+  horses = [],
 }: {
   clients: ClientOpt[];
   lessons: LessonOpt[];
+  horses?: HorseOpt[];
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -37,6 +40,7 @@ export function CreatePaymentPanel({
         <CreatePaymentForm
           clients={clients}
           lessons={lessons}
+          horses={horses}
           onClose={() => setOpen(false)}
         />
       )}
@@ -47,18 +51,22 @@ export function CreatePaymentPanel({
 function CreatePaymentForm({
   clients,
   lessons,
+  horses,
   onClose,
 }: {
   clients: ClientOpt[];
   lessons: LessonOpt[];
+  horses: HorseOpt[];
   onClose: () => void;
 }) {
   const [state, formAction] = useFormState<AddPaymentState, FormData>(
     addPaymentAction, addPaymentInitialState,
   );
 
-  // Controlled selects so we can filter the lesson options by client.
   const [clientId, setClientId] = useState<string>("");
+  const [newClient, setNewClient] = useState(false);
+  const [purpose, setPurpose] = useState<"general" | "boarding">("general");
+  const [horseId, setHorseId] = useState<string>("");
   const [dateLocal, setDateLocal] = useState<string>(toDateInputValue(new Date()));
   const dateISO = useMemo(() => dateLocalToISO(dateLocal), [dateLocal]);
 
@@ -66,6 +74,8 @@ function CreatePaymentForm({
     () => (clientId ? lessons.filter((l) => l.client?.id === clientId) : []),
     [clientId, lessons],
   );
+
+  const selectedHorseName = horses.find((h) => h.id === horseId)?.name ?? "";
 
   useEffect(() => {
     if (state.success) onClose();
@@ -88,23 +98,81 @@ function CreatePaymentForm({
           </button>
         </div>
 
+        {/* Purpose */}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700">Client</span>
+          <span className="text-neutral-700">What for</span>
           <select
-            name="client_id"
-            required
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
+            name="purpose"
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value as "general" | "boarding")}
             className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
           >
-            <option value="" disabled>Select…</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.full_name}
-              </option>
-            ))}
+            <option value="general">General payment</option>
+            <option value="boarding">Boarding</option>
           </select>
         </label>
+
+        {/* Boarding → which horse */}
+        {purpose === "boarding" && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-neutral-700">For which horse</span>
+            <select
+              value={horseId}
+              onChange={(e) => setHorseId(e.target.value)}
+              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+            >
+              <option value="">Select horse…</option>
+              {horses.map((h) => (
+                <option key={h.id} value={h.id}>{h.name}</option>
+              ))}
+            </select>
+            {/* Horse name folded into the note server-side. */}
+            <input type="hidden" name="boarding_horse_name" value={selectedHorseName} />
+          </label>
+        )}
+
+        {/* Client — existing or brand-new */}
+        <div className="flex flex-col gap-1 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-700">Client</span>
+            <button
+              type="button"
+              onClick={() => { setNewClient((v) => !v); setClientId(""); }}
+              className="text-[12px] text-brand-700 hover:text-brand-800 font-medium"
+            >
+              {newClient ? "Pick existing" : "+ New client"}
+            </button>
+          </div>
+
+          {newClient ? (
+            <div className="flex flex-col gap-2">
+              <input
+                name="new_client_name"
+                required
+                placeholder="Full name"
+                className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
+              />
+              <input
+                name="new_client_email"
+                type="email"
+                placeholder="Email (optional)"
+                className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+          ) : (
+            <select
+              name="client_id"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+            >
+              <option value="">Select…</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.full_name}</option>
+              ))}
+            </select>
+          )}
+        </div>
 
         <Field
           label="Amount"
@@ -141,31 +209,27 @@ function CreatePaymentForm({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700 font-medium">What's this payment for?</span>
-          <select
-            name="lesson_id"
-            defaultValue=""
-            disabled={!clientId}
-            className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white disabled:bg-neutral-100"
-          >
-            <option value="">— Boarding, package, misc, or general —</option>
-            {eligibleLessons.length > 0 && (
-              <optgroup label="Link to a specific lesson">
-                {eligibleLessons.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {fmtLessonOption(l)}
-                  </option>
-                ))}
-              </optgroup>
+        {/* Optional link to a specific lesson — only for general payments
+            of an existing client. */}
+        {purpose === "general" && !newClient && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-neutral-700 font-medium">Link to a lesson (optional)</span>
+            <select
+              name="lesson_id"
+              defaultValue=""
+              disabled={!clientId}
+              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white disabled:bg-neutral-100"
+            >
+              <option value="">— Not linked —</option>
+              {eligibleLessons.map((l) => (
+                <option key={l.id} value={l.id}>{fmtLessonOption(l)}</option>
+              ))}
+            </select>
+            {!clientId && (
+              <span className="text-[11.5px] text-neutral-500 mt-1">Pick a client to see their lessons.</span>
             )}
-          </select>
-          <span className="text-[11.5px] text-neutral-500 mt-1">
-            {!clientId
-              ? "Select a client first."
-              : "Pick a lesson to link the payment, or leave on the first option for boarding payments, package purchases, misc charges, or general account top-ups. The amount still hits the client's balance — describe the purpose in Notes."}
-          </span>
-        </label>
+          </label>
+        )}
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-neutral-700">Notes (optional)</span>
@@ -232,14 +296,8 @@ function dateLocalToISO(local: string): string {
 
 function fmtLessonOption(l: LessonOpt): string {
   const d = new Date(l.starts_at);
-  const day = d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-  const time = d.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const day = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
   const horse = l.horse?.name ?? "—";
   return `${day} ${time} · ${horse}`;
 }

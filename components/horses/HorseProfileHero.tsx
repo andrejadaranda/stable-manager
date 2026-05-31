@@ -11,6 +11,7 @@
 
 import Link from "next/link";
 import type { HorseProfileSummary } from "@/services/horseProfile";
+import type { HorseRow } from "@/services/horses";
 import { EditHorseButton } from "./edit-horse-dialog";
 
 const fmtDate = (iso: string) =>
@@ -300,8 +301,9 @@ function Kpi({
 }
 
 // EditHorseButton expects the legacy HorseRow type; the summary is a
-// superset so we just downcast for the call.
-function horseAsHorseRow(h: HorseProfileSummary) {
+// superset. `sex` is a wide `string | null` on the summary but a narrow
+// enum on HorseRow, so we cast through the row type for the call.
+function horseAsHorseRow(h: HorseProfileSummary): HorseRow {
   return {
     id: h.id,
     stable_id: h.stable_id,
@@ -330,5 +332,5 @@ function horseAsHorseRow(h: HorseProfileSummary) {
     dam_name:      h.dam_name,
     created_at: "",
     updated_at: "",
-  };
+  } as HorseRow;
 }

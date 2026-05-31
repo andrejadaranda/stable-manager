@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { addPayment } from "@/services/payments";
+import { createClient } from "@/services/clients";
 
 export type AddPaymentState = { error: string | null; success: boolean };
 
@@ -11,14 +12,19 @@ export async function addPaymentAction(
   _prev: AddPaymentState,
   formData: FormData,
 ): Promise<AddPaymentState> {
-  const clientId  = String(formData.get("client_id") ?? "");
+  let clientId        = String(formData.get("client_id") ?? "").trim();
+  const newClientName = String(formData.get("new_client_name") ?? "").trim();
+  const newClientEmail = String(formData.get("new_client_email") ?? "").trim();
+
   const amountRaw = String(formData.get("amount") ?? "").trim();
   const paidAt    = String(formData.get("paid_at") ?? "");      // ISO from hidden field
   const lessonId  = String(formData.get("lesson_id") ?? "");
   const method    = String(formData.get("method") ?? "cash");
-  const notes     = String(formData.get("notes") ?? "").trim();
+  let   notes     = String(formData.get("notes") ?? "").trim();
+  // Boarding context — folded into the note since payments has no horse FK.
+  const purpose   = String(formData.get("purpose") ?? "general");
+  const horseName = String(formData.get("boarding_horse_name") ?? "").trim();
 
-  if (!clientId)  return { error: "Client is required.", success: false };
   if (!amountRaw) return { error: "Amount is required.", success: false };
   if (!paidAt)    return { error: "Payment date is required.", success: false };
 
@@ -32,7 +38,26 @@ export async function addPaymentAction(
     return { error: "Invalid payment method.", success: false };
   }
 
+  // Prefix a boarding tag (incl. the horse) onto the note so the purpose
+  // is captured even though payments only links to client/lesson.
+  if (purpose === "boarding") {
+    const tag = horseName ? `Boarding — ${horseName}` : "Boarding";
+    notes = notes ? `${tag} · ${notes}` : tag;
+  }
+
   try {
+    // Inline new client — create first, then use its id.
+    if (!clientId && newClientName) {
+      const created = await createClient({
+        fullName: newClientName,
+        email: newClientEmail || undefined,
+      });
+      clientId = (created as { id: string }).id;
+    }
+    if (!clientId) {
+      return { error: "Pick a client, or add a new one.", success: false };
+    }
+
     await addPayment({
       clientId,
       amount,
@@ -54,4 +79,3 @@ export async function addPaymentAction(
   revalidatePath("/dashboard/clients", "layout");
   return { error: null, success: true };
 }
-
