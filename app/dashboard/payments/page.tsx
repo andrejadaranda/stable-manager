@@ -21,7 +21,9 @@ export default async function PaymentsPage() {
     listPayments(),
     listClients({ activeOnly: true }),
     getCalendar(from.toISOString(), to.toISOString()),
-    listHorses({ activeOnly: true }).catch(() => []),
+    // ALL horses (incl. inactive) — boarding is paid for retired/non-lesson
+    // horses too, so the payment dropdown must not hide them.
+    listHorses().catch(() => []),
   ]);
 
   return (
