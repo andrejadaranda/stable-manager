@@ -27,6 +27,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { sendLessonReminderEmail } from "@/lib/email/lesson-reminder";
 import { sendHealthDueReminderEmail } from "@/lib/email/health-due-reminder";
 import { sendWeatherAlertEmail } from "@/lib/email/weather-alert";
+import { sendTrialEndingEmail } from "@/lib/email/trial-ending";
 import { sendSMS, toE164Lithuania } from "@/lib/sms/send";
 
 export const runtime = "nodejs";
@@ -223,13 +224,104 @@ export async function GET(req: Request) {
   // Free tier permits 1000 calls/day — plenty.
   const weatherResults = await runWeatherAlerts(supabase);
 
+  // ---- Trial-ending drip (Founding-15 conversion) -------------
+  // Email the owner when their trial has 7 / 3 / 1 days left.
+  // Idempotent via trial_drip_dispatch_log (stable_id, milestone).
+  const trialResults = await runTrialDrip(supabase);
+
   return NextResponse.json({
     ok: true,
     ...results,
     health: healthResults,
     weather: weatherResults,
+    trial: trialResults,
     window: { from: winFrom.toISOString(), to: winTo.toISOString() },
   });
+}
+
+// ----------------------------------------------------------------
+// Trial-ending drip — one email per stable at 7, 3, and 1 days left.
+// Daily cron + per-milestone idempotency = exactly one send per bucket.
+// ----------------------------------------------------------------
+type TrialDripResult = {
+  candidates: number;
+  sent:       number;
+  skipped:    number;
+  failed:     number;
+};
+
+async function runTrialDrip(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+): Promise<TrialDripResult> {
+  const tally: TrialDripResult = { candidates: 0, sent: 0, skipped: 0, failed: 0 };
+  const MILESTONES = [7, 3, 1];
+
+  // Trialing stables whose trial ends within the next 7 days.
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 8 * 24 * 3600 * 1000);
+  const { data: stables, error } = await supabase
+    .from("stables")
+    .select("id, name, trial_ends_at")
+    .not("trial_ends_at", "is", null)
+    .gte("trial_ends_at", now.toISOString())
+    .lte("trial_ends_at", horizon.toISOString());
+  if (error) {
+    console.error("[cron/trial] stable fetch failed:", error);
+    return tally;
+  }
+
+  for (const s of (stables ?? []) as Array<{ id: string; name: string; trial_ends_at: string }>) {
+    // Whole days remaining (ceil so "1.4 days" still counts as the 1-day mark).
+    const msLeft = new Date(s.trial_ends_at).getTime() - now.getTime();
+    const daysLeft = Math.ceil(msLeft / (24 * 3600 * 1000));
+    const milestone = MILESTONES.find((m) => daysLeft === m);
+    if (!milestone) continue;
+    tally.candidates += 1;
+
+    // Idempotency: claim the (stable, milestone) row first.
+    const { error: logErr } = await supabase
+      .from("trial_drip_dispatch_log")
+      .insert({ stable_id: s.id, milestone });
+    if (logErr) {
+      // Duplicate = already sent this milestone → skip silently.
+      if (!/duplicate key/i.test(logErr.message)) {
+        console.error("[cron/trial] log insert failed:", logErr);
+      }
+      tally.skipped += 1;
+      continue;
+    }
+
+    // Resolve the owner's email + first name via profiles → auth.users.
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("full_name, auth_user_id")
+      .eq("stable_id", s.id)
+      .eq("role", "owner")
+      .limit(1)
+      .maybeSingle();
+    const authUserId = (prof as { auth_user_id?: string } | null)?.auth_user_id;
+    if (!authUserId) { tally.failed += 1; continue; }
+
+    const { data: authUser } = await supabase.auth.admin.getUserById(authUserId);
+    const email = authUser?.user?.email ?? null;
+    if (!email) { tally.failed += 1; continue; }
+    const firstName = ((prof as { full_name?: string } | null)?.full_name ?? "").split(" ")[0] ?? "";
+
+    try {
+      await sendTrialEndingEmail({
+        to: email,
+        firstName,
+        stableName: s.name ?? "your stable",
+        daysLeft: milestone,
+      });
+      tally.sent += 1;
+    } catch (err) {
+      console.error("[cron/trial] email send failed:", err);
+      tally.failed += 1;
+    }
+  }
+
+  return tally;
 }
 
 // ----------------------------------------------------------------
