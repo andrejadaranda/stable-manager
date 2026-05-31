@@ -161,8 +161,44 @@ export function HorseProfileHero({ horse }: { horse: HorseProfileSummary }) {
             color="navy"
           />
         </div>
+
+        {/* Quick details — height, colour, sex, microchip, sire/dam… the
+            data entered in Edit. Renders only fields that are set. */}
+        <HorseQuickDetails horse={horse} />
       </div>
     </header>
+  );
+}
+
+// Compact key/value grid under the KPI strip, visible on every tab.
+function HorseQuickDetails({ horse }: { horse: HorseProfileSummary }) {
+  const SEX_LABEL: Record<string, string> = {
+    mare: "Mare", gelding: "Gelding", stallion: "Stallion", colt: "Colt", filly: "Filly",
+  };
+  const items: Array<[string, string | null | undefined]> = [
+    ["Sex",        horse.sex ? (SEX_LABEL[horse.sex] ?? horse.sex) : null],
+    ["Colour",     horse.color],
+    ["Height",     horse.height_cm != null ? `${horse.height_cm} cm` : null],
+    ["Discipline", horse.discipline],
+    ["Microchip",  horse.microchip_id],
+    ["Passport",   horse.passport_no],
+    ["FEI ID",     horse.fei_id],
+    ["Sire",       horse.sire_name],
+    ["Dam",        horse.dam_name],
+    ["Stable ID",  horse.unique_number],
+  ];
+  const visible = items.filter(([, v]) => v != null && String(v).trim() !== "");
+  if (visible.length === 0) return null;
+
+  return (
+    <dl className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3 rounded-2xl bg-cream-50/70 border border-ink-100 p-4">
+      {visible.map(([label, val]) => (
+        <div key={label} className="flex flex-col gap-0.5 min-w-0">
+          <dt className="text-[10px] uppercase tracking-[0.12em] text-ink-500 font-semibold">{label}</dt>
+          <dd className="text-sm text-navy-900 font-medium truncate" title={String(val)}>{String(val)}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
