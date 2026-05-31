@@ -13,6 +13,7 @@
 // defense-in-depth.
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   setMonthlyFeeAction,
@@ -22,6 +23,7 @@ import {
   markChargeUnpaidAction,
   setOwnerAction,
   setLessonsAvailabilityAction,
+  addNewOwnerAction,
   type BoardingActionState,
 } from "@/app/dashboard/horses/[id]/boarding-actions";
 import type { BoardingChargeRow } from "@/services/boarding";
@@ -241,43 +243,127 @@ function OwnerPanel({
   currentOwner: { id: string; full_name: string } | null;
   clients: ClientOpt[];
 }) {
+  const router = useRouter();
   const [state, action] = useFormState<BoardingActionState, FormData>(
     setOwnerAction, initialState,
   );
   const [ownerId, setOwnerId] = useState<string>(currentOwner?.id ?? "");
   const dirty = ownerId !== (currentOwner?.id ?? "");
 
+  // Inline "add a brand-new owner" — create the person, attach them here,
+  // and optionally email an app invite, all without leaving the page.
+  const [showNew, setShowNew] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [sendInvite, setSendInvite] = useState(true);
+  const [savingNew, setSavingNew] = useState(false);
+  const [newMsg, setNewMsg] = useState<string | null>(null);
+
+  async function addNewOwner() {
+    if (!newName.trim()) { setNewMsg("Owner name is required."); return; }
+    setSavingNew(true);
+    setNewMsg(null);
+    const res = await addNewOwnerAction(horseId, {
+      name: newName,
+      email: newEmail,
+      sendInvite,
+    });
+    setSavingNew(false);
+    if (res.error) { setNewMsg(res.error); return; }
+    setShowNew(false);
+    setNewName("");
+    setNewEmail("");
+    router.refresh();
+    setNewMsg(res.invited ? "Owner added and invite sent." : "Owner added.");
+  }
+
   return (
-    <form
-      action={action}
-      className="bg-white rounded-2xl shadow-soft p-4 flex items-end gap-3"
-    >
-      <input type="hidden" name="horse_id" value={horseId} />
-      <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-0">
-        <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">
-          Owner client
-        </span>
-        <select
-          name="owner_client_id"
-          value={ownerId}
-          onChange={(e) => setOwnerId(e.target.value)}
-          className="
-            rounded-xl border border-ink-200 bg-white text-sm text-ink-900
-            px-3 py-2.5
-            focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
-          "
+    <div className="bg-white rounded-2xl shadow-soft p-4 flex flex-col gap-3">
+      <form action={action} className="flex items-end gap-3">
+        <input type="hidden" name="horse_id" value={horseId} />
+        <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-0">
+          <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">
+            Owner client
+          </span>
+          <select
+            name="owner_client_id"
+            value={ownerId}
+            onChange={(e) => setOwnerId(e.target.value)}
+            className="
+              rounded-xl border border-ink-200 bg-white text-sm text-ink-900
+              px-3 py-2.5
+              focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+            "
+          >
+            <option value="">— No owner —</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>{c.full_name}</option>
+            ))}
+          </select>
+          {state.error && (
+            <span className="text-[11px] text-rose-700 mt-0.5">{state.error}</span>
+          )}
+        </label>
+        <SaveOwnerButton disabled={!dirty} />
+      </form>
+
+      {/* Add a brand-new owner inline */}
+      {!showNew ? (
+        <button
+          type="button"
+          onClick={() => { setShowNew(true); setNewMsg(null); }}
+          className="text-[13px] font-medium text-brand-700 hover:text-brand-800 self-start"
         >
-          <option value="">— No owner —</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>{c.full_name}</option>
-          ))}
-        </select>
-        {state.error && (
-          <span className="text-[11px] text-rose-700 mt-0.5">{state.error}</span>
-        )}
-      </label>
-      <SaveOwnerButton disabled={!dirty} />
-    </form>
+          + New owner (not in the list yet)
+        </button>
+      ) : (
+        <div className="rounded-xl border border-ink-200 bg-cream-50/60 p-4 flex flex-col gap-3">
+          <p className="text-[12px] uppercase tracking-[0.12em] text-ink-500 font-semibold">New owner</p>
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Full name"
+            className="h-10 rounded-xl border border-ink-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+          />
+          <input
+            type="email"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            placeholder="Email (optional — needed to send an invite)"
+            className="h-10 rounded-xl border border-ink-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+          />
+          <label className="flex items-center gap-2 text-[13px] text-ink-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={sendInvite}
+              onChange={(e) => setSendInvite(e.target.checked)}
+              disabled={!newEmail.trim()}
+              className="w-4 h-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500/30 disabled:opacity-40"
+            />
+            Send app invite to this email
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={addNewOwner}
+              disabled={savingNew}
+              className="h-10 px-4 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 disabled:opacity-60"
+            >
+              {savingNew ? "Adding…" : "Add owner"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowNew(false); setNewMsg(null); }}
+              className="h-10 px-4 rounded-xl text-sm text-ink-700 hover:bg-ink-100/60"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {newMsg && <p className="text-[12px] text-ink-500">{newMsg}</p>}
+    </div>
   );
 }
 

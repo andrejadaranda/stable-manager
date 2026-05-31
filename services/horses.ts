@@ -235,6 +235,7 @@ export type UpdateHorseInput = {
   heightCm?:     number | null;
   discipline?:   string | null;
   breed?:        string | null;
+  dateOfBirth?:  string | null;
 };
 
 export async function updateHorse(id: string, input: UpdateHorseInput) {
@@ -268,6 +269,7 @@ export async function updateHorse(id: string, input: UpdateHorseInput) {
   if (input.heightCm      !== undefined) update.height_cm     = input.heightCm;
   if (input.discipline    !== undefined) update.discipline    = input.discipline;
   if (input.breed         !== undefined) update.breed         = input.breed;
+  if (input.dateOfBirth   !== undefined) update.date_of_birth = input.dateOfBirth;
 
   const { data, error } = await supabase
     .from("horses")

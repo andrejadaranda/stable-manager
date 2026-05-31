@@ -24,6 +24,19 @@ export type HorseProfileSummary = {
   name: string;
   breed: string | null;
   date_of_birth: string | null;
+  color: string | null;
+  sex: string | null;
+  height_cm: number | null;
+  discipline: string | null;
+  microchip_id: string | null;
+  passport_no: string | null;
+  fei_id: string | null;
+  sire_name: string | null;
+  dam_name: string | null;
+  unique_number: string | null;
+  backup_contact_name: string | null;
+  backup_contact_phone: string | null;
+  backup_contact_relation: string | null;
   active: boolean;
   notes: string | null;
   photo_url: string | null;
@@ -122,6 +135,9 @@ export async function getHorseProfileSummary(
         `id, stable_id, name, breed, date_of_birth, active, notes, photo_url,
          daily_lesson_limit, weekly_lesson_limit, owner_client_id, monthly_boarding_fee,
          available_for_lessons, public_bio,
+         color, sex, height_cm, discipline, microchip_id, passport_no,
+         fei_id, sire_name, dam_name, unique_number,
+         backup_contact_name, backup_contact_phone, backup_contact_relation,
          owner_client:clients!horses_owner_client_id_fkey(id, full_name)`,
       )
       .eq("id", horseId)
@@ -178,6 +194,19 @@ export async function getHorseProfileSummary(
     name: horse.name,
     breed: horse.breed,
     date_of_birth: horse.date_of_birth,
+    color: horse.color,
+    sex: horse.sex,
+    height_cm: horse.height_cm,
+    discipline: horse.discipline,
+    microchip_id: horse.microchip_id,
+    passport_no: horse.passport_no,
+    fei_id: horse.fei_id,
+    sire_name: horse.sire_name,
+    dam_name: horse.dam_name,
+    unique_number: horse.unique_number,
+    backup_contact_name: horse.backup_contact_name,
+    backup_contact_phone: horse.backup_contact_phone,
+    backup_contact_relation: horse.backup_contact_relation,
     active: horse.active,
     notes: horse.notes,
     photo_url: horse.photo_url,

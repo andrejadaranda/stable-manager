@@ -13,6 +13,8 @@ import {
   markChargeUnpaid,
 } from "@/services/boarding";
 import { setHorseOwner, setHorseLessonsAvailability } from "@/services/horses";
+import { createClient } from "@/services/clients";
+import { sendClientInvite } from "@/services/invitations";
 import { toFriendlyError } from "@/lib/errors/friendly";
 
 export type BoardingActionState = {
@@ -21,6 +23,43 @@ export type BoardingActionState = {
 };
 
 const initial: BoardingActionState = { error: null, success: false };
+
+/** Create a brand-new client, attach them as this horse's owner, and
+ *  optionally email them an app invite — all in one step, without leaving
+ *  the horse page. The new client also shows up under Clients. */
+export async function addNewOwnerAction(
+  horseId: string,
+  input: { name: string; email: string; sendInvite: boolean },
+): Promise<{ error: string | null; invited: boolean }> {
+  const name = input.name.trim();
+  const email = input.email.trim();
+  if (!horseId) return { error: "Missing horse id.", invited: false };
+  if (!name)    return { error: "Owner name is required.", invited: false };
+
+  try {
+    const client = await createClient({
+      fullName: name,
+      email: email || undefined,
+    });
+    await setHorseOwner(horseId, client.id);
+
+    let invited = false;
+    if (input.sendInvite && email) {
+      // Best-effort — owner stays attached even if the email fails.
+      try {
+        const res = await sendClientInvite({ clientId: client.id, email });
+        invited = res.emailSent;
+      } catch {
+        invited = false;
+      }
+    }
+    revalidatePath(`/dashboard/horses/${horseId}`);
+    revalidatePath("/dashboard/clients");
+    return { error: null, invited };
+  } catch (err) {
+    return { error: toFriendlyError(err).message, invited: false };
+  }
+}
 
 export async function setLessonsAvailabilityAction(
   _prev: BoardingActionState,

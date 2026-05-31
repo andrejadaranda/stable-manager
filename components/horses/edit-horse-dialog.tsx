@@ -68,13 +68,21 @@ function EditHorseDialog({
           <legend className="text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-500 px-1">
             Identity
           </legend>
-          <Field
-            label="Breed"
-            name="breed"
-            type="text"
-            defaultValue={(horse as HorseRow & { breed?: string | null }).breed ?? ""}
-            placeholder="e.g. Trakehner, Hanoverian, Russian Trotter…"
-          />
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field
+              label="Breed"
+              name="breed"
+              type="text"
+              defaultValue={(horse as HorseRow & { breed?: string | null }).breed ?? ""}
+              placeholder="e.g. Trakehner, Russian Trotter…"
+            />
+            <Field
+              label="Date of birth"
+              name="date_of_birth"
+              type="date"
+              defaultValue={(horse as HorseRow & { date_of_birth?: string | null }).date_of_birth ?? ""}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-2.5">
             <Field
               label="Color"

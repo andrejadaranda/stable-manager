@@ -58,16 +58,13 @@ export async function createHorseAction(
     if (message.startsWith("HORSE_CAP_REACHED")) {
       return { error: "You've hit your plan's horse limit. Upgrade to add more.", success: false };
     }
-    return { error: `Could not create horse: ${message || "unknown error"}.`, success: false };
+    return { error: `Could not add horse: ${message || "unknown error"}.`, success: false };
   }
 
   revalidatePath("/dashboard/horses");
   return { error: null, success: true };
 }
 
-// =============================================================
-// Update an existing horse
-// =============================================================
 export type UpdateHorseState = { error: string | null; success: boolean };
 
 export async function updateHorseAction(
@@ -97,9 +94,15 @@ export async function updateHorseAction(
   const heightCmRaw  = String(formData.get("height_cm") ?? "").trim();
   const disciplineRaw  = String(formData.get("discipline")   ?? "").trim();
   const breedRaw       = String(formData.get("breed")        ?? "").trim();
+  const dobRaw         = String(formData.get("date_of_birth") ?? "").trim();
 
   if (!id)   return { error: "Missing horse id.", success: false };
   if (!name) return { error: "Name is required.", success: false };
+  if (dobRaw !== "") {
+    const d = new Date(dobRaw);
+    if (Number.isNaN(d.getTime())) return { error: "Date of birth is invalid.", success: false };
+    if (d.getTime() > Date.now())  return { error: "Date of birth can't be in the future.", success: false };
+  }
 
   const daily  = dailyRaw  === "" ? 0 : Number(dailyRaw);
   const weekly = weeklyRaw === "" ? 0 : Number(weeklyRaw);
@@ -131,6 +134,7 @@ export async function updateHorseAction(
       heightCm:     heightCmRaw === "" ? null : (Number.isFinite(Number(heightCmRaw)) ? Math.round(Number(heightCmRaw)) : null),
       discipline:   disciplineRaw  === "" ? null : disciplineRaw,
       breed:        breedRaw === "" ? null : breedRaw,
+      dateOfBirth:  dobRaw === "" ? null : dobRaw,
     });
   } catch (err: any) {
     const message = err?.message ?? "";
