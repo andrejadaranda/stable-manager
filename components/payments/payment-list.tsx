@@ -1,6 +1,7 @@
 import type { PaymentRow } from "@/services/payments";
 import { fmtDayLabel, fmtTime } from "@/lib/utils/dates";
 import { EmptyState, Badge } from "@/components/ui";
+import { DeletePaymentButton } from "./delete-payment-button";
 
 const METHOD_TONE: Record<PaymentRow["method"], "success" | "info" | "brand" | "muted"> = {
   cash:     "success",
@@ -35,7 +36,7 @@ export function PaymentList({
   }
 
   const cols = showClientName
-    ? "md:grid-cols-[1.4fr_0.8fr_1fr_1.6fr_0.9fr_1.4fr]"
+    ? "md:grid-cols-[1.4fr_0.8fr_1fr_1.6fr_0.9fr_1.4fr_auto]"
     : "md:grid-cols-[0.8fr_1fr_1.6fr_0.9fr_1.4fr]";
 
   return (
@@ -49,6 +50,7 @@ export function PaymentList({
         <div>Lesson</div>
         <div>Method</div>
         <div>Notes</div>
+        {showClientName && <div className="text-right"> </div>}
       </div>
       <ul className="divide-y divide-ink-100/60 md:divide-y-0">
         {payments.map((p) => (
@@ -89,6 +91,18 @@ export function PaymentList({
               <MethodTag method={p.method} />
             </div>
             <div className="hidden md:block text-neutral-500 truncate">{p.notes ?? <Dash />}</div>
+            {showClientName && (
+              <div className="hidden md:flex md:justify-end">
+                <DeletePaymentButton paymentId={p.id} />
+              </div>
+            )}
+
+            {/* Mobile delete */}
+            {showClientName && (
+              <div className="md:hidden mt-1.5 flex justify-end">
+                <DeletePaymentButton paymentId={p.id} />
+              </div>
+            )}
 
             {/* Mobile-only meta */}
             <div className="md:hidden mt-1 text-[12.5px] text-neutral-600 flex flex-wrap gap-x-3 gap-y-0.5">

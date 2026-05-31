@@ -44,6 +44,17 @@ export async function addPayment(input: AddPaymentInput) {
   return data;
 }
 
+/** Delete a payment. Owner-only. Used by the payments list to remove a
+ *  wrong/duplicate entry — the client balance recomputes automatically. */
+export async function deletePayment(paymentId: string): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  void session;
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase.from("payments").delete().eq("id", paymentId);
+  if (error) throw error;
+}
+
 // Payment row with client + lesson references joined for display.
 export type PaymentRow = {
   id: string;

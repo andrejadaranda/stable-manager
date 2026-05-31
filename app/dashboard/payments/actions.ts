@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addPayment } from "@/services/payments";
+import { addPayment, deletePayment } from "@/services/payments";
 import { createClient } from "@/services/clients";
 
 export type AddPaymentState = { error: string | null; success: boolean };
@@ -78,4 +78,19 @@ export async function addPaymentAction(
   // Detail pages show the same client's balance; bust their cache too.
   revalidatePath("/dashboard/clients", "layout");
   return { error: null, success: true };
+}
+
+/** Delete a payment (owner-only). Balance recomputes automatically. */
+export async function deletePaymentAction(
+  paymentId: string,
+): Promise<{ error: string | null }> {
+  if (!paymentId) return { error: "Missing payment id." };
+  try {
+    await deletePayment(paymentId);
+  } catch (err) {
+    return { error: (err as Error)?.message ?? "Delete failed." };
+  }
+  revalidatePath("/dashboard/payments");
+  revalidatePath("/dashboard/clients", "layout");
+  return { error: null };
 }
