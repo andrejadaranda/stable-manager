@@ -30,12 +30,16 @@ export type DashboardSummary = {
   todayLessons: DashboardLesson[];
   weekLessonsCount: number;
   weekLessonsCompleted: number;
+  monthLessonsCount: number;
+  monthLessonsCompleted: number;
   activeHorses: number;
   activeClients: number;
   outstandingBalance: number; // EUR (positive = clients owe money to stable)
+  weekRevenue: number;        // EUR (payments paid_at this ISO week)
   monthlyRevenue: number;     // EUR (sum of payments paid_at this calendar month)
   monthlyExpenses: number | null; // owner-only; null = not visible
   monthLabel: string;         // e.g. "April 2026"
+  weekLabel: string;          // e.g. "This week"
   isOwner: boolean;
 };
 
@@ -81,6 +85,18 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     .gte("starts_at", weekStart.toISOString())
     .lt("starts_at", weekEnd.toISOString());
 
+  const monthLessonsP = supabase
+    .from("lessons")
+    .select("status", { count: "exact", head: false })
+    .gte("starts_at", monthStart.toISOString())
+    .lt("starts_at", monthEnd.toISOString());
+
+  const weekPaymentsP = supabase
+    .from("payments")
+    .select("amount")
+    .gte("paid_at", weekStart.toISOString())
+    .lt("paid_at",  weekEnd.toISOString());
+
   const horsesP = supabase
     .from("horses")
     .select("id", { count: "exact", head: true })
@@ -115,13 +131,15 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   const [
     todayRes,
     weekRes,
+    monthLessonsRes,
     horsesRes,
     clientsRes,
     monthPaymentsRes,
+    weekPaymentsRes,
     monthExpensesRes,
     balanceRes,
   ] = await Promise.all([
-    todayP, weekP, horsesP, clientsP, monthPaymentsP, monthExpensesP, balanceP,
+    todayP, weekP, monthLessonsP, horsesP, clientsP, monthPaymentsP, weekPaymentsP, monthExpensesP, balanceP,
   ]);
 
   // ── reduce ──────────────────────────────────────────────────────────
@@ -131,7 +149,12 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   const weekLessonsCount = weekRows.length;
   const weekLessonsCompleted = weekRows.filter(r => r.status === "completed").length;
 
+  const monthRows = (monthLessonsRes.data ?? []) as Array<{ status: DashboardLesson["status"] }>;
+  const monthLessonsCount = monthRows.length;
+  const monthLessonsCompleted = monthRows.filter(r => r.status === "completed").length;
+
   const monthlyRevenue = sumAmount(monthPaymentsRes.data);
+  const weekRevenue = sumAmount(weekPaymentsRes.data);
   const monthlyExpenses = isOwner
     ? sumAmount((monthExpensesRes as { data: unknown }).data)
     : null;
@@ -148,12 +171,16 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     todayLessons,
     weekLessonsCount,
     weekLessonsCompleted,
+    monthLessonsCount,
+    monthLessonsCompleted,
     activeHorses: horsesRes.count ?? 0,
     activeClients: clientsRes.count ?? 0,
     outstandingBalance,
+    weekRevenue,
     monthlyRevenue,
     monthlyExpenses,
     monthLabel,
+    weekLabel: "This week",
     isOwner,
   };
 }

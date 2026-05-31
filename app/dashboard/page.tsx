@@ -31,6 +31,7 @@ import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist
 import { SmartSuggestions } from "@/components/dashboard/smart-suggestions";
 import { BirthdaysWidget } from "@/components/dashboard/birthdays-widget";
 import { InboxWidget } from "@/components/dashboard/inbox-widget";
+import { MetricsPanel } from "@/components/dashboard/metrics-panel";
 import { getOnboardingStatus } from "@/services/onboarding";
 import { getSmartSuggestions } from "@/services/suggestions";
 import { getUpcomingBirthdays } from "@/services/birthdays";
@@ -95,18 +96,6 @@ export default async function DashboardHome({
       currency: "EUR",
       maximumFractionDigits: 0,
     }).format(n);
-
-  const completedRatio =
-    s.weekLessonsCount > 0
-      ? Math.round((s.weekLessonsCompleted / s.weekLessonsCount) * 100)
-      : 0;
-
-  const collectionPct =
-    s.monthlyRevenue + s.outstandingBalance > 0
-      ? Math.round(
-          (s.monthlyRevenue / (s.monthlyRevenue + s.outstandingBalance)) * 100,
-        )
-      : 100;
 
   const greetingName = firstName;
   // Render the greeting date in Europe/Vilnius so a server in UTC (Vercel runs
@@ -333,95 +322,19 @@ export default async function DashboardHome({
         </div>
 
         {/* RIGHT — KPI rings panel */}
-        <aside className="card-elevated p-5 md:p-6 flex flex-col gap-5 lg:sticky lg:top-4 self-start">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold text-navy-900">This week's metrics</h2>
-            <span className="text-[11px] text-ink-500">{s.monthLabel}</span>
-          </div>
-
-          {s.weekLessonsCount === 0 && s.monthlyRevenue === 0 && s.outstandingBalance === 0 ? (
-            <EmptyMetrics isPersonal={isPersonal} />
-          ) : isPersonal ? (
-            <>
-              {/* Personal accounts: emphasise rides + horse welfare; hide
-                  Payments + Client balance entirely (no clients). */}
-              <KpiRing
-                label="Rides this week"
-                value={`${s.weekLessonsCount}`}
-                sub={
-                  s.weekLessonsCompleted > 0
-                    ? `${s.weekLessonsCompleted} completed`
-                    : "Log a session to track progress"
-                }
-                pct={Math.min(100, s.weekLessonsCount * 14)}
-                color="#E04E25"
-              />
-              <KpiRing
-                label="Horses in care"
-                value={`${s.activeHorses}`}
-                sub={s.activeHorses === 0 ? "Add your first horse →" : "Currently active"}
-                subHref={s.activeHorses === 0 ? "/dashboard/horses?new=1" : undefined}
-                pct={s.activeHorses > 0 ? 100 : 0}
-                color="#1E2A47"
-              />
-            </>
-          ) : s.isOwner ? (
-            <>
-              {/* Owner: real completion + money. "Utilization" was a fabricated
-                  ratio (lessons / horses×6) — replaced with the honest
-                  scheduled-vs-completed rate for the week. */}
-              <KpiRing
-                label="Lessons this week"
-                value={`${s.weekLessonsCount}`}
-                sub={
-                  s.weekLessonsCompleted > 0
-                    ? `${completedRatio}% completed`
-                    : "Scheduled"
-                }
-                pct={completedRatio}
-                color="#E04E25"
-              />
-              <KpiRing
-                label="Payments"
-                value={`${collectionPct}%`}
-                sub={`${fmtEUR(s.monthlyRevenue)} collected`}
-                pct={collectionPct}
-                color="#1E2A47"
-              />
-              <KpiRing
-                label="Client balance"
-                value={fmtEUR(s.outstandingBalance)}
-                sub={s.outstandingBalance > 0 ? "Outstanding" : "All paid up"}
-                pct={s.outstandingBalance > 0 ? Math.min(100, Math.round((s.outstandingBalance / Math.max(1, s.monthlyRevenue + s.outstandingBalance)) * 100)) : 0}
-                color="#B23838"
-                inverted
-              />
-            </>
-          ) : (
-            <>
-              {/* Employees / trainers: operational only — never the stable's
-                  money (collection % + outstanding balance are owner-only). */}
-              <KpiRing
-                label="Lessons this week"
-                value={`${s.weekLessonsCount}`}
-                sub={
-                  s.weekLessonsCompleted > 0
-                    ? `${completedRatio}% completed`
-                    : "Scheduled"
-                }
-                pct={completedRatio}
-                color="#E04E25"
-              />
-              <KpiRing
-                label="Horses in care"
-                value={`${s.activeHorses}`}
-                sub={s.activeHorses === 0 ? "None active yet" : "Currently active"}
-                pct={s.activeHorses > 0 ? 100 : 0}
-                color="#1E2A47"
-              />
-            </>
-          )}
-        </aside>
+        <MetricsPanel
+          weekLessonsCount={s.weekLessonsCount}
+          weekLessonsCompleted={s.weekLessonsCompleted}
+          monthLessonsCount={s.monthLessonsCount}
+          monthLessonsCompleted={s.monthLessonsCompleted}
+          activeHorses={s.activeHorses}
+          outstandingBalance={s.outstandingBalance}
+          weekRevenue={s.weekRevenue}
+          monthlyRevenue={s.monthlyRevenue}
+          monthLabel={s.monthLabel}
+          isOwner={s.isOwner}
+          isPersonal={isPersonal}
+        />
       </div>
     </div>
   );
@@ -487,97 +400,6 @@ function RevenueCard({
   );
 }
 
-function KpiRing({
-  label,
-  value,
-  sub,
-  subHref,
-  pct,
-  color,
-  inverted,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  subHref?: string;
-  pct: number;
-  color: string;
-  inverted?: boolean;
-}) {
-  const r = 26;
-  const c = 2 * Math.PI * r;
-  const dash = (Math.min(100, Math.max(0, pct)) / 100) * c;
-  return (
-    <div className="flex items-center gap-4">
-      <svg width="64" height="64" viewBox="0 0 64 64" className="shrink-0">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="#F1EAE0" strokeWidth="7" />
-        <circle
-          cx="32"
-          cy="32"
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth="7"
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${c - dash}`}
-          transform="rotate(-90 32 32)"
-        />
-        <text
-          x="32"
-          y="35"
-          textAnchor="middle"
-          fontSize="11"
-          fontWeight="500"
-          fill="#1E2A47"
-          style={{ fontFamily: "Inter, sans-serif" }}
-        >
-          {value.length > 6 ? value.slice(0, 6) : value}
-        </text>
-      </svg>
-      <div className="min-w-0 flex-1">
-        <div className="text-[12.5px] font-medium text-navy-900">{label}</div>
-        {subHref ? (
-          <Link
-            href={subHref}
-            className="text-[11px] mt-0.5 font-semibold text-brand-700 hover:text-brand-800 underline underline-offset-2 decoration-1 inline-block"
-          >
-            {sub}
-          </Link>
-        ) : (
-          <div className="text-[11px] text-ink-500 mt-0.5">{sub}</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function EmptyMetrics({ isPersonal }: { isPersonal: boolean }) {
-  return (
-    <div className="flex flex-col items-center text-center py-4 px-2">
-      <span
-        className="w-12 h-12 rounded-2xl bg-brand-50 inline-flex items-center justify-center mb-3"
-        aria-hidden
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E04E25" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 17l6-6 4 4 8-8" />
-          <path d="M14 7h7v7" />
-        </svg>
-      </span>
-      <p className="text-[13px] font-medium text-navy-900">Metrics will appear as you use the app</p>
-      <p className="text-[11.5px] text-ink-500 mt-1.5 leading-relaxed">
-        {isPersonal
-          ? "Add your horse and log your first ride — your weekly activity will start showing here."
-          : "Add your first lesson and log your first session — utilization, payments, and outstanding balances will start filling in immediately."}
-      </p>
-      <Link
-        href={isPersonal ? "/dashboard/horses" : "/dashboard/calendar"}
-        className="mt-3 text-[12px] font-medium text-brand-700 hover:text-brand-800"
-      >
-        {isPersonal ? "+ Add horse →" : "+ New lesson →"}
-      </Link>
-    </div>
-  );
-}
 
 function TimelineRow({ lesson }: { lesson: DashboardLesson }) {
   const start = new Date(lesson.starts_at);
