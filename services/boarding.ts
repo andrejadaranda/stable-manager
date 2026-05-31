@@ -75,6 +75,94 @@ export async function setHorseMonthlyBoardingFee(
   if (error) throw error;
 }
 
+/** Set (or clear) the boarding start date on a horse. Owner-only. */
+export async function setHorseBoardingStartDate(
+  horseId: string,
+  startDate: string | null,
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("horses")
+    .update({ boarding_start_date: startDate })
+    .eq("id", horseId);
+  if (error) throw error;
+}
+
+/** Auto-create one boarding charge per calendar month from the horse's
+ *  boarding_start_date up to (and including) the current month — skipping
+ *  any month that already has a charge. Each uses the horse's monthly fee.
+ *  Lets the owner track paid/unpaid per month without typing each one.
+ *  Returns how many charges were created. Owner-only. */
+export async function generateMissingBoardingMonths(
+  horseId: string,
+): Promise<{ created: number }> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+
+  const { data: horse, error: hErr } = await supabase
+    .from("horses")
+    .select("id, owner_client_id, boarding_start_date, monthly_boarding_fee")
+    .eq("id", horseId)
+    .maybeSingle();
+  if (hErr) throw hErr;
+  if (!horse) throw new Error("HORSE_NOT_FOUND");
+  const h = horse as {
+    owner_client_id: string | null;
+    boarding_start_date: string | null;
+    monthly_boarding_fee: number | null;
+  };
+  if (!h.owner_client_id) throw new Error("HORSE_HAS_NO_OWNER");
+  if (!h.boarding_start_date) throw new Error("NO_BOARDING_START_DATE");
+  if (h.monthly_boarding_fee == null) throw new Error("NO_MONTHLY_FEE");
+
+  // Existing charge months for this horse (by period_start YYYY-MM).
+  const { data: existing, error: eErr } = await supabase
+    .from("horse_boarding_charges")
+    .select("period_start")
+    .eq("horse_id", horseId);
+  if (eErr) throw eErr;
+  const have = new Set(
+    ((existing ?? []) as { period_start: string }[]).map((r) => r.period_start.slice(0, 7)),
+  );
+
+  // Walk months from start → current.
+  const start = new Date(h.boarding_start_date);
+  const now = new Date();
+  const records: Array<Record<string, unknown>> = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+  const last = new Date(now.getFullYear(), now.getMonth(), 1);
+  while (cursor <= last) {
+    const y = cursor.getFullYear();
+    const m = cursor.getMonth(); // 0-based
+    const key = `${y}-${String(m + 1).padStart(2, "0")}`;
+    if (!have.has(key)) {
+      const periodStart = `${key}-01`;
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      const periodEnd = `${key}-${String(lastDay).padStart(2, "0")}`;
+      const label = new Date(y, m, 1).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+      records.push({
+        stable_id:       session.stableId,
+        horse_id:        horseId,
+        owner_client_id: h.owner_client_id,
+        period_start:    periodStart,
+        period_end:      periodEnd,
+        period_label:    label,
+        amount:          h.monthly_boarding_fee,
+        notes:           null,
+      });
+    }
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  if (records.length === 0) return { created: 0 };
+  const { error: insErr } = await supabase.from("horse_boarding_charges").insert(records);
+  if (insErr) throw insErr;
+  return { created: records.length };
+}
+
 /** Create one charge. The owner client is read off the horse so the
  *  caller doesn't need to know it; if the horse has no owner_client_id
  *  the call fails with HORSE_HAS_NO_OWNER (configure the horse first). */

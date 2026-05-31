@@ -7,6 +7,8 @@
 import { revalidatePath } from "next/cache";
 import {
   setHorseMonthlyBoardingFee,
+  setHorseBoardingStartDate,
+  generateMissingBoardingMonths,
   createCharge,
   deleteCharge,
   markChargePaid,
@@ -103,6 +105,46 @@ export async function setOwnerAction(
 
   revalidatePath(`/dashboard/horses/${horseId}`);
   return { error: null, success: true };
+}
+
+/** Set boarding start date + auto-generate one charge per month from then
+ *  to now (skipping months already charged). One tap fills the calendar so
+ *  the owner can mark each month paid/unpaid. */
+export async function setBoardingStartAction(
+  horseId: string,
+  startDate: string,
+): Promise<{ error: string | null; created: number }> {
+  if (!horseId) return { error: "Missing horse id.", created: 0 };
+  if (!startDate) return { error: "Pick a start date.", created: 0 };
+  try {
+    await setHorseBoardingStartDate(horseId, startDate);
+    const { created } = await generateMissingBoardingMonths(horseId);
+    revalidatePath(`/dashboard/horses/${horseId}`);
+    return { error: null, created };
+  } catch (err) {
+    const msg = (err as Error)?.message ?? "";
+    if (msg === "NO_MONTHLY_FEE")    return { error: "Set the monthly fee first.", created: 0 };
+    if (msg === "HORSE_HAS_NO_OWNER") return { error: "Set an owner client first.", created: 0 };
+    return { error: toFriendlyError(err).message, created: 0 };
+  }
+}
+
+/** Re-run the monthly generation (e.g. a new month rolled over). */
+export async function generateBoardingMonthsAction(
+  horseId: string,
+): Promise<{ error: string | null; created: number }> {
+  if (!horseId) return { error: "Missing horse id.", created: 0 };
+  try {
+    const { created } = await generateMissingBoardingMonths(horseId);
+    revalidatePath(`/dashboard/horses/${horseId}`);
+    return { error: null, created };
+  } catch (err) {
+    const msg = (err as Error)?.message ?? "";
+    if (msg === "NO_BOARDING_START_DATE") return { error: "Set a boarding start date first.", created: 0 };
+    if (msg === "NO_MONTHLY_FEE")         return { error: "Set the monthly fee first.", created: 0 };
+    if (msg === "HORSE_HAS_NO_OWNER")     return { error: "Set an owner client first.", created: 0 };
+    return { error: toFriendlyError(err).message, created: 0 };
+  }
 }
 
 export async function setMonthlyFeeAction(

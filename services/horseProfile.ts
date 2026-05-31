@@ -34,6 +34,7 @@ export type HorseProfileSummary = {
   sire_name: string | null;
   dam_name: string | null;
   unique_number: string | null;
+  boarding_start_date: string | null;
   backup_contact_name: string | null;
   backup_contact_phone: string | null;
   backup_contact_relation: string | null;
@@ -136,7 +137,7 @@ export async function getHorseProfileSummary(
          daily_lesson_limit, weekly_lesson_limit, owner_client_id, monthly_boarding_fee,
          available_for_lessons, public_bio,
          color, sex, height_cm, discipline, microchip_id, passport_no,
-         fei_id, sire_name, dam_name, unique_number,
+         fei_id, sire_name, dam_name, unique_number, boarding_start_date,
          backup_contact_name, backup_contact_phone, backup_contact_relation,
          owner_client:clients!horses_owner_client_id_fkey(id, full_name)`,
       )
@@ -204,6 +205,7 @@ export async function getHorseProfileSummary(
     sire_name: horse.sire_name,
     dam_name: horse.dam_name,
     unique_number: horse.unique_number,
+    boarding_start_date: horse.boarding_start_date,
     backup_contact_name: horse.backup_contact_name,
     backup_contact_phone: horse.backup_contact_phone,
     backup_contact_relation: horse.backup_contact_relation,

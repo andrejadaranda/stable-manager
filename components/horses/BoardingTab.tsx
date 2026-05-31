@@ -24,6 +24,8 @@ import {
   setOwnerAction,
   setLessonsAvailabilityAction,
   addNewOwnerAction,
+  setBoardingStartAction,
+  generateBoardingMonthsAction,
   type BoardingActionState,
 } from "@/app/dashboard/horses/[id]/boarding-actions";
 import type { BoardingChargeRow } from "@/services/boarding";
@@ -44,6 +46,7 @@ export function BoardingTab({
   horseName,
   ownerClient,
   monthlyFee,
+  boardingStartDate = null,
   availableForLessons,
   charges,
   miscCharges,
@@ -57,6 +60,8 @@ export function BoardingTab({
   horseName: string;
   ownerClient: { id: string; full_name: string } | null;
   monthlyFee: number | null;
+  /** When boarding began — drives the monthly auto-generation. */
+  boardingStartDate?: string | null;
   /** True if this client-owned horse is opted into the lessons dropdown. */
   availableForLessons: boolean;
   charges: BoardingChargeRow[];
@@ -165,6 +170,15 @@ export function BoardingTab({
           initialFee={monthlyFee}
           isPersonal={isPersonal}
           rates={rates}
+        />
+      )}
+
+      {/* Boarding schedule — start date + auto-generate monthly charges. */}
+      {isOwner && !isPersonal && ownerClient && (
+        <BoardingSchedulePanel
+          horseId={horseId}
+          initialStart={boardingStartDate}
+          hasFee={monthlyFee != null}
         />
       )}
 
@@ -603,6 +617,94 @@ function SaveFeeButton() {
     >
       {pending ? "Saving…" : "Save"}
     </button>
+  );
+}
+
+// =============================================================
+// Boarding schedule — start date + one-tap monthly auto-generation.
+// =============================================================
+function BoardingSchedulePanel({
+  horseId,
+  initialStart,
+  hasFee,
+}: {
+  horseId: string;
+  initialStart: string | null;
+  hasFee: boolean;
+}) {
+  const router = useRouter();
+  const [start, setStart] = useState(initialStart ?? "");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function saveStart() {
+    if (!start) { setMsg("Pick a start date."); return; }
+    setSaving(true); setMsg(null);
+    const res = await setBoardingStartAction(horseId, start);
+    setSaving(false);
+    if (res.error) { setMsg(res.error); return; }
+    router.refresh();
+    setMsg(res.created > 0
+      ? `Saved — ${res.created} monthly charge${res.created === 1 ? "" : "s"} created. Mark each paid below.`
+      : "Saved.");
+  }
+
+  async function regenerate() {
+    setSaving(true); setMsg(null);
+    const res = await generateBoardingMonthsAction(horseId);
+    setSaving(false);
+    if (res.error) { setMsg(res.error); return; }
+    router.refresh();
+    setMsg(res.created > 0
+      ? `${res.created} new month${res.created === 1 ? "" : "s"} added.`
+      : "Already up to date.");
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-soft p-4 flex flex-col gap-3">
+      <div>
+        <p className="text-[12px] font-semibold tracking-[0.04em] uppercase text-ink-500">
+          Boarding since
+        </p>
+        <p className="text-[11.5px] text-ink-500 mt-0.5 leading-relaxed">
+          Set when this horse started boarding — we create one charge per month
+          up to today so you can tick off who paid each month.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="text-[12px] font-medium text-ink-700">Start date</span>
+          <input
+            type="date"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            className="rounded-xl border border-ink-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={saveStart}
+          disabled={saving || !hasFee}
+          className="h-10 px-4 rounded-xl bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 disabled:opacity-50"
+        >
+          {saving ? "Saving…" : "Save & fill months"}
+        </button>
+        {initialStart && (
+          <button
+            type="button"
+            onClick={regenerate}
+            disabled={saving}
+            className="h-10 px-4 rounded-xl text-sm font-medium text-ink-700 ring-1 ring-ink-200 hover:bg-ink-100/60 disabled:opacity-50"
+          >
+            Catch up to this month
+          </button>
+        )}
+      </div>
+      {!hasFee && (
+        <p className="text-[11.5px] text-amber-700">Set the monthly fee above first.</p>
+      )}
+      {msg && <p className="text-[12px] text-ink-500">{msg}</p>}
+    </div>
   );
 }
 
