@@ -48,6 +48,7 @@ export function BoardingTab({
   charges,
   miscCharges,
   clients,
+  rates = [],
   isOwner,
   accountType = "business",
   selfDisplayName,
@@ -63,6 +64,8 @@ export function BoardingTab({
   miscCharges: ClientChargeRow[];
   /** Active clients in the stable, used by the owner-picker on this tab. */
   clients: ClientOpt[];
+  /** Stable's boarding price presets — pick one to fill the monthly fee. */
+  rates?: Array<{ id: string; name: string; amount: number }>;
   isOwner: boolean;
   /** "personal" = solo B2C owner — re-themes labels to reflect that
    *  THEY are paying a stable, not billing clients. */
@@ -161,7 +164,13 @@ export function BoardingTab({
           horseId={horseId}
           initialFee={monthlyFee}
           isPersonal={isPersonal}
+          rates={rates}
         />
+      )}
+
+      {/* Payment calendar — 12-month grid, green=paid, amber=unpaid. */}
+      {!isPersonal && charges.length > 0 && (
+        <BoardingPaymentCalendar charges={charges} horseId={horseId} isOwner={isOwner} />
       )}
 
       {/* Misc charges (farrier, equipment, etc) — shown only when
@@ -258,11 +267,14 @@ function OwnerPanel({
   const [sendInvite, setSendInvite] = useState(true);
   const [savingNew, setSavingNew] = useState(false);
   const [newMsg, setNewMsg] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function addNewOwner() {
     if (!newName.trim()) { setNewMsg("Owner name is required."); return; }
     setSavingNew(true);
     setNewMsg(null);
+    setInviteLink(null);
     const res = await addNewOwnerAction(horseId, {
       name: newName,
       email: newEmail,
@@ -274,7 +286,25 @@ function OwnerPanel({
     setNewName("");
     setNewEmail("");
     router.refresh();
-    setNewMsg(res.invited ? "Owner added and invite sent." : "Owner added.");
+    setInviteLink(res.inviteUrl ?? null);
+    setNewMsg(
+      res.invited
+        ? "Owner added and invite emailed."
+        : res.inviteUrl
+        ? "Owner added — copy the invite link below to share it."
+        : "Owner added.",
+    );
+  }
+
+  async function copyLink() {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard blocked — link is still visible to select manually */
+    }
   }
 
   return (
@@ -362,7 +392,25 @@ function OwnerPanel({
         </div>
       )}
 
-      {newMsg && <p className="text-[12px] text-ink-500">{newMsg}</p>}
+      {newMsg && <p className="text-[12px] text-ink-500 mt-2">{newMsg}</p>}
+
+      {inviteLink && (
+        <div className="mt-2 flex items-center gap-2 rounded-xl border border-ink-200 bg-cream-50/60 px-3 py-2">
+          <input
+            readOnly
+            value={inviteLink}
+            onFocus={(e) => e.currentTarget.select()}
+            className="flex-1 min-w-0 bg-transparent text-[12px] text-ink-700 truncate focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={copyLink}
+            className="shrink-0 h-8 px-3 rounded-lg bg-navy-900 text-white text-[12px] font-medium hover:bg-navy-800"
+          >
+            {copied ? "Copied ✓" : "Copy link"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -458,10 +506,12 @@ function MonthlyFeePanel({
   horseId,
   initialFee,
   isPersonal,
+  rates = [],
 }: {
   horseId: string;
   initialFee: number | null;
   isPersonal?: boolean;
+  rates?: Array<{ id: string; name: string; amount: number }>;
 }) {
   const [state, action] = useFormState<BoardingActionState, FormData>(
     setMonthlyFeeAction, initialState,
@@ -481,9 +531,36 @@ function MonthlyFeePanel({
         <p className="text-[11.5px] text-ink-500 mt-0.5 leading-relaxed">
           {isPersonal
             ? "Enter your monthly boarding cost (in EUR). Used to pre-fill recurring expense entries each month."
-            : "Used to pre-fill new boarding charges. Owner can override per period."}
+            : "Pick a price option or enter a custom amount. You can still override per charge."}
         </p>
       </div>
+
+      {/* Price-option presets — one tap fills the amount, still editable. */}
+      {!isPersonal && rates.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {rates.map((r) => {
+            const active = Number(fee) === r.amount;
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setFee(String(r.amount))}
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[12px] font-medium transition-colors ${
+                  active
+                    ? "bg-brand-700 text-white"
+                    : "bg-white text-ink-700 ring-1 ring-ink-200 hover:bg-ink-100/60"
+                }`}
+              >
+                {r.name}
+                <span className={active ? "text-white/80" : "text-ink-500"}>
+                  {FMT_EUR.format(r.amount)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex items-end gap-3">
         <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-0">
           <span className="text-[12px] font-medium text-ink-700">Amount · €</span>
@@ -526,6 +603,135 @@ function SaveFeeButton() {
     >
       {pending ? "Saving…" : "Save"}
     </button>
+  );
+}
+
+// =============================================================
+// Payment calendar — 12-month grid of boarding charges.
+// Green = paid, amber = unpaid/partial, grey = no charge that month.
+// Owner can click a charged month to toggle paid/unpaid.
+// =============================================================
+function BoardingPaymentCalendar({
+  charges,
+  horseId,
+  isOwner,
+}: {
+  charges: BoardingChargeRow[];
+  horseId: string;
+  isOwner: boolean;
+}) {
+  // Map each charge to its YYYY-MM (by period_start) → latest charge wins.
+  const byMonth = new Map<string, BoardingChargeRow>();
+  for (const c of charges) {
+    const key = c.period_start.slice(0, 7); // YYYY-MM
+    byMonth.set(key, c);
+  }
+
+  // Last 12 months ending this month, oldest → newest.
+  const now = new Date();
+  const months: { key: string; label: string }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString(undefined, { month: "short" }),
+    });
+  }
+
+  return (
+    <section className="bg-white rounded-2xl shadow-soft p-5">
+      <div className="flex items-baseline justify-between mb-3">
+        <h3 className="text-sm font-semibold text-navy-900">Payment calendar</h3>
+        <span className="text-[11px] text-ink-500">Last 12 months</span>
+      </div>
+      <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
+        {months.map((m) => {
+          const charge = byMonth.get(m.key);
+          const status = charge?.payment_status;
+          const tone =
+            !charge        ? "bg-ink-50 text-ink-300 ring-1 ring-ink-100" :
+            status === "paid"    ? "bg-emerald-500 text-white" :
+            status === "partial" ? "bg-amber-400 text-white" :
+                                   "bg-rose-100 text-rose-700 ring-1 ring-rose-200";
+          return (
+            <BoardingMonthCell
+              key={m.key}
+              label={m.label}
+              tone={tone}
+              charge={charge}
+              horseId={horseId}
+              isOwner={isOwner}
+            />
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap items-center gap-3 mt-3 text-[11px] text-ink-500">
+        <Legend swatch="bg-emerald-500" text="Paid" />
+        <Legend swatch="bg-rose-100 ring-1 ring-rose-200" text="Unpaid" />
+        <Legend swatch="bg-amber-400" text="Partial" />
+        <Legend swatch="bg-ink-50 ring-1 ring-ink-100" text="No charge" />
+      </div>
+    </section>
+  );
+}
+
+function Legend({ swatch, text }: { swatch: string; text: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={`w-3 h-3 rounded ${swatch}`} />
+      {text}
+    </span>
+  );
+}
+
+function BoardingMonthCell({
+  label,
+  tone,
+  charge,
+  horseId,
+  isOwner,
+}: {
+  label: string;
+  tone: string;
+  charge: BoardingChargeRow | undefined;
+  horseId: string;
+  isOwner: boolean;
+}) {
+  const paid = charge?.payment_status === "paid";
+  const [, action] = useFormState<BoardingActionState, FormData>(
+    paid ? markChargeUnpaidAction : markChargePaidAction,
+    initialState,
+  );
+
+  const title = charge
+    ? `${label}: ${FMT_EUR.format(Number(charge.amount))} · ${charge.payment_status}${isOwner ? " — tap to toggle" : ""}`
+    : `${label}: no charge`;
+
+  // Non-owner OR no charge → static cell (no toggle).
+  if (!charge || !isOwner) {
+    return (
+      <div
+        title={title}
+        className={`aspect-square rounded-lg flex flex-col items-center justify-center text-[10px] font-semibold ${tone}`}
+      >
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <form action={action} className="contents">
+      <input type="hidden" name="charge_id" value={charge.id} />
+      <input type="hidden" name="horse_id" value={horseId} />
+      <input type="hidden" name="method" value="cash" />
+      <button
+        type="submit"
+        title={title}
+        className={`aspect-square w-full rounded-lg flex flex-col items-center justify-center text-[10px] font-semibold transition-transform hover:scale-[1.05] ${tone}`}
+      >
+        {label}
+      </button>
+    </form>
   );
 }
 

@@ -30,11 +30,11 @@ const initial: BoardingActionState = { error: null, success: false };
 export async function addNewOwnerAction(
   horseId: string,
   input: { name: string; email: string; sendInvite: boolean },
-): Promise<{ error: string | null; invited: boolean }> {
+): Promise<{ error: string | null; invited: boolean; inviteUrl: string | null }> {
   const name = input.name.trim();
   const email = input.email.trim();
-  if (!horseId) return { error: "Missing horse id.", invited: false };
-  if (!name)    return { error: "Owner name is required.", invited: false };
+  if (!horseId) return { error: "Missing horse id.", invited: false, inviteUrl: null };
+  if (!name)    return { error: "Owner name is required.", invited: false, inviteUrl: null };
 
   try {
     const client = await createClient({
@@ -44,20 +44,23 @@ export async function addNewOwnerAction(
     await setHorseOwner(horseId, client.id);
 
     let invited = false;
+    let inviteUrl: string | null = null;
     if (input.sendInvite && email) {
-      // Best-effort — owner stays attached even if the email fails.
+      // Best-effort — owner stays attached even if the email fails. We
+      // always surface the link so the owner can copy/share it manually.
       try {
         const res = await sendClientInvite({ clientId: client.id, email });
         invited = res.emailSent;
+        inviteUrl = res.invitation.invite_url ?? null;
       } catch {
         invited = false;
       }
     }
     revalidatePath(`/dashboard/horses/${horseId}`);
     revalidatePath("/dashboard/clients");
-    return { error: null, invited };
+    return { error: null, invited, inviteUrl };
   } catch (err) {
-    return { error: toFriendlyError(err).message, invited: false };
+    return { error: toFriendlyError(err).message, invited: false, inviteUrl: null };
   }
 }
 

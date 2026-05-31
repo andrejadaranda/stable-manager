@@ -35,6 +35,7 @@ import { PhotoGallery } from "@/components/horses/PhotoGallery";
 import { ScheduleRail } from "@/components/horses/ScheduleRail";
 import { ComingSoonTab } from "@/components/horses/ComingSoonTab";
 import { listChargesForHorse } from "@/services/boarding";
+import { listBoardingRates } from "@/services/boardingRates";
 import { listChargesForHorse as listMiscChargesForHorse } from "@/services/clientCharges";
 import { getClient } from "@/services/clients";
 import { getOwnProfile } from "@/services/account";
@@ -103,12 +104,13 @@ export default async function HorseDetailPage({
       />
     );
   } else if (tab === "boarding") {
-    const [charges, ownerClient, allClients, miscCharges, ownProfile] = await Promise.all([
+    const [charges, ownerClient, allClients, miscCharges, ownProfile, boardingRates] = await Promise.all([
       listChargesForHorse(params.id),
       horse.owner_client_id ? getClient(horse.owner_client_id) : Promise.resolve(null),
       listClients({ activeOnly: true }),
       listMiscChargesForHorse(params.id),
       getOwnProfile().catch(() => null),
+      listBoardingRates({ activeOnly: true }).catch(() => []),
     ]);
     tabContent = (
       <BoardingTab
@@ -120,6 +122,7 @@ export default async function HorseDetailPage({
         charges={charges}
         miscCharges={miscCharges}
         clients={allClients.map((c) => ({ id: c.id, full_name: c.full_name }))}
+        rates={boardingRates.map((r) => ({ id: r.id, name: r.name, amount: Number(r.amount) }))}
         isOwner={session.role === "owner"}
         accountType={session.accountType === "personal" ? "personal" : "business"}
         selfDisplayName={ownProfile?.full_name ?? undefined}
