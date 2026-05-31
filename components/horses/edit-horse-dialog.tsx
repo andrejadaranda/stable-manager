@@ -7,6 +7,7 @@ import {
   type UpdateHorseState,
 } from "@/app/dashboard/horses/actions";
 import type { HorseRow } from "@/services/horses";
+import { HorsePhotoField } from "@/components/horses/horse-photo-field";
 
 const initial: UpdateHorseState = { error: null, success: false };
 
@@ -214,12 +215,9 @@ function EditHorseDialog({
           />
         </label>
 
-        <Field
-          label="Photo URL"
-          name="photo_url"
-          type="url"
-          placeholder="https://… (paste link to a public image)"
-          defaultValue={(horse as HorseRow & { photo_url?: string | null }).photo_url ?? ""}
+        <HorsePhotoField
+          horseId={horse.id}
+          initialUrl={(horse as HorseRow & { photo_url?: string | null }).photo_url ?? null}
         />
 
         <label className="flex flex-col gap-1.5 text-sm">
