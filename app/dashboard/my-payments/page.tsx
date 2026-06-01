@@ -16,6 +16,7 @@ import {
   listPayments,
   getClientBalance,
 } from "@/services/payments";
+import { listChargesForClient } from "@/services/boarding";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +42,10 @@ export default async function MyPaymentsPage() {
     );
   }
 
-  const [payments, balance] = await Promise.all([
+  const [payments, balance, boardingCharges] = await Promise.all([
     listPayments({ clientId: session.clientId }),
     getClientBalance(session.clientId),
+    listChargesForClient(session.clientId).catch(() => []),
   ]);
 
   return (
@@ -61,6 +63,53 @@ export default async function MyPaymentsPage() {
       </header>
 
       <BalanceCard balance={balance} />
+
+      {boardingCharges.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-[11px] uppercase tracking-[0.14em] font-semibold text-ink-500">
+            Boarding by month ({boardingCharges.length})
+          </h2>
+          <ul className="bg-white rounded-2xl shadow-soft divide-y divide-ink-100">
+            {boardingCharges.map((c) => {
+              const status = c.payment_status;
+              const remaining = Math.max(0, Number(c.amount) - Number(c.paid_amount));
+              return (
+                <li key={c.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-ink-900">
+                      {c.period_label ||
+                        new Date(c.period_start).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+                    </p>
+                    <p className="text-[11.5px] text-ink-500 mt-0.5 tabular-nums">
+                      {FMT_EUR.format(Number(c.amount))}
+                      {status === "partial" && ` · ${FMT_EUR.format(Number(c.paid_amount))} paid`}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+                      status === "paid"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : status === "partial"
+                        ? "bg-amber-50 text-amber-800"
+                        : "bg-rose-50 text-rose-700"
+                    }`}
+                  >
+                    {status === "paid"
+                      ? "Paid"
+                      : status === "partial"
+                      ? `${FMT_EUR.format(remaining)} left`
+                      : "Unpaid"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-[12px] text-ink-500">
+            Boarding is billed monthly. Pay your stable directly — once they
+            record it, the month flips to <span className="text-emerald-700 font-medium">Paid</span> here.
+          </p>
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-[11px] uppercase tracking-[0.14em] font-semibold text-ink-500">
