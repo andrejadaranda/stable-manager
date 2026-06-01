@@ -14,6 +14,7 @@ import { SESSION_TYPE_LABEL, type SessionType } from "@/services/sessions.types"
 import { SessionMap } from "@/components/sessions/SessionMap";
 import { ShareRideDialog } from "@/components/sessions/ShareRideDialog";
 import { BeaconShareDialog } from "@/components/sessions/BeaconShareDialog";
+import { EditSessionButton } from "@/components/sessions/edit-session-button";
 import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +108,12 @@ export default async function SessionDetailPage({
           subtitle={`${started.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${started.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}${finished ? ` → ${finished.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
         />
         <div className="flex items-center gap-2">
+          {/* Edit a logged (non-live) session — fix type/duration/notes/rating. */}
+          {s.status !== "live" && (
+            <EditSessionButton
+              session={{ id: s.id, type: s.type, duration_minutes: s.duration_minutes, notes: s.notes, rating: s.rating }}
+            />
+          )}
           {/* Live safety beacon — mint a public share link while the ride is in progress */}
           {s.status === "live" && <BeaconShareDialog sessionId={s.id} />}
           {/* BUG #FF guard — empty-string polylines (0m stationary rides)
