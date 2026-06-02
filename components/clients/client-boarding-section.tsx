@@ -8,6 +8,8 @@
 
 import type { BoardingChargeRow } from "@/services/boarding";
 
+type ChargeWithHorse = BoardingChargeRow & { horse_name?: string | null };
+
 const FMT_EUR = new Intl.NumberFormat(undefined, {
   style: "currency",
   currency: "EUR",
@@ -16,20 +18,15 @@ const FMT_EUR = new Intl.NumberFormat(undefined, {
 export function ClientBoardingSection({
   charges,
 }: {
-  charges: BoardingChargeRow[];
+  charges: ChargeWithHorse[];
 }) {
   const totalDue = charges.reduce((acc, c) => {
     const remaining = Math.max(0, Number(c.amount) - Number(c.paid_amount));
     return acc + remaining;
   }, 0);
 
-  // Group by horse so each horse gets its own subsection.
-  const byHorse = new Map<string, BoardingChargeRow[]>();
-  for (const c of charges) {
-    const arr = byHorse.get(c.horse_id) ?? [];
-    arr.push(c);
-    byHorse.set(c.horse_id, arr);
-  }
+  // Show the horse name per row only when this client boards more than one.
+  const multipleHorses = new Set(charges.map((c) => c.horse_id)).size > 1;
 
   return (
     <section className="bg-white rounded-2xl shadow-soft p-5 flex flex-col gap-4">
@@ -57,6 +54,9 @@ export function ClientBoardingSection({
           >
             <div className="min-w-0">
               <p className="font-medium text-ink-900">
+                {multipleHorses && c.horse_name && (
+                  <span className="text-ink-500 font-normal">{c.horse_name} · </span>
+                )}
                 {c.period_label ||
                   `${new Date(c.period_start).toLocaleDateString()} → ${new Date(c.period_end).toLocaleDateString()}`}
               </p>

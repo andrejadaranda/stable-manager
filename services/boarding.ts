@@ -363,9 +363,13 @@ export async function listChargesForHorse(
   return (data ?? []) as BoardingChargeRow[];
 }
 
+/** A boarding charge plus the horse's name — needed wherever a client
+ *  who boards more than one horse needs to tell the months apart. */
+export type BoardingChargeWithHorse = BoardingChargeRow & { horse_name: string | null };
+
 export async function listChargesForClient(
   clientId: string,
-): Promise<BoardingChargeRow[]> {
+): Promise<BoardingChargeWithHorse[]> {
   const session = await getSession();
   requireOwnerOrClientSelf(session, clientId);
   const supabase = createSupabaseServerClient();
@@ -375,7 +379,22 @@ export async function listChargesForClient(
     .eq("owner_client_id", clientId)
     .order("period_start", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as BoardingChargeRow[];
+  const rows = (data ?? []) as BoardingChargeRow[];
+
+  // The view exposes horse_id only, so resolve names in one keyed query.
+  // RLS lets the client read the horses they own (and staff read all).
+  const ids = Array.from(new Set(rows.map((r) => r.horse_id)));
+  const nameById = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: horses } = await supabase
+      .from("horses")
+      .select("id, name")
+      .in("id", ids);
+    for (const h of (horses ?? []) as { id: string; name: string }[]) {
+      nameById.set(h.id, h.name);
+    }
+  }
+  return rows.map((r) => ({ ...r, horse_name: nameById.get(r.horse_id) ?? null }));
 }
 
 // =================================================================

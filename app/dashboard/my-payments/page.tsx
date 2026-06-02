@@ -48,6 +48,10 @@ export default async function MyPaymentsPage() {
     listChargesForClient(session.clientId).catch(() => []),
   ]);
 
+  // Only prefix the horse name when this boarder keeps more than one horse —
+  // otherwise it's redundant noise on every row.
+  const multipleHorses = new Set(boardingCharges.map((c) => c.horse_id)).size > 1;
+
   return (
     <div className="flex flex-col gap-8 max-w-3xl">
       <header>
@@ -77,6 +81,9 @@ export default async function MyPaymentsPage() {
                 <li key={c.id} className="px-5 py-3.5 flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-ink-900">
+                      {multipleHorses && c.horse_name && (
+                        <span className="text-ink-500 font-normal">{c.horse_name} · </span>
+                      )}
                       {c.period_label ||
                         new Date(c.period_start).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
                     </p>
