@@ -24,6 +24,9 @@ export async function addPaymentAction(
   // Boarding context — folded into the note since payments has no horse FK.
   const purpose   = String(formData.get("purpose") ?? "general");
   const horseName = String(formData.get("boarding_horse_name") ?? "").trim();
+  // When the owner picks a specific unpaid month, link the payment to that
+  // charge so the month auto-flips to Paid in horse_boarding_summary.
+  const boardingChargeId = String(formData.get("boarding_charge_id") ?? "").trim();
 
   if (!amountRaw) return { error: "Amount is required.", success: false };
   if (!paidAt)    return { error: "Payment date is required.", success: false };
@@ -63,6 +66,7 @@ export async function addPaymentAction(
       amount,
       method: method as "cash" | "card" | "transfer" | "other",
       lessonId: lessonId || null,
+      boardingChargeId: purpose === "boarding" && boardingChargeId ? boardingChargeId : null,
       paidAt,
       notes: notes || undefined,
     });

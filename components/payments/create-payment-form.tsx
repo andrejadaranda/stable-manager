@@ -17,15 +17,26 @@ type LessonOpt = {
   client: { id: string } | null;
   horse:  { id: string; name: string } | null;
 };
+type OutstandingCharge = {
+  id: string;
+  horse_id: string;
+  owner_client_id: string;
+  period_label: string | null;
+  period_start: string;
+  amount: number;
+  paid_amount: number;
+};
 
 export function CreatePaymentPanel({
   clients,
   lessons,
   horses = [],
+  outstanding = [],
 }: {
   clients: ClientOpt[];
   lessons: LessonOpt[];
   horses?: HorseOpt[];
+  outstanding?: OutstandingCharge[];
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -41,6 +52,7 @@ export function CreatePaymentPanel({
           clients={clients}
           lessons={lessons}
           horses={horses}
+          outstanding={outstanding}
           onClose={() => setOpen(false)}
         />
       )}
@@ -52,11 +64,13 @@ function CreatePaymentForm({
   clients,
   lessons,
   horses,
+  outstanding,
   onClose,
 }: {
   clients: ClientOpt[];
   lessons: LessonOpt[];
   horses: HorseOpt[];
+  outstanding: OutstandingCharge[];
   onClose: () => void;
 }) {
   const [state, formAction] = useFormState<AddPaymentState, FormData>(
@@ -67,6 +81,8 @@ function CreatePaymentForm({
   const [newClient, setNewClient] = useState(false);
   const [purpose, setPurpose] = useState<"general" | "boarding">("general");
   const [horseId, setHorseId] = useState<string>("");
+  const [chargeId, setChargeId] = useState<string>("");
+  const [amountStr, setAmountStr] = useState<string>("");
   const [dateLocal, setDateLocal] = useState<string>(toDateInputValue(new Date()));
   const dateISO = useMemo(() => dateLocalToISO(dateLocal), [dateLocal]);
 
@@ -74,6 +90,27 @@ function CreatePaymentForm({
     () => (clientId ? lessons.filter((l) => l.client?.id === clientId) : []),
     [clientId, lessons],
   );
+
+  // Unpaid months for the chosen horse, newest first.
+  const horseCharges = useMemo(
+    () => outstanding
+      .filter((c) => c.horse_id === horseId)
+      .sort((a, b) => b.period_start.localeCompare(a.period_start)),
+    [horseId, outstanding],
+  );
+
+  // Picking a month auto-fills the remaining amount and selects the owner
+  // as the paying client — closes the double-entry gap.
+  function pickCharge(id: string) {
+    setChargeId(id);
+    const c = outstanding.find((x) => x.id === id);
+    if (c) {
+      const remaining = Math.max(0, Number(c.amount) - Number(c.paid_amount));
+      setAmountStr(remaining ? remaining.toFixed(2) : "");
+      setNewClient(false);
+      setClientId(c.owner_client_id);
+    }
+  }
 
   const selectedHorseName = horses.find((h) => h.id === horseId)?.name ?? "";
 
@@ -118,7 +155,7 @@ function CreatePaymentForm({
             <span className="text-neutral-700">For which horse</span>
             <select
               value={horseId}
-              onChange={(e) => setHorseId(e.target.value)}
+              onChange={(e) => { setHorseId(e.target.value); setChargeId(""); }}
               className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
             >
               <option value="">Select horse…</option>
@@ -128,6 +165,41 @@ function CreatePaymentForm({
             </select>
             {/* Horse name folded into the note server-side. */}
             <input type="hidden" name="boarding_horse_name" value={selectedHorseName} />
+          </label>
+        )}
+
+        {/* Boarding → which unpaid month. Picking one auto-fills the
+            remaining amount, selects the owner, and links the payment so
+            the month flips to Paid automatically. */}
+        {purpose === "boarding" && horseId && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-neutral-700">Which month</span>
+            {horseCharges.length === 0 ? (
+              <span className="text-[12px] text-neutral-500 rounded-md bg-neutral-50 border border-neutral-200 px-3 py-2">
+                No unpaid months for this horse. Record it as a general
+                boarding payment, or generate the months in the horse&apos;s
+                Boarding tab first.
+              </span>
+            ) : (
+              <select
+                value={chargeId}
+                onChange={(e) => pickCharge(e.target.value)}
+                className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+              >
+                <option value="">Don&apos;t link to a month</option>
+                {horseCharges.map((c) => {
+                  const remaining = Math.max(0, Number(c.amount) - Number(c.paid_amount));
+                  const label = c.period_label ||
+                    new Date(c.period_start).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {label} · €{remaining.toFixed(2)} left
+                    </option>
+                  );
+                })}
+              </select>
+            )}
+            <input type="hidden" name="boarding_charge_id" value={chargeId} />
           </label>
         )}
 
@@ -174,14 +246,19 @@ function CreatePaymentForm({
           )}
         </div>
 
-        <Field
-          label="Amount"
-          name="amount"
-          type="number"
-          min="0.01"
-          step="0.01"
-          required
-        />
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="text-neutral-700 font-medium">Amount</span>
+          <input
+            name="amount"
+            type="number"
+            min="0.01"
+            step="0.01"
+            required
+            value={amountStr}
+            onChange={(e) => setAmountStr(e.target.value)}
+            className="border border-neutral-300 rounded-md px-3 py-2 text-sm placeholder:text-neutral-400"
+          />
+        </label>
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-neutral-700">Payment date</span>
@@ -252,21 +329,6 @@ function CreatePaymentForm({
 }
 
 // ---------- primitives ----------
-function Field(
-  props: React.InputHTMLAttributes<HTMLInputElement> & { label: string },
-) {
-  const { label, ...rest } = props;
-  return (
-    <label className="flex flex-col gap-1.5 text-sm">
-      <span className="text-neutral-700 font-medium">{label}</span>
-      <input
-        className="border border-neutral-300 rounded-md px-3 py-2 text-sm placeholder:text-neutral-400"
-        {...rest}
-      />
-    </label>
-  );
-}
-
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (

@@ -16,6 +16,9 @@ export type AddPaymentInput = {
   amount: number;
   method?: "cash" | "card" | "transfer" | "other";
   lessonId?: string | null;
+  /** Settle a specific boarding month — links the payment so the month
+   *  flips to paid in horse_boarding_summary automatically. */
+  boardingChargeId?: string | null;
   paidAt?: string;     // ISO timestamp; defaults to now()
   notes?: string;
 };
@@ -35,6 +38,7 @@ export async function addPayment(input: AddPaymentInput) {
       amount: input.amount,
       method: input.method ?? "cash",
       lesson_id: input.lessonId ?? null,
+      boarding_charge_id: input.boardingChargeId ?? null,
       paid_at: input.paidAt ?? new Date().toISOString(),
       notes: input.notes ?? null,
     })

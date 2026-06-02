@@ -2,6 +2,7 @@ import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { listPayments } from "@/services/payments";
 import { listClients } from "@/services/clients";
 import { listHorses } from "@/services/horses";
+import { listOutstandingBoardingCharges } from "@/services/boarding";
 import { getCalendar } from "@/services/lessons";
 import { PaymentList } from "@/components/payments/payment-list";
 import { CreatePaymentPanel } from "@/components/payments/create-payment-form";
@@ -33,7 +34,7 @@ export default async function PaymentsPage({
     ? (searchParams.method as Method)
     : undefined;
 
-  const [paymentsRaw, clients, lessons, horses] = await Promise.all([
+  const [paymentsRaw, clients, lessons, horses, outstanding] = await Promise.all([
     listPayments({
       clientId: fClient,
       from: fFrom ? new Date(fFrom).toISOString() : undefined,
@@ -45,6 +46,9 @@ export default async function PaymentsPage({
     // ALL horses (incl. inactive) — boarding is paid for retired/non-lesson
     // horses too, so the payment dropdown must not hide them.
     listHorses().catch(() => []),
+    // Unpaid boarding months — lets a boarding payment settle a specific
+    // month so it auto-flips to Paid.
+    listOutstandingBoardingCharges().catch(() => []),
   ]);
 
   const payments = fMethod ? paymentsRaw.filter((p) => p.method === fMethod) : paymentsRaw;
@@ -63,6 +67,15 @@ export default async function PaymentsPage({
               clients={clients ?? []}
               lessons={lessons ?? []}
               horses={(horses ?? []).map((h) => ({ id: h.id, name: h.name }))}
+              outstanding={(outstanding ?? []).map((c) => ({
+                id: c.id,
+                horse_id: c.horse_id,
+                owner_client_id: c.owner_client_id,
+                period_label: c.period_label,
+                period_start: c.period_start,
+                amount: c.amount,
+                paid_amount: c.paid_amount,
+              }))}
             />
           </div>
         }
