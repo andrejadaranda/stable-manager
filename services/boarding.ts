@@ -332,6 +332,24 @@ export async function listOutstandingBoardingCharges(): Promise<OutstandingBoard
   });
 }
 
+/** Remaining (unpaid) amount on a single boarding charge. Owner-only.
+ *  Returns null if the charge isn't visible to this stable (RLS) or gone.
+ *  Used to validate manual boarding payments don't overpay a month. */
+export async function getBoardingChargeRemaining(chargeId: string): Promise<number | null> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("horse_boarding_summary")
+    .select("amount, paid_amount")
+    .eq("id", chargeId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const row = data as { amount: number; paid_amount: number };
+  return Math.max(0, Number(row.amount) - Number(row.paid_amount));
+}
+
 /** Undo the paid mark by deleting payments tied to the charge. */
 export async function markChargeUnpaid(chargeId: string): Promise<void> {
   const session = await getSession();

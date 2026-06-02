@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { addPayment, deletePayment, updatePayment } from "@/services/payments";
 import { createClient } from "@/services/clients";
+import { getBoardingChargeRemaining } from "@/services/boarding";
 
 export type AddPaymentState = { error: string | null; success: boolean };
 
@@ -49,6 +50,23 @@ export async function addPaymentAction(
   }
 
   try {
+    // Guard against overpaying a linked boarding month — it would silently
+    // flip the month to "paid" and inflate collected revenue. Validate the
+    // amount against the charge's remaining balance server-side (the client
+    // input is not authoritative). Partial (amount < remaining) is fine.
+    if (purpose === "boarding" && boardingChargeId) {
+      const remaining = await getBoardingChargeRemaining(boardingChargeId);
+      if (remaining == null) {
+        return { error: "That boarding month couldn't be found. Refresh and try again.", success: false };
+      }
+      if (amount > remaining + 0.005) {
+        return {
+          error: `That's more than the €${remaining.toFixed(2)} left on this month. Enter €${remaining.toFixed(2)} or less, or record the extra as a general payment.`,
+          success: false,
+        };
+      }
+    }
+
     // Inline new client — create first, then use its id.
     if (!clientId && newClientName) {
       const created = await createClient({

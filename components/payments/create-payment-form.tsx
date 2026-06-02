@@ -114,6 +114,15 @@ function CreatePaymentForm({
 
   const selectedHorseName = horses.find((h) => h.id === horseId)?.name ?? "";
 
+  // When a boarding month is linked, cap the amount at its remaining
+  // balance (server re-validates — this is just a UX guard).
+  const selectedRemaining = (() => {
+    if (purpose !== "boarding" || !chargeId) return undefined;
+    const c = outstanding.find((x) => x.id === chargeId);
+    if (!c) return undefined;
+    return Math.max(0, Number(c.amount) - Number(c.paid_amount));
+  })();
+
   useEffect(() => {
     if (state.success) onClose();
   }, [state.success, onClose]);
@@ -253,11 +262,17 @@ function CreatePaymentForm({
             type="number"
             min="0.01"
             step="0.01"
+            max={selectedRemaining}
             required
             value={amountStr}
             onChange={(e) => setAmountStr(e.target.value)}
             className="border border-neutral-300 rounded-md px-3 py-2 text-sm placeholder:text-neutral-400"
           />
+          {selectedRemaining != null && (
+            <span className="text-[11.5px] text-neutral-500">
+              €{selectedRemaining.toFixed(2)} left on this month — pay up to this to mark it paid.
+            </span>
+          )}
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
