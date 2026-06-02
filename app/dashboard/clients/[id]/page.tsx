@@ -68,6 +68,20 @@ export default async function ClientDetailPage({
 
   const initial = client.full_name?.[0]?.toUpperCase() ?? "?";
 
+  // Role shape drives the layout. A client who owns boarded horses but
+  // books no lessons is a "horse owner / boarder" — leading their profile
+  // with empty lesson lists looks broken, so we surface boarding instead.
+  const isHorseOwner = boardingCharges.length > 0;
+  const hasLessons = upcoming.length > 0 || recent.length > 0;
+  const isHorseOwnerOnly = isHorseOwner && !hasLessons;
+
+  const notesBlock = client.notes ? (
+    <section className="border border-neutral-200 rounded-md bg-white p-4">
+      <h2 className="text-sm font-medium mb-2">Notes</h2>
+      <p className="text-sm whitespace-pre-wrap text-neutral-800">{client.notes}</p>
+    </section>
+  ) : null;
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       <Link
@@ -114,7 +128,12 @@ export default async function ClientDetailPage({
                   <span className={`w-1.5 h-1.5 rounded-full ${client.active ? "bg-emerald-500" : "bg-ink-400"}`} />
                   {client.active ? "Active" : "Inactive"}
                 </span>
-                {client.skill_level && (
+                {isHorseOwner && (
+                  <span className="text-[11.5px] font-medium text-amber-800 px-2 py-0.5 rounded-md bg-amber-50 ring-1 ring-amber-200">
+                    {isHorseOwnerOnly ? "Horse owner" : "Rider + owner"}
+                  </span>
+                )}
+                {client.skill_level && hasLessons && (
                   <span className="text-[11.5px] text-ink-700 px-2 py-0.5 rounded-md bg-ink-100">
                     {SKILL_LABEL[client.skill_level]}
                   </span>
@@ -206,47 +225,71 @@ export default async function ClientDetailPage({
         </>
       )}
 
-      <PackagePanel
-        clientId={client.id}
-        packages={packages}
-        isOwner={session.role === "owner"}
-      />
+      {isHorseOwnerOnly ? (
+        /* Boarder / horse-owner layout — boarding leads, no lesson noise. */
+        <>
+          <ClientBoardingSection charges={boardingCharges} />
 
-      {boardingCharges.length > 0 && (
-        <ClientBoardingSection charges={boardingCharges} />
-      )}
+          <ChargesPanel
+            clientId={client.id}
+            charges={miscCharges}
+            isOwner={session.role === "owner"}
+          />
 
-      <ChargesPanel
-        clientId={client.id}
-        charges={miscCharges}
-        isOwner={session.role === "owner"}
-      />
+          <AgreementsPanel
+            clientId={client.id}
+            agreements={agreements}
+            hasBoardedHorses
+            isOwner={session.role === "owner"}
+          />
 
-      <AgreementsPanel
-        clientId={client.id}
-        agreements={agreements}
-        hasBoardedHorses={boardingCharges.length > 0}
-        isOwner={session.role === "owner"}
-      />
+          {notesBlock}
 
-      {client.notes && (
-        <section className="border border-neutral-200 rounded-md bg-white p-4">
-          <h2 className="text-sm font-medium mb-2">Notes</h2>
-          <p className="text-sm whitespace-pre-wrap text-neutral-800">
-            {client.notes}
+          <p className="text-[12px] text-ink-500 bg-ink-50/60 rounded-xl px-4 py-3">
+            This client boards {boardingCharges.length === 1 ? "a horse" : "horses"} but
+            isn&apos;t enrolled in lessons. Book a lesson to add them to the
+            schedule, or keep managing their boarding above.
           </p>
-        </section>
+        </>
+      ) : (
+        /* Rider layout (incl. riders who also own boarded horses). */
+        <>
+          <PackagePanel
+            clientId={client.id}
+            packages={packages}
+            isOwner={session.role === "owner"}
+          />
+
+          {boardingCharges.length > 0 && (
+            <ClientBoardingSection charges={boardingCharges} />
+          )}
+
+          <ChargesPanel
+            clientId={client.id}
+            charges={miscCharges}
+            isOwner={session.role === "owner"}
+          />
+
+          <AgreementsPanel
+            clientId={client.id}
+            agreements={agreements}
+            hasBoardedHorses={boardingCharges.length > 0}
+            isOwner={session.role === "owner"}
+          />
+
+          {notesBlock}
+
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-medium">Upcoming lessons</h2>
+            <LessonList lessons={upcoming} empty="No upcoming lessons." />
+          </section>
+
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-medium">Recent lessons</h2>
+            <LessonList lessons={recent} empty="No past lessons yet." />
+          </section>
+        </>
       )}
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium">Upcoming lessons</h2>
-        <LessonList lessons={upcoming} empty="No upcoming lessons." />
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium">Recent lessons</h2>
-        <LessonList lessons={recent} empty="No past lessons yet." />
-      </section>
     </div>
   );
 }
