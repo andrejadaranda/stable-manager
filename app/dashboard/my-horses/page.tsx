@@ -36,8 +36,9 @@ export default async function MyHorsesPage() {
       {owned.length === 0 && ridden.length === 0 && (
         <section className="card-elevated p-8 text-center">
           <p className="text-sm text-ink-600">
-            You don&apos;t have any horses linked yet. Once your trainer books
-            a lesson with you and assigns a horse — it&apos;ll show up here.
+            You don&apos;t have any horses linked yet. They&apos;ll appear here
+            once your stable adds a horse you own, or your trainer assigns one
+            to a lesson with you.
           </p>
         </section>
       )}
