@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { listPayments } from "@/services/payments";
 import { listClients } from "@/services/clients";
@@ -55,6 +56,14 @@ export default async function PaymentsPage({
   const total = payments.reduce((s, p) => s + Number(p.amount), 0);
   const hasFilter = Boolean(fFrom || fTo || fClient || fMethod);
 
+  // Stable-wide unpaid boarding — surfaced here so the owner sees money
+  // still owed alongside money received.
+  const boardingOutstanding = (outstanding ?? []).reduce(
+    (s, c) => s + Math.max(0, Number(c.amount) - Number(c.paid_amount)),
+    0,
+  );
+  const boardingOutstandingCount = (outstanding ?? []).length;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -86,14 +95,29 @@ export default async function PaymentsPage({
         current={{ from: fFrom, to: fTo, client: fClient, method: fMethod }}
       />
 
-      {/* Totals summary */}
-      <div className="flex items-center justify-between rounded-2xl bg-navy-700 text-white px-5 py-3">
-        <span className="text-[12px] uppercase tracking-[0.12em] text-white/70">
-          {hasFilter ? "Filtered total" : "All payments"} · {payments.length}
-        </span>
-        <span className="font-display text-xl tabular-nums">
-          €{total.toFixed(2)}
-        </span>
+      {/* Totals summary — received + outstanding boarding side by side. */}
+      <div className={`grid gap-3 ${boardingOutstanding > 0 ? "sm:grid-cols-2" : "grid-cols-1"}`}>
+        <div className="flex items-center justify-between rounded-2xl bg-navy-700 text-white px-5 py-3">
+          <span className="text-[12px] uppercase tracking-[0.12em] text-white/70">
+            {hasFilter ? "Filtered total" : "All payments"} · {payments.length}
+          </span>
+          <span className="font-display text-xl tabular-nums">
+            €{total.toFixed(2)}
+          </span>
+        </div>
+        {boardingOutstanding > 0 && (
+          <Link
+            href="/dashboard/settings/boarding"
+            className="flex items-center justify-between rounded-2xl bg-amber-50 text-amber-900 ring-1 ring-amber-200 px-5 py-3 hover:bg-amber-100 transition-colors"
+          >
+            <span className="text-[12px] uppercase tracking-[0.12em] text-amber-700">
+              Boarding unpaid · {boardingOutstandingCount}
+            </span>
+            <span className="font-display text-xl tabular-nums">
+              €{boardingOutstanding.toFixed(2)}
+            </span>
+          </Link>
+        )}
       </div>
 
       <PaymentList payments={payments} showClientName />
