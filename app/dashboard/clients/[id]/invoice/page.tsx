@@ -9,7 +9,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { getClient } from "@/services/clients";
-import { listChargesForClient, type BoardingChargeRow } from "@/services/boarding";
+import { listChargesForClient, type BoardingChargeWithHorse } from "@/services/boarding";
 import { listClientCharges, type ClientChargeRow } from "@/services/clientCharges";
 import { getClientBalance } from "@/services/payments";
 import { getOwnStable } from "@/services/account";
@@ -35,7 +35,7 @@ export default async function ClientInvoicePage({
   const [client, stable, boarding, misc, balance] = await Promise.all([
     getClient(params.id),
     getOwnStable().catch(() => null),
-    listChargesForClient(params.id).catch((): BoardingChargeRow[] => []),
+    listChargesForClient(params.id).catch((): BoardingChargeWithHorse[] => []),
     listClientCharges(params.id).catch((): ClientChargeRow[] => []),
     getClientBalance(params.id).catch(() => 0),
   ]);
@@ -54,6 +54,8 @@ export default async function ClientInvoicePage({
   // server-side in the boarding/clientCharges views.
   const boardingDue = boarding.filter((b) => b.payment_status !== "paid");
   const miscDue     = misc.filter((m)     => m.payment_status !== "paid");
+  // Name the horse on each boarding line when this client boards more than one.
+  const multipleHorses = new Set(boarding.map((b) => b.horse_id)).size > 1;
 
   const total =
     boardingDue.reduce((acc: number, b) => acc + (Number(b.amount) - Number(b.paid_amount ?? 0)), 0) +
@@ -148,7 +150,9 @@ export default async function ClientInvoicePage({
                     <tr key={b.id} className="border-b border-ink-100">
                       <td className="py-2.5 text-ink-700 tabular-nums">{b.period_label ?? b.period_start}</td>
                       <td className="py-2.5">
-                        <span className="font-medium text-ink-900">Boarding</span>
+                        <span className="font-medium text-ink-900">
+                          {multipleHorses && b.horse_name ? `Boarding · ${b.horse_name}` : "Boarding"}
+                        </span>
                         {b.payment_status === "partial" && (
                           <span className="text-amber-700 text-[11px]"> · partially paid</span>
                         )}
