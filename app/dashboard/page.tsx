@@ -17,6 +17,7 @@ import { getSession } from "@/lib/auth/session";
 import { syncSubscriptionFromCheckoutSession } from "@/lib/stripe/sync";
 import { getDashboardSummary, type DashboardLesson } from "@/services/dashboard";
 import { getOwnProfile } from "@/services/account";
+import { listMyHorses } from "@/services/myHorses";
 import {
   PageHeader,
   Badge,
@@ -48,7 +49,21 @@ export default async function DashboardHome({
 }) {
   const session = await getSession().catch(() => null);
   if (!session) redirect("/login");
-  if (session.role === "client") redirect("/dashboard/my-lessons");
+  // Clients land on the portal home that matches their shape. A boarder /
+  // horse-owner who takes no lessons would hit an empty "My lessons" page,
+  // so route them to "My horses" instead. Riders keep lessons as home.
+  if (session.role === "client") {
+    let dest = "/dashboard/my-lessons";
+    try {
+      const myHorses = await listMyHorses();
+      const ownsHorses = myHorses.some((h) => h.relationship === "owner");
+      const ridesHorses = myHorses.some((h) => h.relationship === "rider");
+      if (ownsHorses && !ridesHorses) dest = "/dashboard/my-horses";
+    } catch {
+      /* fall back to lessons home */
+    }
+    redirect(dest);
+  }
 
   // Belt-and-braces: if Stripe redirected the user back here with a
   // session_id, sync the subscription state DIRECTLY (don't trust the
