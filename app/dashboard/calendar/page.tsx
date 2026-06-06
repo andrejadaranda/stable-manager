@@ -6,8 +6,10 @@ import { listTrainers } from "@/services/profiles";
 import { listActivePackagesForStable } from "@/services/packages";
 import { listServices } from "@/services/services";
 import { listArenas } from "@/services/arenas";
+import { getFarrierVisitsForCalendar } from "@/services/farrierVisits";
 import { startOfWeek, addDays } from "@/lib/utils/dates";
 import { CalendarShell } from "@/components/calendar/calendar-shell";
+import { FarrierPanel } from "@/components/calendar/farrier-panel";
 import { EmptyState } from "@/components/ui";
 
 export default async function CalendarPage({
@@ -25,7 +27,7 @@ export default async function CalendarPage({
   // Horse list is filtered to lesson-eligible: stable-owned or
   // client-owned-and-opted-in. Boarding-only horses are hidden so the
   // calendar dropdown stays clean.
-  const [lessons, clients, horses, trainers, activePackages, services, arenas] = await Promise.all([
+  const [lessons, clients, horses, trainers, activePackages, services, arenas, farrierVisits, allHorses] = await Promise.all([
     getCalendar(start.toISOString(), end.toISOString()),
     listClients({ activeOnly: true }),
     listHorses({ activeOnly: true, lessonsOnly: true }),
@@ -33,6 +35,8 @@ export default async function CalendarPage({
     listActivePackagesForStable(),
     listServices({ activeOnly: true }),
     listArenas({ activeOnly: true }).catch(() => []),
+    getFarrierVisitsForCalendar(start.toISOString(), end.toISOString()).catch(() => []),
+    listHorses({ activeOnly: true }).catch(() => []),
   ]);
 
   // Fresh-stable nudge: if no horses or no clients, calendar can't book
@@ -61,17 +65,25 @@ export default async function CalendarPage({
   }
 
   return (
-    <CalendarShell
-      lessons={lessons}
-      weekStart={start}
-      basePath="/dashboard/calendar"
-      clients={clients ?? []}
-      horses={horses ?? []}
-      trainers={trainers ?? []}
-      services={services ?? []}
-      arenas={arenas ?? []}
-      activePackagesByClient={activePackages}
-      editable
-    />
+    <div className="flex flex-col gap-6">
+      <CalendarShell
+        lessons={lessons}
+        weekStart={start}
+        basePath="/dashboard/calendar"
+        clients={clients ?? []}
+        horses={horses ?? []}
+        trainers={trainers ?? []}
+        services={services ?? []}
+        arenas={arenas ?? []}
+        activePackagesByClient={activePackages}
+        editable
+      />
+
+      <FarrierPanel
+        visits={farrierVisits ?? []}
+        horses={(allHorses ?? []).map((h) => ({ id: h.id, name: h.name }))}
+        editable
+      />
+    </div>
   );
 }

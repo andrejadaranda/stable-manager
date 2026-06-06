@@ -1,8 +1,10 @@
 import { requirePageRole } from "@/lib/auth/redirects";
 import { getCalendar } from "@/services/lessons";
+import { getFarrierVisitsForCalendar } from "@/services/farrierVisits";
 import { listServices } from "@/services/services";
 import { startOfWeek, addDays } from "@/lib/utils/dates";
 import { CalendarShell } from "@/components/calendar/calendar-shell";
+import { FarrierPanel } from "@/components/calendar/farrier-panel";
 import { listMyHorses } from "@/services/myHorses";
 import { listLessonRequestsForClient } from "@/services/lessonRequests";
 import {
@@ -31,11 +33,12 @@ export default async function MyLessonsPage({
 
   // RLS narrows lessons to the caller's own client_id; services view is
   // active-only when the caller is a client.
-  const [lessons, services, myHorses, myRequests] = await Promise.all([
+  const [lessons, services, myHorses, myRequests, farrierVisits] = await Promise.all([
     getCalendar(start.toISOString(), end.toISOString()),
     listServices(),
     listMyHorses().catch(() => []),
     listLessonRequestsForClient().catch(() => []),
+    getFarrierVisitsForCalendar(start.toISOString(), end.toISOString()).catch(() => []),
   ]);
 
   // The "Request a lesson" picker offers horses the client either owns or has
@@ -67,6 +70,8 @@ export default async function MyLessonsPage({
         basePath="/dashboard/my-lessons"
         editable={false}
       />
+
+      <FarrierPanel visits={farrierVisits ?? []} editable={false} />
 
       <MyLessonRequestsSection items={myRequests} />
 
