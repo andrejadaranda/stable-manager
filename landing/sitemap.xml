@@ -30,6 +30,14 @@
     <priority>0.9</priority>
   </url>
 
+  <!-- Ambassador program -->
+  <url>
+    <loc>https://longrein.eu/ambassador-application</loc>
+    <lastmod>2026-06-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <!-- Comparison pages (high commercial intent — "X vs Y" searches) -->
   <url>
     <loc>https://longrein.eu/vs-equilab.html</loc>

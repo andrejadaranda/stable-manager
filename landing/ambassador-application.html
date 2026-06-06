@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Apply to Become a Longrein Ambassador</title>
+<meta name="description" content="Join the Longrein Ambassador Program. Selected equestrians, horse owners, coaches, stable owners and creators help grow the Longrein community and earn commission on paid referrals across Bronze, Silver, Gold and Platinum tiers.">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<link rel="canonical" href="https://longrein.eu/ambassador-application">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://longrein.eu/ambassador-application">
+<meta property="og:title" content="Apply to Become a Longrein Ambassador">
+<meta property="og:description" content="Help grow the Longrein community. Earn commission on paid referrals across four ambassador tiers.">
+<meta property="og:image" content="https://longrein.eu/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_GB">
+<meta property="og:site_name" content="Longrein">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Apply to Become a Longrein Ambassador">
+<meta name="twitter:image" content="https://longrein.eu/og-image.png">
+<meta name="theme-color" content="#1E3A2A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/seo.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "BreadcrumbList", "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://longrein.eu/" },
+      { "@type": "ListItem", "position": 2, "name": "Ambassador application", "item": "https://longrein.eu/ambassador-application" }
+    ]},
+    { "@type": "FAQPage", "mainEntity": [
+      { "@type": "Question", "name": "What counts as a referral?", "acceptedAnswer": { "@type": "Answer", "text": "A referral only counts when a person you referred becomes a paying Longrein customer using your referral code. Signups, free accounts, registrations and inactive users do not count toward your tier or commissions." }},
+      { "@type": "Question", "name": "When are commissions earned?", "acceptedAnswer": { "@type": "Answer", "text": "Commission is earned only on completed, paid purchases made with your referral code. The amount depends on your current tier: €5 Bronze, €7 Silver, €10 Gold, €15 Platinum per successful paid referral." }},
+      { "@type": "Question", "name": "How do tier upgrades work?", "acceptedAnswer": { "@type": "Answer", "text": "You move up automatically as your number of successful paid referrals grows: Bronze 0–4, Silver 5–14, Gold 15–39, Platinum 40+. Higher tiers unlock higher commission and additional benefits." }},
+      { "@type": "Question", "name": "How do discounts work?", "acceptedAnswer": { "@type": "Answer", "text": "Customers who use an ambassador's referral code pay €40 instead of the standard €50 — a 20% discount. The ambassador earns commission based on their current tier for each completed paid purchase." }}
+    ]}
+  ]
+}
+</script>
+<style>
+  /* ---- Ambassador-specific styles (brand tokens from seo.css) ---- */
+  .amb-eyebrow { color: var(--saddle); }
+  .section-lead { font-size: 18px; color: #3F4A42; max-width: 760px; margin: 0 0 8px; }
+
+  /* Tier grid */
+  .tier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 36px; }
+  @media (max-width: 980px) { .tier-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .tier-grid { grid-template-columns: 1fr; } }
+  .tier {
+    background: white; border: 1px solid var(--line); border-radius: var(--radius-lg);
+    padding: 26px 22px; display: flex; flex-direction: column; position: relative;
+    box-shadow: var(--shadow);
+  }
+  .tier.featured { border-color: var(--saddle); box-shadow: 0 2px 6px rgba(181,121,62,0.18), 0 14px 36px rgba(30,42,71,0.10); }
+  .tier .badge {
+    position: absolute; top: -12px; right: 18px; background: var(--saddle); color: white;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 999px;
+  }
+  .tier .medal { font-size: 30px; line-height: 1; }
+  .tier h3 { margin: 12px 0 2px; font-size: 22px; }
+  .tier .range { font-size: 13px; color: var(--stone); font-weight: 500; }
+  .tier .commission { margin: 16px 0 4px; font-family: var(--serif); font-weight: 700; font-size: 30px; color: var(--paddock); letter-spacing: -0.02em; }
+  .tier .commission span { font-size: 14px; font-weight: 500; color: var(--stone); font-family: var(--sans); }
+  .tier ul { list-style: none; margin: 16px 0 0; padding: 0; }
+  .tier ul li { position: relative; padding: 7px 0 7px 22px; font-size: 14px; color: var(--ink); line-height: 1.45; border-top: 1px solid var(--line); }
+  .tier ul li:first-child { border-top: none; }
+  .tier ul li::before { content: "✓"; position: absolute; left: 0; top: 7px; color: var(--saddle); font-weight: 700; }
+  .tier ul li.inherit { color: var(--stone); font-style: italic; }
+  .tier ul li.inherit::before { content: "★"; }
+
+  /* Pricing / commission strip */
+  .price-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 28px; max-width: 720px; }
+  @media (max-width: 540px) { .price-row { grid-template-columns: 1fr; } }
+  .price-card { background: white; border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
+  .price-card .k { font-size: 13px; color: var(--stone); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .price-card .v { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--paddock); margin-top: 6px; }
+  .price-card .v .old { font-size: 18px; color: var(--stone); text-decoration: line-through; margin-right: 8px; font-weight: 400; }
+
+  /* Dashboard preview */
+  .dash {
+    background: var(--paddock); color: var(--cream); border-radius: var(--radius-lg);
+    padding: 30px; margin-top: 28px; max-width: 760px;
+  }
+  .dash .tag { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(244,236,223,0.6); }
+  .dash .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 16px 0 20px; }
+  @media (max-width: 540px) { .dash .dash-grid { grid-template-columns: 1fr; } }
+  .dash .stat .n { font-family: var(--serif); font-size: 30px; font-weight: 700; color: var(--cream); }
+  .dash .stat .l { font-size: 13px; color: rgba(244,236,223,0.72); }
+  .dash .bar { height: 10px; background: rgba(244,236,223,0.18); border-radius: 999px; overflow: hidden; }
+  .dash .bar > span { display: block; height: 100%; width: 40%; background: var(--saddle); }
+  .dash .bar-label { font-size: 13px; color: rgba(244,236,223,0.72); margin: 8px 0 0; }
+  .dash .note { font-size: 12px; color: rgba(244,236,223,0.55); margin-top: 16px; }
+
+  /* Form */
+  .form-wrap { background: white; border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 34px; max-width: 760px; margin: 32px auto 0; }
+  @media (max-width: 720px) { .form-wrap { padding: 22px; } }
+  .fieldset { border: none; padding: 0; margin: 0 0 28px; }
+  .fieldset > legend { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--paddock); padding: 0; margin: 0 0 4px; }
+  .fieldset .hint { font-size: 13px; color: var(--stone); margin: 0 0 16px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .field label .req { color: var(--saddle); }
+  .field input[type=text], .field input[type=email], .field input[type=url], .field select, .field textarea {
+    width: 100%; padding: 12px 14px; font-family: var(--sans); font-size: 15px; color: var(--tack);
+    background: var(--cream-soft); border: 1px solid var(--line-strong); border-radius: 10px; transition: border .15s, box-shadow .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--paddock); box-shadow: 0 0 0 3px rgba(30,58,42,0.10); background: white; }
+  .field textarea { min-height: 96px; resize: vertical; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+  .choice-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .choice {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px;
+    border: 1px solid var(--line-strong); background: var(--cream-soft); font-size: 14px; cursor: pointer; user-select: none; transition: all .12s;
+  }
+  .choice input { accent-color: var(--paddock); margin: 0; }
+  .choice:has(input:checked) { border-color: var(--paddock); background: rgba(30,58,42,0.07); color: var(--paddock); font-weight: 600; }
+  .agree { display: flex; gap: 12px; align-items: flex-start; background: var(--cream-soft); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 14px; color: var(--ink); line-height: 1.5; }
+  .agree input { margin-top: 3px; accent-color: var(--paddock); }
+  .err-msg { color: #9b2c2c; font-size: 13px; margin-top: 6px; display: none; }
+  .field.invalid input, .field.invalid select { border-color: #c0392b; }
+  .field.invalid .err-msg { display: block; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .submit-row { margin-top: 8px; }
+  .submit-row .btn { width: 100%; justify-content: center; }
+  .form-note { font-size: 12px; color: var(--stone); text-align: center; margin-top: 14px; }
+
+  /* Success / error states */
+  .state { display: none; text-align: center; padding: 44px 24px; border-radius: var(--radius-lg); max-width: 720px; margin: 32px auto 0; }
+  .state.show { display: block; }
+  .state.success { background: rgba(30,58,42,0.06); border: 1px solid rgba(30,58,42,0.18); }
+  .state.error { background: #fbecea; border: 1px solid #e6c3bd; }
+  .state .icon { font-size: 40px; }
+  .state h3 { margin: 10px 0 8px; }
+  .state p { color: #3F4A42; font-size: 16px; max-width: 520px; margin: 0 auto; }
+  .state.error a { color: var(--saddle); }
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="container row">
+    <a class="brand" href="/">Longrein<span class="dot">.</span></a>
+    <div class="links">
+      <a href="/" class="hide-sm">Home</a>
+      <a href="/#pricing" class="hide-sm">Pricing</a>
+      <a href="#apply" class="btn btn-primary">Apply now</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow amb-eyebrow">Longrein Ambassador Program</span>
+    <h1 class="hero-title">Apply to Become a <span class="accent">Longrein Ambassador</span></h1>
+    <p class="lead">Longrein is looking for a selected group of equestrians, horse owners, coaches, stable owners and creators to help grow the Longrein community. As an ambassador you get free Longrein access, your own referral code, and commission on every rider who becomes a paying customer through you.</p>
+    <div class="ctas">
+      <a class="btn btn-primary btn-lg" href="#apply">Apply to become an ambassador</a>
+      <a class="btn btn-secondary btn-lg" href="#tiers">See the tiers ↓</a>
+    </div>
+  </div>
+</section>
+
+<!-- TIERS -->
+<section id="tiers">
+  <div class="container">
+    <h2 class="h-section">Four tiers. One direction — up.</h2>
+    <p class="section-lead">Your tier is decided by one thing only: the number of riders you refer who become <strong>paying</strong> Longrein customers. The more you grow the community, the more you earn per referral.</p>
+    <div class="tier-grid">
+
+      <div class="tier">
+        <div class="medal">🥉</div>
+        <h3>Bronze</h3>
+        <div class="range">0–4 paid referrals</div>
+        <div class="commission">€5 <span>/ paid referral</span></div>
+        <ul>
+          <li>Free Longrein Premium access</li>
+          <li>Personal referral code</li>
+          <li>20% discount for your referred customers</li>
+          <li>€5 commission per successful paid referral</li>
+        </ul>
+      </div>
+
+      <div class="tier">
+        <div class="medal">🥈</div>
+        <h3>Silver</h3>
+        <div class="range">5–14 paid referrals</div>
+        <div class="commission">€7 <span>/ paid referral</span></div>
+        <ul>
+          <li class="inherit">Everything in Bronze</li>
+          <li>€7 commission per successful paid referral</li>
+          <li>Early access to selected new features</li>
+          <li>Eligibility for Longrein merchandise rewards</li>
+        </ul>
+      </div>
+
+      <div class="tier featured">
+        <div class="badge">Most popular</div>
+        <div class="medal">🥇</div>
+        <h3>Gold</h3>
+        <div class="range">15–39 paid referrals</div>
+        <div class="commission">€10 <span>/ paid referral</span></div>
+        <ul>
+          <li class="inherit">Everything in Silver</li>
+          <li>€10 commission per successful paid referral</li>
+          <li>Exclusive Longrein merchandise opportunities</li>
+          <li>Featured ambassador opportunities</li>
+          <li>Direct feedback channel with the Longrein team</li>
+        </ul>
+      </div>
+
+      <div class="tier">
+        <div class="badge">VIP</div>
+        <div class="medal">💎</div>
+        <h3>Platinum</h3>
+        <div class="range">40+ paid referrals</div>
+        <div class="commission">€15 <span>/ paid referral</span></div>
+        <ul>
+          <li class="inherit">Everything in Gold</li>
+          <li>€15 commission per successful paid referral</li>
+          <li>Exclusive Longrein apparel opportunities</li>
+          <li>Potential branded equestrian gear rewards</li>
+          <li>VIP Ambassador status</li>
+          <li>Priority access to major releases &amp; testing</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="alt">
+  <div class="container">
+    <h2 class="h-section">How the referral program works</h2>
+    <p class="section-lead">Every approved ambassador gets a unique referral code and a personal referral dashboard. When a customer buys Longrein with your code, they save — and you earn.</p>
+    <div class="price-row">
+      <div class="price-card">
+        <div class="k">Customer pays with your code</div>
+        <div class="v"><span class="old">€50</span>€40</div>
+        <p style="margin:8px 0 0;font-size:14px;color:#3F4A42;">A flat 20% discount for everyone who joins through an ambassador.</p>
+      </div>
+      <div class="price-card">
+        <div class="k">You earn per paid referral</div>
+        <div class="v">€5 – €15</div>
+        <p style="margin:8px 0 0;font-size:14px;color:#3F4A42;">Bronze €5 · Silver €7 · Gold €10 · Platinum €15. Only completed paid purchases trigger commission.</p>
+      </div>
+    </div>
+
+    <!-- Dashboard preview -->
+    <div class="dash" aria-label="Ambassador dashboard preview">
+      <div class="tag">Your ambassador dashboard — preview</div>
+      <div class="dash-grid">
+        <div class="stat"><div class="n">🥈 Silver</div><div class="l">Current tier</div></div>
+        <div class="stat"><div class="n">8</div><div class="l">Successful paid referrals</div></div>
+        <div class="stat"><div class="n">€56</div><div class="l">Total commission earned</div></div>
+      </div>
+      <div class="bar"><span></span></div>
+      <p class="bar-label">7 more paid referrals to reach 🥇 Gold (€10 / referral)</p>
+      <p class="note">Live progress, referral code and commission history appear here once your application is approved.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq">
+  <div class="container">
+    <h2 class="h-section">Ambassador FAQ</h2>
+    <details><summary>What counts as a referral?</summary>
+      <div class="body">A referral only counts when a person you referred becomes a <strong>paying</strong> Longrein customer using your referral code. Signups, registrations, free accounts and inactive users do <strong>not</strong> count toward your tier or your commissions.</div></details>
+    <details><summary>When are commissions earned?</summary>
+      <div class="body">Commission is earned only on completed, paid purchases made with your code. The amount depends on your current tier at the time of the purchase: €5 Bronze, €7 Silver, €10 Gold, €15 Platinum.</div></details>
+    <details><summary>How do tier upgrades work?</summary>
+      <div class="body">Upgrades are automatic as your number of successful paid referrals grows — Bronze 0–4, Silver 5–14, Gold 15–39, Platinum 40+. Each tier unlocks a higher commission and additional benefits.</div></details>
+    <details><summary>How do discounts work?</summary>
+      <div class="body">Anyone who buys Longrein with an ambassador's referral code pays €40 instead of €50 — a 20% discount. You earn your tier's commission for each completed paid purchase made with your code.</div></details>
+    <details><summary>Is the ambassador role paid?</summary>
+      <div class="body">The role itself is unpaid. Selected ambassadors receive free Longrein access, a personal discount code, and commission opportunities based on approved paid referrals.</div></details>
+  </div>
+</section>
+
+<!-- APPLICATION FORM -->
+<section id="apply">
+  <div class="container">
+    <h2 class="h-section" style="text-align:center;">Apply to become an ambassador</h2>
+    <p class="section-lead" style="margin:0 auto;text-align:center;">Takes about 3 minutes. We review every application carefully.</p>
+
+    <form id="ambForm" class="form-wrap" novalidate>
+      <!-- Honeypot (anti-spam) — must stay empty -->
+      <div class="hp" aria-hidden="true"><label>Company<input type="text" name="company" tabindex="-1" autocomplete="off"></label></div>
+
+      <fieldset class="fieldset">
+        <legend>Personal information</legend>
+        <div class="grid-2">
+          <div class="field" data-req><label>Full name <span class="req">*</span></label><input type="text" name="full_name" autocomplete="name"><div class="err-msg">Please enter your full name.</div></div>
+          <div class="field" data-req><label>Email address <span class="req">*</span></label><input type="email" name="email" autocomplete="email"><div class="err-msg">Please enter a valid email address.</div></div>
+        </div>
+        <div class="field" data-req><label>Country <span class="req">*</span></label><input type="text" name="country" autocomplete="country-name"><div class="err-msg">Please enter your country.</div></div>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>Equestrian background</legend>
+        <div class="grid-2">
+          <div class="field" data-req><label>Horses you own or ride regularly <span class="req">*</span></label>
+            <select name="horses"><option value="" selected disabled>Select…</option><option>1</option><option>2–3</option><option>4–5</option><option>6+</option></select>
+            <div class="err-msg">Please select an option.</div></div>
+          <div class="field" data-req><label>Main discipline <span class="req">*</span></label>
+            <select name="discipline"><option value="" selected disabled>Select…</option><option>Show Jumping</option><option>Dressage</option><option>Eventing</option><option>Endurance</option><option>Western</option><option>Pleasure Riding</option><option>Other</option></select>
+            <div class="err-msg">Please select an option.</div></div>
+        </div>
+        <div class="field" data-req data-group="describes"><label>Which best describes you? <span class="req">*</span> <span style="font-weight:400;color:var(--stone);">(select all that apply)</span></label>
+          <div class="choice-grid">
+            <label class="choice"><input type="checkbox" name="describes" value="Rider">Rider</label>
+            <label class="choice"><input type="checkbox" name="describes" value="Horse Owner">Horse Owner</label>
+            <label class="choice"><input type="checkbox" name="describes" value="Coach">Coach</label>
+            <label class="choice"><input type="checkbox" name="describes" value="Stable Owner">Stable Owner</label>
+            <label class="choice"><input type="checkbox" name="describes" value="Content Creator">Content Creator</label>
+            <label class="choice"><input type="checkbox" name="describes" value="Other">Other</label>
+          </div>
+          <div class="err-msg">Please select at least one.</div></div>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>Social media</legend>
+        <p class="hint">Add the profiles you're active on — all optional, but they help us understand your reach.</p>
+        <div class="grid-2">
+          <div class="field"><label>Instagram profile URL</label><input type="url" name="instagram" placeholder="https://instagram.com/…"></div>
+          <div class="field"><label>TikTok profile URL</label><input type="url" name="tiktok" placeholder="https://tiktok.com/@…"></div>
+          <div class="field"><label>Facebook profile / page URL</label><input type="url" name="facebook" placeholder="https://facebook.com/…"></div>
+          <div class="field"><label>YouTube channel URL</label><input type="url" name="youtube" placeholder="https://youtube.com/@…"></div>
+        </div>
+        <div class="field"><label>Other relevant links</label><input type="text" name="other_links" placeholder="Website, blog, second account…"></div>
+        <div class="field" data-req><label>Total audience size across all platforms <span class="req">*</span></label>
+          <select name="audience"><option value="" selected disabled>Select…</option><option>Under 1,000</option><option>1,000–5,000</option><option>5,000–10,000</option><option>10,000–50,000</option><option>50,000+</option></select>
+          <div class="err-msg">Please select an option.</div></div>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>Community access</legend>
+        <div class="grid-2">
+          <div class="field" data-req><label>Do you manage or have access to an equestrian community? <span class="req">*</span></label>
+            <select name="community_type"><option value="" selected disabled>Select…</option><option>Riding Club</option><option>Stable</option><option>Training Group</option><option>Facebook Group</option><option>WhatsApp Group</option><option>Discord Community</option><option>No</option><option>Other</option></select>
+            <div class="err-msg">Please select an option.</div></div>
+          <div class="field"><label>Approximate size of that community</label>
+            <select name="community_size"><option value="" selected disabled>Select…</option><option>Under 20</option><option>20–50</option><option>50–100</option><option>100–500</option><option>500+</option></select></div>
+        </div>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>Ambassador program</legend>
+        <div class="field" data-req data-group="support"><label>How would you support Longrein? <span class="req">*</span> <span style="font-weight:400;color:var(--stone);">(select all that apply)</span></label>
+          <div class="choice-grid">
+            <label class="choice"><input type="checkbox" name="support" value="Testing new features">Testing new features</label>
+            <label class="choice"><input type="checkbox" name="support" value="Sharing on social media">Sharing on social media</label>
+            <label class="choice"><input type="checkbox" name="support" value="Inviting riders">Inviting riders</label>
+            <label class="choice"><input type="checkbox" name="support" value="Providing feedback">Providing feedback</label>
+            <label class="choice"><input type="checkbox" name="support" value="Creating content">Creating content</label>
+            <label class="choice"><input type="checkbox" name="support" value="Introducing Longrein to communities">Introducing Longrein to communities</label>
+          </div>
+          <div class="err-msg">Please select at least one.</div></div>
+        <div class="field" data-req><label>How many riders could you personally invite to Longrein? <span class="req">*</span></label>
+          <select name="invite_count"><option value="" selected disabled>Select…</option><option>1–5</option><option>5–20</option><option>20–50</option><option>50+</option></select>
+          <div class="err-msg">Please select an option.</div></div>
+        <div class="field"><label>Anything else we should know?</label><textarea name="notes_applicant" placeholder="Optional"></textarea></div>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <div class="field" data-req data-check>
+          <label class="agree"><input type="checkbox" name="agreement" value="agreed">
+            <span>I understand that this is an unpaid ambassador role. Selected ambassadors may receive free Longrein access, a personal discount code, and commission opportunities based on approved referrals. <span class="req">*</span></span>
+          </label>
+          <div class="err-msg" style="margin-left:0;">Please confirm to continue.</div>
+        </div>
+      </fieldset>
+
+      <div class="submit-row">
+        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">Submit application</button>
+        <p class="form-note">Your details are sent securely to the Longrein team. We never share your information.</p>
+      </div>
+    </form>
+
+    <!-- Success / error states -->
+    <div class="state success" id="successState">
+      <div class="icon">✓</div>
+      <h3 class="h-section" style="text-align:center;">Application received</h3>
+      <p>Thank you for applying to become a Longrein Ambassador. We have received your application and will review it carefully.</p>
+    </div>
+    <div class="state error" id="errorState">
+      <div class="icon">⚠️</div>
+      <h3 class="h-section" style="text-align:center;">Something went wrong</h3>
+      <p>Something went wrong. Please try again or contact us at <a href="mailto:longrein.team@gmail.com">longrein.team@gmail.com</a>.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="container">
+    <div class="row">
+      <a class="brand" href="/">Longrein<span class="dot">.</span></a>
+      <div>
+        <a href="/">Home</a>
+        <a href="/stable-management-software.html">Platform</a>
+        <a href="/#pricing">Pricing</a>
+        <a href="mailto:hello@longrein.eu">Contact</a>
+      </div>
+    </div>
+    <div class="legal">© 2026 Longrein. EU-hosted. GDPR-ready. Built in Vilnius for European stables.</div>
+  </div>
+</footer>
+
+<script>
+/* ============================================================
+   Ambassador application — submit handler
+   Posts the form as JSON to a Google Apps Script Web App that
+   appends a row to a Google Sheet under longrein.team@gmail.com.
+   ⚠️ SET THIS after deploying the Apps Script (see setup doc):
+   ============================================================ */
+const FORM_ENDPOINT = "REPLACE_WITH_APPS_SCRIPT_WEB_APP_URL";
+
+(function () {
+  const form = document.getElementById('ambForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const successState = document.getElementById('successState');
+  const errorState = document.getElementById('errorState');
+
+  function setInvalid(field, bad) { field.classList.toggle('invalid', bad); }
+
+  function validate() {
+    let ok = true;
+    form.querySelectorAll('.field[data-req]').forEach(function (field) {
+      let bad = false;
+      if (field.hasAttribute('data-group')) {
+        bad = field.querySelectorAll('input[type=checkbox]:checked').length === 0;
+      } else if (field.hasAttribute('data-check')) {
+        bad = !field.querySelector('input[type=checkbox]').checked;
+      } else {
+        const ctrl = field.querySelector('input, select');
+        bad = !ctrl || !ctrl.value.trim();
+        if (!bad && ctrl.type === 'email') bad = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ctrl.value.trim());
+      }
+      setInvalid(field, bad);
+      if (bad && ok) field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (bad) ok = false;
+    });
+    return ok;
+  }
+
+  // live-clear errors
+  form.addEventListener('input', function (e) {
+    const field = e.target.closest('.field');
+    if (field && field.classList.contains('invalid')) setInvalid(field, false);
+  });
+
+  function collect() {
+    const d = {};
+    const f = new FormData(form);
+    // single-value fields
+    ['full_name','email','country','horses','discipline','instagram','tiktok','facebook','youtube','other_links','audience','community_type','community_size','invite_count','notes_applicant','agreement','company'].forEach(function (k) {
+      d[k] = (f.get(k) || '').toString().trim();
+    });
+    // multi-selects
+    d.describes = f.getAll('describes').join('; ');
+    d.support = f.getAll('support').join('; ');
+    // metadata
+    d.source_page = location.href;
+    d.user_agent = navigator.userAgent;
+    return d;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!validate()) return;
+
+    const payload = collect();
+    if (payload.company) { // honeypot filled -> silently drop (bot)
+      successState.classList.add('show'); form.style.display = 'none'; return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+    errorState.classList.remove('show');
+
+    fetch(FORM_ENDPOINT, {
+      method: 'POST',
+      // text/plain avoids a CORS preflight against Apps Script
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+    .then(function (r) { return r.json().catch(function(){ return { result: r.ok ? 'success' : 'error' }; }); })
+    .then(function (res) {
+      if (res && res.result === 'success') {
+        form.style.display = 'none';
+        successState.classList.add('show');
+        successState.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else { throw new Error('Bad response'); }
+    })
+    .catch(function () {
+      errorState.classList.add('show');
+      errorState.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit application';
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
