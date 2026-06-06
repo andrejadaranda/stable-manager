@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Apply to Become a Longrein Ambassador</title>
-<meta name="description" content="Join the Longrein Ambassador Program. Selected equestrians, horse owners, coaches, stable owners and creators help grow the Longrein community and earn commission on paid referrals across Bronze, Silver, Gold and Platinum tiers.">
+<meta name="description" content="Join the Longrein Ambassador Program. Selected equestrians, horse owners, coaches, stable owners and creators help grow the Longrein community — with a personal discount code, commission, promotion, and exclusive Longrein-branded riding gear at higher tiers.">
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
 <link rel="canonical" href="https://longrein.eu/ambassador-application">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://longrein.eu/ambassador-application">
 <meta property="og:title" content="Apply to Become a Longrein Ambassador">
-<meta property="og:description" content="Help grow the Longrein community. Earn commission on paid referrals across four ambassador tiers.">
+<meta property="og:description" content="Help grow the Longrein community. Get your own discount code, commission, promotion, and exclusive Longrein-branded riding gear.">
 <meta property="og:image" content="https://longrein.eu/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -33,12 +33,6 @@
     { "@type": "BreadcrumbList", "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://longrein.eu/" },
       { "@type": "ListItem", "position": 2, "name": "Ambassador application", "item": "https://longrein.eu/ambassador-application" }
-    ]},
-    { "@type": "FAQPage", "mainEntity": [
-      { "@type": "Question", "name": "What counts as a referral?", "acceptedAnswer": { "@type": "Answer", "text": "A referral only counts when a person you referred becomes a paying Longrein customer using your referral code. Signups, free accounts, registrations and inactive users do not count toward your tier or commissions." }},
-      { "@type": "Question", "name": "When are commissions earned?", "acceptedAnswer": { "@type": "Answer", "text": "Commission is earned only on completed, paid purchases made with your referral code. The amount depends on your current tier: €5 Bronze, €7 Silver, €10 Gold, €15 Platinum per successful paid referral." }},
-      { "@type": "Question", "name": "How do tier upgrades work?", "acceptedAnswer": { "@type": "Answer", "text": "You move up automatically as your number of successful paid referrals grows: Bronze 0–4, Silver 5–14, Gold 15–39, Platinum 40+. Higher tiers unlock higher commission and additional benefits." }},
-      { "@type": "Question", "name": "How do discounts work?", "acceptedAnswer": { "@type": "Answer", "text": "Customers who use an ambassador's referral code pay €40 instead of the standard €50 — a 20% discount. The ambassador earns commission based on their current tier for each completed paid purchase." }}
     ]}
   ]
 }
@@ -48,55 +42,30 @@
   .amb-eyebrow { color: var(--saddle); }
   .section-lead { font-size: 18px; color: #3F4A42; max-width: 760px; margin: 0 0 8px; }
 
-  /* Tier grid */
+  /* Perks */
+  .perk-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 36px; }
+  @media (max-width: 980px) { .perk-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .perk-grid { grid-template-columns: 1fr; } }
+  .perk { background: white; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 26px 22px; box-shadow: var(--shadow); }
+  .perk .ico { font-size: 26px; line-height: 1; }
+  .perk h3 { margin: 12px 0 6px; font-size: 19px; }
+  .perk p { font-size: 14px; color: #3F4A42; margin: 0; line-height: 1.55; }
+
+  /* Tier ladder */
   .tier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 36px; }
   @media (max-width: 980px) { .tier-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 540px) { .tier-grid { grid-template-columns: 1fr; } }
-  .tier {
-    background: white; border: 1px solid var(--line); border-radius: var(--radius-lg);
-    padding: 26px 22px; display: flex; flex-direction: column; position: relative;
-    box-shadow: var(--shadow);
-  }
+  .tier { background: white; border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 26px 22px; display: flex; flex-direction: column; position: relative; box-shadow: var(--shadow); }
   .tier.featured { border-color: var(--saddle); box-shadow: 0 2px 6px rgba(181,121,62,0.18), 0 14px 36px rgba(30,42,71,0.10); }
-  .tier .badge {
-    position: absolute; top: -12px; right: 18px; background: var(--saddle); color: white;
-    font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-    padding: 5px 12px; border-radius: 999px;
-  }
+  .tier .badge { position: absolute; top: -12px; right: 18px; background: var(--saddle); color: white; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; }
   .tier .medal { font-size: 30px; line-height: 1; }
-  .tier h3 { margin: 12px 0 2px; font-size: 22px; }
-  .tier .range { font-size: 13px; color: var(--stone); font-weight: 500; }
-  .tier .commission { margin: 16px 0 4px; font-family: var(--serif); font-weight: 700; font-size: 30px; color: var(--paddock); letter-spacing: -0.02em; }
-  .tier .commission span { font-size: 14px; font-weight: 500; color: var(--stone); font-family: var(--sans); }
-  .tier ul { list-style: none; margin: 16px 0 0; padding: 0; }
+  .tier h3 { margin: 12px 0 4px; font-size: 22px; }
+  .tier ul { list-style: none; margin: 14px 0 0; padding: 0; }
   .tier ul li { position: relative; padding: 7px 0 7px 22px; font-size: 14px; color: var(--ink); line-height: 1.45; border-top: 1px solid var(--line); }
   .tier ul li:first-child { border-top: none; }
   .tier ul li::before { content: "✓"; position: absolute; left: 0; top: 7px; color: var(--saddle); font-weight: 700; }
   .tier ul li.inherit { color: var(--stone); font-style: italic; }
   .tier ul li.inherit::before { content: "★"; }
-
-  /* Pricing / commission strip */
-  .price-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 28px; max-width: 720px; }
-  @media (max-width: 540px) { .price-row { grid-template-columns: 1fr; } }
-  .price-card { background: white; border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
-  .price-card .k { font-size: 13px; color: var(--stone); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
-  .price-card .v { font-family: var(--serif); font-size: 28px; font-weight: 700; color: var(--paddock); margin-top: 6px; }
-  .price-card .v .old { font-size: 18px; color: var(--stone); text-decoration: line-through; margin-right: 8px; font-weight: 400; }
-
-  /* Dashboard preview */
-  .dash {
-    background: var(--paddock); color: var(--cream); border-radius: var(--radius-lg);
-    padding: 30px; margin-top: 28px; max-width: 760px;
-  }
-  .dash .tag { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(244,236,223,0.6); }
-  .dash .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 16px 0 20px; }
-  @media (max-width: 540px) { .dash .dash-grid { grid-template-columns: 1fr; } }
-  .dash .stat .n { font-family: var(--serif); font-size: 30px; font-weight: 700; color: var(--cream); }
-  .dash .stat .l { font-size: 13px; color: rgba(244,236,223,0.72); }
-  .dash .bar { height: 10px; background: rgba(244,236,223,0.18); border-radius: 999px; overflow: hidden; }
-  .dash .bar > span { display: block; height: 100%; width: 40%; background: var(--saddle); }
-  .dash .bar-label { font-size: 13px; color: rgba(244,236,223,0.72); margin: 8px 0 0; }
-  .dash .note { font-size: 12px; color: rgba(244,236,223,0.55); margin-top: 16px; }
 
   /* Form */
   .form-wrap { background: white; border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 34px; max-width: 760px; margin: 32px auto 0; }
@@ -116,10 +85,7 @@
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
   .choice-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-  .choice {
-    display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px;
-    border: 1px solid var(--line-strong); background: var(--cream-soft); font-size: 14px; cursor: pointer; user-select: none; transition: all .12s;
-  }
+  .choice { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--cream-soft); font-size: 14px; cursor: pointer; user-select: none; transition: all .12s; }
   .choice input { accent-color: var(--paddock); margin: 0; }
   .choice:has(input:checked) { border-color: var(--paddock); background: rgba(30,58,42,0.07); color: var(--paddock); font-weight: 600; }
   .agree { display: flex; gap: 12px; align-items: flex-start; background: var(--cream-soft); border: 1px solid var(--line); border-radius: 12px; padding: 16px; font-size: 14px; color: var(--ink); line-height: 1.5; }
@@ -161,7 +127,7 @@
   <div class="container">
     <span class="eyebrow amb-eyebrow">Longrein Ambassador Program</span>
     <h1 class="hero-title">Apply to Become a <span class="accent">Longrein Ambassador</span></h1>
-    <p class="lead">Longrein is looking for a selected group of equestrians, horse owners, coaches, stable owners and creators to help grow the Longrein community. As an ambassador you get free Longrein access, your own referral code, and commission on every rider who becomes a paying customer through you.</p>
+    <p class="lead">Longrein is looking for a selected group of equestrians, horse owners, coaches, stable owners and creators to help grow the Longrein community. As an ambassador, you get your own discount code, commission, promotion from Longrein, and — as you grow — exclusive Longrein-branded riding gear.</p>
     <div class="ctas">
       <a class="btn btn-primary btn-lg" href="#apply">Apply to become an ambassador</a>
       <a class="btn btn-secondary btn-lg" href="#tiers">See the tiers ↓</a>
@@ -169,36 +135,59 @@
   </div>
 </section>
 
-<!-- TIERS -->
-<section id="tiers">
+<!-- WHAT YOU GET -->
+<section id="perks">
   <div class="container">
-    <h2 class="h-section">Four tiers. One direction — up.</h2>
-    <p class="section-lead">Your tier is decided by one thing only: the number of riders you refer who become <strong>paying</strong> Longrein customers. The more you grow the community, the more you earn per referral.</p>
+    <h2 class="h-section">What you get as an ambassador</h2>
+    <div class="perk-grid">
+      <div class="perk">
+        <div class="ico">🎟️</div>
+        <h3>Your own discount code</h3>
+        <p>A personal code your community can use to join Longrein at an exclusive discount.</p>
+      </div>
+      <div class="perk">
+        <div class="ico">💶</div>
+        <h3>Commission on referrals</h3>
+        <p>Earn a commission for every rider who joins Longrein through you.</p>
+      </div>
+      <div class="perk">
+        <div class="ico">📣</div>
+        <h3>Promotion from Longrein</h3>
+        <p>We feature and promote our ambassadors across the Longrein community.</p>
+      </div>
+      <div class="perk">
+        <div class="ico">🏆</div>
+        <h3>Branded riding gear</h3>
+        <p>Reach the higher tiers and unlock exclusive Longrein-branded equestrian gear.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TIERS -->
+<section id="tiers" class="alt">
+  <div class="container">
+    <h2 class="h-section">Grow with us — Bronze to Platinum</h2>
+    <p class="section-lead">The more you grow the Longrein community, the more you unlock. Every ambassador starts at Bronze and climbs as they go.</p>
     <div class="tier-grid">
 
       <div class="tier">
         <div class="medal">🥉</div>
         <h3>Bronze</h3>
-        <div class="range">0–4 paid referrals</div>
-        <div class="commission">€5 <span>/ paid referral</span></div>
         <ul>
-          <li>Free Longrein Premium access</li>
-          <li>Personal referral code</li>
-          <li>20% discount for your referred customers</li>
-          <li>€5 commission per successful paid referral</li>
+          <li>Free Longrein access</li>
+          <li>Personal discount code</li>
+          <li>Commission on referrals</li>
         </ul>
       </div>
 
       <div class="tier">
         <div class="medal">🥈</div>
         <h3>Silver</h3>
-        <div class="range">5–14 paid referrals</div>
-        <div class="commission">€7 <span>/ paid referral</span></div>
         <ul>
           <li class="inherit">Everything in Bronze</li>
-          <li>€7 commission per successful paid referral</li>
-          <li>Early access to selected new features</li>
-          <li>Eligibility for Longrein merchandise rewards</li>
+          <li>Early access to new features</li>
+          <li>Longrein merchandise rewards</li>
         </ul>
       </div>
 
@@ -206,12 +195,8 @@
         <div class="badge">Most popular</div>
         <div class="medal">🥇</div>
         <h3>Gold</h3>
-        <div class="range">15–39 paid referrals</div>
-        <div class="commission">€10 <span>/ paid referral</span></div>
         <ul>
           <li class="inherit">Everything in Silver</li>
-          <li>€10 commission per successful paid referral</li>
-          <li>Exclusive Longrein merchandise opportunities</li>
           <li>Featured ambassador opportunities</li>
           <li>Direct feedback channel with the Longrein team</li>
         </ul>
@@ -221,69 +206,14 @@
         <div class="badge">VIP</div>
         <div class="medal">💎</div>
         <h3>Platinum</h3>
-        <div class="range">40+ paid referrals</div>
-        <div class="commission">€15 <span>/ paid referral</span></div>
         <ul>
           <li class="inherit">Everything in Gold</li>
-          <li>€15 commission per successful paid referral</li>
-          <li>Exclusive Longrein apparel opportunities</li>
-          <li>Potential branded equestrian gear rewards</li>
-          <li>VIP Ambassador status</li>
-          <li>Priority access to major releases &amp; testing</li>
+          <li>Exclusive Longrein-branded riding gear</li>
+          <li>VIP ambassador status &amp; priority access</li>
         </ul>
       </div>
 
     </div>
-  </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section class="alt">
-  <div class="container">
-    <h2 class="h-section">How the referral program works</h2>
-    <p class="section-lead">Every approved ambassador gets a unique referral code and a personal referral dashboard. When a customer buys Longrein with your code, they save — and you earn.</p>
-    <div class="price-row">
-      <div class="price-card">
-        <div class="k">Customer pays with your code</div>
-        <div class="v"><span class="old">€50</span>€40</div>
-        <p style="margin:8px 0 0;font-size:14px;color:#3F4A42;">A flat 20% discount for everyone who joins through an ambassador.</p>
-      </div>
-      <div class="price-card">
-        <div class="k">You earn per paid referral</div>
-        <div class="v">€5 – €15</div>
-        <p style="margin:8px 0 0;font-size:14px;color:#3F4A42;">Bronze €5 · Silver €7 · Gold €10 · Platinum €15. Only completed paid purchases trigger commission.</p>
-      </div>
-    </div>
-
-    <!-- Dashboard preview -->
-    <div class="dash" aria-label="Ambassador dashboard preview">
-      <div class="tag">Your ambassador dashboard — preview</div>
-      <div class="dash-grid">
-        <div class="stat"><div class="n">🥈 Silver</div><div class="l">Current tier</div></div>
-        <div class="stat"><div class="n">8</div><div class="l">Successful paid referrals</div></div>
-        <div class="stat"><div class="n">€56</div><div class="l">Total commission earned</div></div>
-      </div>
-      <div class="bar"><span></span></div>
-      <p class="bar-label">7 more paid referrals to reach 🥇 Gold (€10 / referral)</p>
-      <p class="note">Live progress, referral code and commission history appear here once your application is approved.</p>
-    </div>
-  </div>
-</section>
-
-<!-- FAQ -->
-<section class="faq">
-  <div class="container">
-    <h2 class="h-section">Ambassador FAQ</h2>
-    <details><summary>What counts as a referral?</summary>
-      <div class="body">A referral only counts when a person you referred becomes a <strong>paying</strong> Longrein customer using your referral code. Signups, registrations, free accounts and inactive users do <strong>not</strong> count toward your tier or your commissions.</div></details>
-    <details><summary>When are commissions earned?</summary>
-      <div class="body">Commission is earned only on completed, paid purchases made with your code. The amount depends on your current tier at the time of the purchase: €5 Bronze, €7 Silver, €10 Gold, €15 Platinum.</div></details>
-    <details><summary>How do tier upgrades work?</summary>
-      <div class="body">Upgrades are automatic as your number of successful paid referrals grows — Bronze 0–4, Silver 5–14, Gold 15–39, Platinum 40+. Each tier unlocks a higher commission and additional benefits.</div></details>
-    <details><summary>How do discounts work?</summary>
-      <div class="body">Anyone who buys Longrein with an ambassador's referral code pays €40 instead of €50 — a 20% discount. You earn your tier's commission for each completed paid purchase made with your code.</div></details>
-    <details><summary>Is the ambassador role paid?</summary>
-      <div class="body">The role itself is unpaid. Selected ambassadors receive free Longrein access, a personal discount code, and commission opportunities based on approved paid referrals.</div></details>
   </div>
 </section>
 
@@ -417,13 +347,10 @@
 </footer>
 
 <script>
-/* ============================================================
-   Ambassador application — submit handler
-   Posts the form as JSON to a Google Apps Script Web App that
-   appends a row to a Google Sheet under longrein.team@gmail.com.
-   ⚠️ SET THIS after deploying the Apps Script (see setup doc):
-   ============================================================ */
-const FORM_ENDPOINT = "REPLACE_WITH_APPS_SCRIPT_WEB_APP_URL";
+/* Ambassador application — posts to the Longrein app API, which stores
+   the application in the Longrein database (Supabase). No keys in the
+   frontend; CORS is allowlisted on the API for longrein.eu. */
+const FORM_ENDPOINT = "https://app.longrein.eu/api/ambassador";
 
 (function () {
   const form = document.getElementById('ambForm');
@@ -453,7 +380,6 @@ const FORM_ENDPOINT = "REPLACE_WITH_APPS_SCRIPT_WEB_APP_URL";
     return ok;
   }
 
-  // live-clear errors
   form.addEventListener('input', function (e) {
     const field = e.target.closest('.field');
     if (field && field.classList.contains('invalid')) setInvalid(field, false);
@@ -462,16 +388,12 @@ const FORM_ENDPOINT = "REPLACE_WITH_APPS_SCRIPT_WEB_APP_URL";
   function collect() {
     const d = {};
     const f = new FormData(form);
-    // single-value fields
     ['full_name','email','country','horses','discipline','instagram','tiktok','facebook','youtube','other_links','audience','community_type','community_size','invite_count','notes_applicant','agreement','company'].forEach(function (k) {
       d[k] = (f.get(k) || '').toString().trim();
     });
-    // multi-selects
     d.describes = f.getAll('describes').join('; ');
     d.support = f.getAll('support').join('; ');
-    // metadata
     d.source_page = location.href;
-    d.user_agent = navigator.userAgent;
     return d;
   }
 
@@ -480,9 +402,7 @@ const FORM_ENDPOINT = "REPLACE_WITH_APPS_SCRIPT_WEB_APP_URL";
     if (!validate()) return;
 
     const payload = collect();
-    if (payload.company) { // honeypot filled -> silently drop (bot)
-      successState.classList.add('show'); form.style.display = 'none'; return;
-    }
+    if (payload.company) { successState.classList.add('show'); form.style.display = 'none'; return; }
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting…';
@@ -490,13 +410,12 @@ const FORM_ENDPOINT = "REPLACE_WITH_APPS_SCRIPT_WEB_APP_URL";
 
     fetch(FORM_ENDPOINT, {
       method: 'POST',
-      // text/plain avoids a CORS preflight against Apps Script
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
-    .then(function (r) { return r.json().catch(function(){ return { result: r.ok ? 'success' : 'error' }; }); })
+    .then(function (r) { return r.json().catch(function(){ return { ok: r.ok }; }); })
     .then(function (res) {
-      if (res && res.result === 'success') {
+      if (res && res.ok) {
         form.style.display = 'none';
         successState.classList.add('show');
         successState.scrollIntoView({ behavior: 'smooth', block: 'center' });
