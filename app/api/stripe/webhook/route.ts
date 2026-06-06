@@ -188,6 +188,40 @@ export async function POST(req: NextRequest) {
           console.error("[stripe-webhook] receipt email failed:", err);
           // Don't fail the webhook — receipt is a nice-to-have, not correctness.
         }
+
+        // --- Ambassador referral attribution (non-blocking) ---
+        // If this paid invoice belongs to a subscription that carries a
+        // `referral_code` (set at Checkout via subscription_data.metadata),
+        // record ONE paid referral + commission for that ambassador.
+        // Idempotent on invoice id (record_paid_referral no-ops on a
+        // repeat invoice). Fully wrapped so attribution can NEVER affect
+        // billing state — worst case it simply doesn't fire.
+        try {
+          const refCode =
+            (invoice as unknown as {
+              subscription_details?: { metadata?: Record<string, string> };
+            }).subscription_details?.metadata?.referral_code ?? null;
+
+          if (refCode && invoice.id) {
+            const rpc = (supabase as unknown as {
+              rpc: (
+                fn: string,
+                args: Record<string, unknown>,
+              ) => Promise<{ error: { message: string } | null }>;
+            }).rpc;
+            const { error: refErr } = await rpc("record_paid_referral", {
+              p_code:         refCode,
+              p_invoice:      invoice.id,
+              p_email:        invoice.customer_email ?? null,
+              p_amount_cents: invoice.amount_paid,
+            });
+            if (refErr) {
+              console.error("[stripe-webhook] referral attribution failed:", refErr.message);
+            }
+          }
+        } catch (err) {
+          console.error("[stripe-webhook] referral attribution error:", err);
+        }
         break;
       }
 
