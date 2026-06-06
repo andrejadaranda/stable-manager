@@ -23,6 +23,7 @@
 //   8. User redirects back to /dashboard/settings/billing?started=true
 
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getSession, requireRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { stripeServerClient, PRICE_IDS } from "@/lib/stripe/server";
@@ -138,6 +139,18 @@ export async function POST() {
   // for the locked launch decision (14-day trial, card required, never
   // charged during trial). Stripe also fires customer.subscription.trial_will_end
   // 3 days before the end, which our webhook turns into the Day 11 reminder email.
+  // --- Ambassador referral attribution (additive) ---
+  // /r/CODE drops an `lr_ref` cookie. If present + sane, tag the
+  // subscription so the Stripe webhook can credit the ambassador on the
+  // first PAID invoice. If STRIPE_AMBASSADOR_COUPON_ID is set we also
+  // auto-apply the 20% coupon; otherwise the customer can still type the
+  // code into the promotion-code field on Checkout. No cookie → behaviour
+  // is identical to before.
+  const refRaw = (cookies().get("lr_ref")?.value ?? "").toUpperCase();
+  const referralCode = /^[A-Z0-9-]{4,40}$/.test(refRaw) ? refRaw : null;
+  const ambassadorCoupon = process.env.STRIPE_AMBASSADOR_COUPON_ID || null;
+  const applyAmbassadorCoupon = Boolean(referralCode && ambassadorCoupon);
+
   const checkoutSession = await stripeServerClient.checkout.sessions.create({
     mode:                "subscription",
     customer:            customerId,
@@ -148,7 +161,11 @@ export async function POST() {
       // attached) is starting from a known second-chance position —
       // immediate charge instead of free trial recursion.
       ...(skipTrial ? {} : { trial_period_days: 14 }),
-      metadata: { stable_id: stable.id, restart: skipTrial ? "true" : "false" },
+      metadata: {
+        stable_id: stable.id,
+        restart: skipTrial ? "true" : "false",
+        ...(referralCode ? { referral_code: referralCode } : {}),
+      },
       // Surfaces on every invoice line + receipt as a human-readable
       // subscription description. Without this, Stripe falls back to
       // the bare product nickname ("Pro plan"), which reads cold next
@@ -204,7 +221,12 @@ export async function POST() {
     // (e.g. FOUNDER100 = 100% off forever) and any future marketing promos
     // without a code change. Stripe only honors codes you create in
     // Dashboard → Products → Coupons → Promotion codes.
-    allow_promotion_codes: true,
+    // Auto-apply the ambassador 20% coupon when a referral cookie + coupon
+    // env are present (Stripe forbids discounts + allow_promotion_codes
+    // together). Otherwise keep the manual promotion-code field.
+    ...(applyAmbassadorCoupon
+      ? { discounts: [{ coupon: ambassadorCoupon as string }] }
+      : { allow_promotion_codes: true }),
   });
 
   return NextResponse.json({ ok: true, url: checkoutSession.url });
