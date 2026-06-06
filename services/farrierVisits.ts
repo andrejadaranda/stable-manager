@@ -5,9 +5,9 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
-import type { CalendarFarrierVisit } from "./farrierVisits.pure";
+import type { CalendarFarrierVisit, CareVisitKind } from "./farrierVisits.pure";
 
-export type { CalendarFarrierVisit, FarrierVisitHorse } from "./farrierVisits.pure";
+export type { CalendarFarrierVisit, CareVisitKind, FarrierVisitHorse } from "./farrierVisits.pure";
 
 /**
  * Farrier visits overlapping the [from, to) window, with attached horses.
@@ -24,7 +24,7 @@ export async function getFarrierVisitsForCalendar(
     .from("farrier_visits")
     .select(
       `
-      id, starts_at, ends_at, farrier_name, notes, status,
+      id, kind, starts_at, ends_at, farrier_name, notes, status,
       farrier_visit_horses (
         horse:horses!farrier_visit_horses_horse_id_fkey ( id, name )
       )
@@ -39,6 +39,7 @@ export async function getFarrierVisitsForCalendar(
   return (data ?? []).map((v: any): CalendarFarrierVisit => ({
     id: v.id,
     event_type: "farrier_visit",
+    kind: v.kind === "vet" ? "vet" : "farrier",
     starts_at: v.starts_at,
     ends_at: v.ends_at,
     farrier_name: v.farrier_name ?? null,
@@ -51,10 +52,11 @@ export async function getFarrierVisitsForCalendar(
   }));
 }
 
-/** Create a farrier visit and attach the horses being shod. Staff only. */
+/** Create a farrier/vet visit and attach the horses. Staff only. */
 export async function createFarrierVisit(input: {
   starts_at: string;
   ends_at: string;
+  kind?: CareVisitKind;
   farrier_name?: string | null;
   notes?: string | null;
   horse_ids: string[];
@@ -67,6 +69,7 @@ export async function createFarrierVisit(input: {
     .from("farrier_visits")
     .insert({
       stable_id: session.stableId,
+      kind: input.kind === "vet" ? "vet" : "farrier",
       starts_at: input.starts_at,
       ends_at: input.ends_at,
       farrier_name: input.farrier_name?.trim() || null,

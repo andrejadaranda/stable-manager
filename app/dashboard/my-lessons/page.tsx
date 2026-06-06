@@ -68,6 +68,7 @@ export default async function MyLessonsPage({
         lessons={lessons}
         weekStart={start}
         basePath="/dashboard/my-lessons"
+        farrierVisits={farrierVisits ?? []}
         editable={false}
       />
 

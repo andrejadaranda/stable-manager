@@ -76,6 +76,7 @@ export default async function CalendarPage({
         services={services ?? []}
         arenas={arenas ?? []}
         activePackagesByClient={activePackages}
+        farrierVisits={farrierVisits ?? []}
         editable
       />
 

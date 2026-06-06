@@ -18,9 +18,11 @@
 // lightweight middle ground.
 
 import type { CalendarLesson } from "@/services/lessons";
+import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
+import { VISIT_KIND_COLOR, VISIT_KIND_LABEL } from "@/services/farrierVisits.pure";
 import { fmtTime } from "@/lib/utils/dates";
 import { STATUS_LABEL, STATUS_STYLE, HOUR_START, HOUR_END } from "./grid-utils";
-import { PaymentDot } from "./week-grid";
+import { PaymentDot, VISIT_CHIP_STYLE } from "./week-grid";
 
 /** Local "YYYY-MM-DDTHH:mm" from a Date — matches the create form input. */
 function toLocalInput(d: Date): string {
@@ -100,6 +102,7 @@ export function DayAgenda({
   selectedKey,
   onSelectDay,
   lessons,
+  farrierVisits = [],
   onLessonClick,
   onCreate,
   onSlotCreate,
@@ -111,6 +114,8 @@ export function DayAgenda({
   selectedKey: string;
   onSelectDay: (k: string) => void;
   lessons: CalendarLesson[];
+  /** Read-only farrier/vet visit cards for the selected day. Optional. */
+  farrierVisits?: CalendarFarrierVisit[];
   onLessonClick: (l: CalendarLesson) => void;
   onCreate: () => void;
   /** Tapping a free-gap row opens the create form prefilled to that
@@ -166,6 +171,11 @@ export function DayAgenda({
 
       {/* Interleaved lesson + free-gap list -------------------- */}
       <div className="flex flex-col gap-2 pb-24">
+        {/* Farrier/vet care visits — pinned above the lesson flow so
+            they never get lost between gap rows. Read-only. */}
+        {farrierVisits.map((v) => (
+          <CareVisitCard key={`care-${v.id}`} visit={v} />
+        ))}
         {!hasLessons ? (
           <>
             <div className="bg-white rounded-2xl shadow-soft p-6 text-center">
@@ -278,6 +288,47 @@ function GapRow({
     >
       {content}
     </button>
+  );
+}
+
+// Read-only farrier/vet visit card — colored by kind to match the
+// desktop grid chips (farrier = saddle amber, vet = sky blue).
+function CareVisitCard({ visit }: { visit: CalendarFarrierVisit }) {
+  const chip = VISIT_CHIP_STYLE[visit.kind] ?? VISIT_CHIP_STYLE.farrier;
+  const stripeColor = VISIT_KIND_COLOR[visit.kind] ?? VISIT_KIND_COLOR.farrier;
+  const kindLabel = VISIT_KIND_LABEL[visit.kind] ?? "Visit";
+  const horses = visit.horses.map((h) => h.name).join(", ");
+  return (
+    <div
+      className={`relative rounded-2xl ${chip.bg} ${chip.border} shadow-soft border-l-[3px]`}
+      style={{ borderLeftColor: stripeColor }}
+    >
+      <div className="px-4 py-3 flex items-center gap-3">
+        <div className="flex flex-col tabular-nums shrink-0 w-16">
+          <span className={`text-sm font-semibold ${chip.ink}`}>
+            {fmtTime(visit.starts_at)}
+          </span>
+          <span className={`text-[11px] ${chip.meta}`}>
+            {fmtTime(visit.ends_at)}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium truncate ${chip.ink}`}>
+            {kindLabel}
+            {visit.farrier_name ? ` · ${visit.farrier_name}` : ""}
+          </p>
+          <p className={`text-xs truncate ${chip.meta}`}>
+            {horses || "No horses attached"}
+          </p>
+        </div>
+        <span
+          className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium text-white"
+          style={{ background: stripeColor }}
+        >
+          {kindLabel}
+        </span>
+      </div>
+    </div>
   );
 }
 

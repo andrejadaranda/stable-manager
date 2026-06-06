@@ -24,6 +24,7 @@ export async function createFarrierVisitAction(
 ): Promise<FarrierActionResult> {
   const startsLocal = String(formData.get("starts_at") ?? "");
   const duration = Number(formData.get("duration") ?? 60);
+  const kind = String(formData.get("kind") ?? "farrier") === "vet" ? "vet" as const : "farrier" as const;
   const farrierName = String(formData.get("farrier_name") ?? "");
   const notes = String(formData.get("notes") ?? "");
   const horseIds = formData.getAll("horse_ids").map((v) => String(v)).filter(Boolean);
@@ -40,6 +41,7 @@ export async function createFarrierVisitAction(
     await createFarrierVisit({
       starts_at: startsISO,
       ends_at: endsISO,
+      kind,
       farrier_name: farrierName,
       notes,
       horse_ids: horseIds,

@@ -25,6 +25,8 @@
 
 import { useMemo, useState } from "react";
 import type { CalendarLesson, LessonPaymentStatus } from "@/services/lessons";
+import type { CalendarFarrierVisit, CareVisitKind } from "@/services/farrierVisits.pure";
+import { VISIT_KIND_COLOR, VISIT_KIND_LABEL } from "@/services/farrierVisits.pure";
 import {
   HOUR_START,
   HOUR_END,
@@ -38,6 +40,25 @@ import {
 } from "./grid-utils";
 import { fmtTime } from "@/lib/utils/dates";
 
+// Care-visit chip palette — static literal classes so Tailwind keeps them.
+export const VISIT_CHIP_STYLE: Record<
+  CareVisitKind,
+  { bg: string; border: string; ink: string; meta: string }
+> = {
+  farrier: {
+    bg: "bg-amber-50/90",
+    border: "border border-amber-200",
+    ink: "text-amber-900",
+    meta: "text-amber-700",
+  },
+  vet: {
+    bg: "bg-sky-50/90",
+    border: "border border-sky-200",
+    ink: "text-sky-900",
+    meta: "text-sky-700",
+  },
+};
+
 /** Format a "YYYY-MM-DDTHH:mm" local string back into "HH:mm" for tooltip. */
 function fmtLocalTime(local: string): string {
   return local.slice(11, 16);
@@ -48,6 +69,7 @@ export function WeekGrid({
   weekKeys,
   todayKey,
   byDay,
+  farrierByDay,
   onLessonClick,
   onSlotClick,
   onDayHeaderClick,
@@ -58,6 +80,9 @@ export function WeekGrid({
   weekKeys: string[];
   todayKey: string;
   byDay: Map<string, CalendarLesson[]>;
+  /** Farrier/vet care visits per day — rendered as read-only colored
+   *  chips behind the lesson cards. Optional. */
+  farrierByDay?: Map<string, CalendarFarrierVisit[]>;
   onLessonClick: (l: CalendarLesson) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
   onDayHeaderClick: (key: string) => void;
@@ -137,6 +162,7 @@ export function WeekGrid({
               day={d}
               isToday={isToday}
               layout={layout}
+              farrierVisits={farrierByDay?.get(k) ?? []}
               onLessonClick={onLessonClick}
               onSlotClick={onSlotClick}
               onOverflowClick={() => onDayHeaderClick(k)}
@@ -184,6 +210,7 @@ export function DayColumn({
   day,
   isToday,
   layout,
+  farrierVisits = [],
   onLessonClick,
   onSlotClick,
   onOverflowClick,
@@ -194,6 +221,8 @@ export function DayColumn({
   day: Date;
   isToday: boolean;
   layout: ReturnType<typeof buildLessonLayout>;
+  /** Read-only farrier/vet chips for this day. Optional. */
+  farrierVisits?: CalendarFarrierVisit[];
   onLessonClick: (l: CalendarLesson) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
   onOverflowClick?: () => void;
@@ -299,6 +328,46 @@ export function DayColumn({
 
       {/* Now-line — only on today's column ------------------------- */}
       {isToday && <NowLine />}
+
+      {/* Farrier/vet care-visit chips — read-only, rendered BEFORE the
+          lesson cards so lessons paint on top when overlapping. The
+          data-lesson-card attribute makes the column click handler
+          ignore taps on a chip (no accidental create-form). ---------- */}
+      {farrierVisits.map((v) => {
+        const vs = new Date(v.starts_at);
+        const ve = new Date(v.ends_at);
+        const startMin = (vs.getHours() - HOUR_START) * 60 + vs.getMinutes();
+        const durMin = Math.max(15, (ve.getTime() - vs.getTime()) / 60000);
+        const rawTop = (startMin / 60) * HOUR_HEIGHT;
+        const top = Math.max(0, Math.min(rawTop, GRID_HEIGHT - 22));
+        const height = Math.max((durMin / 60) * HOUR_HEIGHT, 22);
+        const chip = VISIT_CHIP_STYLE[v.kind] ?? VISIT_CHIP_STYLE.farrier;
+        const stripeColor = VISIT_KIND_COLOR[v.kind] ?? VISIT_KIND_COLOR.farrier;
+        const kindLabel = VISIT_KIND_LABEL[v.kind] ?? "Visit";
+        const horseNames = v.horses.map((h) => h.name).join(", ");
+        return (
+          <div
+            key={`care-${v.id}`}
+            data-lesson-card
+            title={`${kindLabel}${v.farrier_name ? ` — ${v.farrier_name}` : ""}${horseNames ? `: ${horseNames}` : ""}`}
+            className={`absolute left-[2px] right-[2px] rounded-lg overflow-hidden ${chip.bg} ${chip.border} border-l-[3px]`}
+            style={{ top, height, borderLeftColor: stripeColor }}
+          >
+            <div className={`h-full px-2 py-1.5 leading-tight ${fullDetail ? "" : "text-[11px]"}`}>
+              <div className={`flex items-center gap-1 tabular-nums ${chip.ink}`}>
+                <span className="font-semibold">{fmtTime(v.starts_at)}</span>
+                <span className={chip.meta}>· {kindLabel}</span>
+              </div>
+              {height >= 30 && horseNames && (
+                <div className={`mt-0.5 truncate font-medium ${chip.ink}`}>{horseNames}</div>
+              )}
+              {height >= 56 && v.farrier_name && (
+                <div className={`mt-0.5 truncate ${chip.meta}`}>{v.farrier_name}</div>
+              )}
+            </div>
+          </div>
+        );
+      })}
 
       {/* Lessons --------------------------------------------------- */}
       {layout.placed.map((p) => {

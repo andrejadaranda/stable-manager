@@ -11,7 +11,11 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
-import { FARRIER_EVENT_COLOR } from "@/services/farrierVisits.pure";
+import {
+  FARRIER_EVENT_COLOR,
+  VISIT_KIND_COLOR,
+  VISIT_KIND_LABEL,
+} from "@/services/farrierVisits.pure";
 import {
   createFarrierVisitAction,
   deleteFarrierVisitAction,
@@ -72,12 +76,11 @@ export function FarrierPanel({
     <section className="bg-white rounded-2xl shadow-soft p-5 md:p-6">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span
-            className="w-2.5 h-2.5 rounded-sm shrink-0"
-            style={{ background: FARRIER_EVENT_COLOR }}
-            aria-hidden
-          />
-          <h2 className="font-display text-xl text-navy-900 truncate">Farrier visits</h2>
+          <span className="flex items-center gap-1 shrink-0" aria-hidden>
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: VISIT_KIND_COLOR.farrier }} />
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: VISIT_KIND_COLOR.vet }} />
+          </span>
+          <h2 className="font-display text-xl text-navy-900 truncate">Farrier & vet visits</h2>
         </div>
         {editable && (
           <button
@@ -86,7 +89,7 @@ export function FarrierPanel({
             className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-xl text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90"
             style={{ background: FARRIER_EVENT_COLOR }}
           >
-            + Farrier visit
+            + New visit
           </button>
         )}
       </div>
@@ -100,8 +103,8 @@ export function FarrierPanel({
       {sorted.length === 0 ? (
         <p className="text-sm text-ink-500">
           {editable
-            ? "No farrier visits scheduled this week. Add one to notify the horses' owners."
-            : "No farrier visits scheduled for your horses this week."}
+            ? "No farrier or vet visits scheduled this week. Add one to notify the horses' owners."
+            : "No farrier or vet visits scheduled for your horses this week."}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -112,6 +115,12 @@ export function FarrierPanel({
             >
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-navy-900 tabular-nums">
+                  <span
+                    className="inline-flex items-center px-1.5 py-0.5 mr-2 rounded-md text-[10px] font-semibold text-white align-middle"
+                    style={{ background: VISIT_KIND_COLOR[v.kind] ?? VISIT_KIND_COLOR.farrier }}
+                  >
+                    {VISIT_KIND_LABEL[v.kind] ?? "Visit"}
+                  </span>
                   {fmtWhen(v.starts_at)}
                   {v.farrier_name ? <span className="font-normal text-ink-600"> · {v.farrier_name}</span> : null}
                 </p>
@@ -212,7 +221,19 @@ function CreateFarrierModal({
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-2xl shadow-lift w-full max-w-md max-h-[90vh] overflow-y-auto p-5 md:p-6 flex flex-col gap-4"
       >
-        <h3 className="font-display text-xl text-navy-900">New farrier visit</h3>
+        <h3 className="font-display text-xl text-navy-900">New visit</h3>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-medium text-ink-700">Type</span>
+          <select
+            name="kind"
+            defaultValue="farrier"
+            className="h-10 px-3 rounded-xl bg-cream-soft border border-ink-200 text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-200"
+          >
+            <option value="farrier">Farrier (shoeing)</option>
+            <option value="vet">Vet visit</option>
+          </select>
+        </label>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-[13px] font-medium text-ink-700">Date & time</span>
@@ -241,17 +262,17 @@ function CreateFarrierModal({
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-medium text-ink-700">Farrier name <span className="text-ink-400 font-normal">(optional)</span></span>
+          <span className="text-[13px] font-medium text-ink-700">Farrier / vet name <span className="text-ink-400 font-normal">(optional)</span></span>
           <input
             type="text"
             name="farrier_name"
-            placeholder="e.g. Tom the farrier"
+            placeholder="e.g. Tom the farrier, Dr. Weber"
             className="h-10 px-3 rounded-xl bg-cream-soft border border-ink-200 text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-brand-200"
           />
         </label>
 
         <div className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-medium text-ink-700">Horses being shod</span>
+          <span className="text-[13px] font-medium text-ink-700">Horses involved</span>
           {horses.length === 0 ? (
             <p className="text-[13px] text-ink-500">No horses available.</p>
           ) : (

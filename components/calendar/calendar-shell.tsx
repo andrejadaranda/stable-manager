@@ -22,6 +22,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { addDays, fmtISODate } from "@/lib/utils/dates";
 import type { CalendarLesson } from "@/services/lessons";
+import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
 import type { PackageSummaryRow } from "@/services/packages";
 import type { ServiceRow } from "@/services/services";
 import { CreateLessonForm } from "./create-lesson-form";
@@ -50,11 +51,15 @@ export function CalendarShell({
   services = [],
   arenas = [],
   activePackagesByClient = {},
+  farrierVisits = [],
   editable = true,
 }: {
   lessons: CalendarLesson[];
   weekStart: Date;
   basePath: string;
+  /** Farrier/vet care visits rendered as read-only colored chips in the
+   *  grid (migration 66/67). Optional — omitted callers see no change. */
+  farrierVisits?: CalendarFarrierVisit[];
   /** Required when editable. Optional for read-only views. */
   clients?: ClientOpt[];
   horses?: HorseOpt[];
@@ -158,6 +163,19 @@ export function CalendarShell({
     }
     return m;
   }, [visibleLessons]);
+
+  // Farrier/vet visits grouped by local day key — read-only chips, so no
+  // optimistic overlay or arena filtering applies.
+  const farrierByDay = useMemo(() => {
+    const m = new Map<string, CalendarFarrierVisit[]>();
+    for (const v of farrierVisits) {
+      const k = fmtISODate(new Date(v.starts_at));
+      const arr = m.get(k) ?? [];
+      arr.push(v);
+      m.set(k, arr);
+    }
+    return m;
+  }, [farrierVisits]);
 
   /** Drag-and-drop reschedule. The week grid passes a snapped local
    *  start string ("YYYY-MM-DDTHH:mm"); we preserve duration and submit. */
@@ -303,6 +321,7 @@ export function CalendarShell({
             weekKeys={weekKeys}
             todayKey={todayKey}
             byDay={byDay}
+            farrierByDay={farrierByDay}
             onLessonClick={handleLessonClick}
             onSlotClick={handleCreateAt}
             onDayHeaderClick={handleExpandDay}
@@ -315,6 +334,7 @@ export function CalendarShell({
             dayKey={dayKey}
             todayKey={todayKey}
             lessons={byDay.get(dayKey) ?? []}
+            farrierVisits={farrierByDay.get(dayKey) ?? []}
             onLessonClick={handleLessonClick}
             onSlotClick={handleCreateAt}
             onLessonDrop={editable ? handleLessonDrop : undefined}
@@ -342,6 +362,7 @@ export function CalendarShell({
           selectedKey={dayKey}
           onSelectDay={setDayKey}
           lessons={byDay.get(dayKey) ?? []}
+          farrierVisits={farrierByDay.get(dayKey) ?? []}
           onLessonClick={handleLessonClick}
           onCreate={() => {
             // Mobile FAB: open form prefilled to selected day at next
