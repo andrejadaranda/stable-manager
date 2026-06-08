@@ -7,10 +7,12 @@ import { listActivePackagesForStable } from "@/services/packages";
 import { listServices } from "@/services/services";
 import { listArenas } from "@/services/arenas";
 import { getFarrierVisitsForCalendar } from "@/services/farrierVisits";
+import { listAvailabilityBlocks } from "@/services/availability";
 import { startOfWeek, addDays, fmtISODate } from "@/lib/utils/dates";
 import { CalendarShell } from "@/components/calendar/calendar-shell";
 import { MonthView } from "@/components/calendar/month-view";
 import { CalendarViewToggle } from "@/components/calendar/view-toggle";
+import { TimeOffPanel } from "@/components/calendar/time-off-panel";
 import { FarrierPanel } from "@/components/calendar/farrier-panel";
 import { EmptyState } from "@/components/ui";
 
@@ -29,9 +31,10 @@ export default async function CalendarPage({
     const monthFirst = new Date(ref.getFullYear(), ref.getMonth(), 1);
     const gridStart = startOfWeek(monthFirst);
     const gridEnd = addDays(gridStart, 42);
-    const [mLessons, mFarrier] = await Promise.all([
+    const [mLessons, mFarrier, mBlocks] = await Promise.all([
       getCalendar(gridStart.toISOString(), gridEnd.toISOString()),
       getFarrierVisitsForCalendar(gridStart.toISOString(), gridEnd.toISOString()).catch(() => []),
+      listAvailabilityBlocks(gridStart.toISOString(), gridEnd.toISOString()).catch(() => []),
     ]);
     const prev = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
     const next = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
@@ -41,6 +44,7 @@ export default async function CalendarPage({
         <MonthView
           lessons={mLessons}
           farrierVisits={mFarrier ?? []}
+          blocks={mBlocks ?? []}
           gridStart={gridStart}
           monthIndex={ref.getMonth()}
           monthLabel={monthFirst.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
@@ -48,6 +52,7 @@ export default async function CalendarPage({
           prevDate={fmtISODate(prev)}
           nextDate={fmtISODate(next)}
         />
+        <TimeOffPanel blocks={mBlocks ?? []} />
       </div>
     );
   }
@@ -72,6 +77,7 @@ export default async function CalendarPage({
     // need a farrier/vet, so the visit form must not hide them.
     listHorses({}).catch(() => []),
   ]);
+  const blocks = await listAvailabilityBlocks(start.toISOString(), end.toISOString()).catch(() => []);
 
   // Fresh-stable nudge: if no horses or no clients, calendar can't book
   // anything yet — show a guided empty state instead of an empty grid.
@@ -120,6 +126,8 @@ export default async function CalendarPage({
         horses={(allHorses ?? []).map((h) => ({ id: h.id, name: h.name }))}
         editable
       />
+
+      <TimeOffPanel blocks={blocks ?? []} />
     </div>
   );
 }
