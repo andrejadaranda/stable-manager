@@ -42,7 +42,10 @@ function readCommon(formData: FormData) {
   const farrierName = String(formData.get("farrier_name") ?? "");
   const notes = String(formData.get("notes") ?? "");
   const horses = parseHorses(formData);
-  return { startsLocal, duration, kind, farrierName, notes, horses };
+  const rawExpense = String(formData.get("expense") ?? "").replace(",", ".").trim();
+  const expenseEuros = rawExpense === "" ? NaN : Number(rawExpense);
+  const expense_cents = Number.isFinite(expenseEuros) && expenseEuros > 0 ? Math.round(expenseEuros * 100) : null;
+  return { startsLocal, duration, kind, farrierName, notes, horses, expense_cents };
 }
 
 function revalidateAll() {
@@ -55,13 +58,13 @@ function revalidateAll() {
 export async function createFarrierVisitAction(
   formData: FormData,
 ): Promise<FarrierActionResult> {
-  const { startsLocal, duration, kind, farrierName, notes, horses } = readCommon(formData);
+  const { startsLocal, duration, kind, farrierName, notes, horses, expense_cents } = readCommon(formData);
   if (!startsLocal) return { ok: false, error: "Pick a date and time." };
   if (horses.length === 0) return { ok: false, error: "Select at least one horse." };
   try {
     const startsISO = localToISO(startsLocal);
     const endsISO = new Date(new Date(startsISO).getTime() + Math.max(15, duration) * 60_000).toISOString();
-    await createFarrierVisit({ starts_at: startsISO, ends_at: endsISO, kind, farrier_name: farrierName, notes, horses });
+    await createFarrierVisit({ starts_at: startsISO, ends_at: endsISO, kind, farrier_name: farrierName, notes, expense_cents, horses });
     revalidateAll();
     return { ok: true, error: null };
   } catch (err) {
@@ -74,13 +77,13 @@ export async function updateFarrierVisitAction(
 ): Promise<FarrierActionResult> {
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "Missing visit id." };
-  const { startsLocal, duration, kind, farrierName, notes, horses } = readCommon(formData);
+  const { startsLocal, duration, kind, farrierName, notes, horses, expense_cents } = readCommon(formData);
   if (!startsLocal) return { ok: false, error: "Pick a date and time." };
   if (horses.length === 0) return { ok: false, error: "Select at least one horse." };
   try {
     const startsISO = localToISO(startsLocal);
     const endsISO = new Date(new Date(startsISO).getTime() + Math.max(15, duration) * 60_000).toISOString();
-    await updateFarrierVisit(id, { starts_at: startsISO, ends_at: endsISO, kind, farrier_name: farrierName, notes, horses });
+    await updateFarrierVisit(id, { starts_at: startsISO, ends_at: endsISO, kind, farrier_name: farrierName, notes, expense_cents, horses });
     revalidateAll();
     return { ok: true, error: null };
   } catch (err) {

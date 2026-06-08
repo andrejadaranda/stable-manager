@@ -36,7 +36,9 @@ export default async function CalendarPage({
     listServices({ activeOnly: true }),
     listArenas({ activeOnly: true }).catch(() => []),
     getFarrierVisitsForCalendar(start.toISOString(), end.toISOString()).catch(() => []),
-    listHorses({ activeOnly: true }).catch(() => []),
+    // ALL horses (incl. inactive/retired private boarders) — any horse can
+    // need a farrier/vet, so the visit form must not hide them.
+    listHorses({}).catch(() => []),
   ]);
 
   // Fresh-stable nudge: if no horses or no clients, calendar can't book

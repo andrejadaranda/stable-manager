@@ -35,7 +35,7 @@ export async function getFarrierVisitsForCalendar(
     .from("farrier_visits")
     .select(
       `
-      id, kind, starts_at, ends_at, farrier_name, notes, status,
+      id, kind, starts_at, ends_at, farrier_name, notes, status, expense_cents,
       farrier_visit_horses (
         cost_cents, note, paid_at,
         horse:horses!farrier_visit_horses_horse_id_fkey ( id, name )
@@ -57,6 +57,7 @@ export async function getFarrierVisitsForCalendar(
     farrier_name: v.farrier_name ?? null,
     notes: v.notes ?? null,
     status: v.status,
+    expense_cents: v.expense_cents ?? null,
     horses: (v.farrier_visit_horses ?? [])
       .filter((r: any) => r.horse)
       .map((r: any) => ({
@@ -67,6 +68,57 @@ export async function getFarrierVisitsForCalendar(
         paid_at: r.paid_at ?? null,
       })),
   }));
+}
+
+// Create or update the linked stable expense for a visit. Owner-only
+// (expenses RLS), so employees creating a visit simply skip the expense.
+// Returns the expense id to store on the visit (or null).
+async function syncVisitExpense(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  args: {
+    role: string;
+    stableId: string;
+    userId: string;
+    existingExpenseId: string | null;
+    expenseCents: number | null;
+    kind: CareVisitKind;
+    farrierName: string | null;
+    startsISO: string;
+  },
+): Promise<string | null> {
+  if (args.role !== "owner") return args.existingExpenseId;
+  const cents = args.expenseCents;
+  const incurredOn = args.startsISO.slice(0, 10);
+  const label = args.kind === "vet" ? "Vet visit" : "Farrier visit";
+  const description = args.farrierName ? `${label} — ${args.farrierName}` : label;
+
+  // No amount → remove any previously linked expense.
+  if (!cents || cents <= 0) {
+    if (args.existingExpenseId) {
+      await supabase.from("expenses").delete().eq("id", args.existingExpenseId);
+    }
+    return null;
+  }
+
+  const payload = {
+    category: args.kind, // 'farrier' | 'vet' — both valid ExpenseCategory
+    amount: cents / 100,
+    description,
+    incurred_on: incurredOn,
+  };
+
+  if (args.existingExpenseId) {
+    const { error } = await supabase.from("expenses").update(payload).eq("id", args.existingExpenseId);
+    if (error) throw error;
+    return args.existingExpenseId;
+  }
+  const { data, error } = await supabase
+    .from("expenses")
+    .insert({ ...payload, stable_id: args.stableId, horse_id: null, created_by: args.userId })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return (data as any).id as string;
 }
 
 function dedupeHorses(horses: FarrierHorseInput[]): FarrierHorseInput[] {
@@ -88,20 +140,23 @@ export async function createFarrierVisit(input: {
   kind?: CareVisitKind;
   farrier_name?: string | null;
   notes?: string | null;
+  expense_cents?: number | null;
   horses: FarrierHorseInput[];
 }): Promise<{ id: string }> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
   const supabase = createSupabaseServerClient();
+  const kind = input.kind === "vet" ? "vet" : "farrier";
+  const farrierName = input.farrier_name?.trim() || null;
 
   const { data, error } = await supabase
     .from("farrier_visits")
     .insert({
       stable_id: session.stableId,
-      kind: input.kind === "vet" ? "vet" : "farrier",
+      kind,
       starts_at: input.starts_at,
       ends_at: input.ends_at,
-      farrier_name: input.farrier_name?.trim() || null,
+      farrier_name: farrierName,
       notes: input.notes?.trim() || null,
       created_by: session.userId,
     })
@@ -121,6 +176,22 @@ export async function createFarrierVisit(input: {
     const { error: jerr } = await supabase.from("farrier_visit_horses").insert(rows);
     if (jerr) throw jerr;
   }
+
+  const expenseId = await syncVisitExpense(supabase, {
+    role: session.role,
+    stableId: session.stableId,
+    userId: session.userId,
+    existingExpenseId: null,
+    expenseCents: input.expense_cents ?? null,
+    kind,
+    farrierName,
+    startsISO: input.starts_at,
+  });
+  if (expenseId) {
+    await supabase.from("farrier_visits").update({ expense_cents: input.expense_cents ?? null, expense_id: expenseId }).eq("id", visitId);
+  } else if (input.expense_cents) {
+    await supabase.from("farrier_visits").update({ expense_cents: input.expense_cents }).eq("id", visitId);
+  }
   return { id: visitId };
 }
 
@@ -134,24 +205,49 @@ export async function updateFarrierVisit(
     kind?: CareVisitKind;
     farrier_name?: string | null;
     notes?: string | null;
+    expense_cents?: number | null;
     horses: FarrierHorseInput[];
   },
 ): Promise<void> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
   const supabase = createSupabaseServerClient();
+  const kind = input.kind === "vet" ? "vet" : "farrier";
+  const farrierName = input.farrier_name?.trim() || null;
+
+  const { data: prior } = await supabase
+    .from("farrier_visits")
+    .select("expense_id")
+    .eq("id", id)
+    .maybeSingle();
+  const existingExpenseId = (prior as any)?.expense_id ?? null;
 
   const { error: uerr } = await supabase
     .from("farrier_visits")
     .update({
-      kind: input.kind === "vet" ? "vet" : "farrier",
+      kind,
       starts_at: input.starts_at,
       ends_at: input.ends_at,
-      farrier_name: input.farrier_name?.trim() || null,
+      farrier_name: farrierName,
       notes: input.notes?.trim() || null,
     })
     .eq("id", id);
   if (uerr) throw uerr;
+
+  const expenseId = await syncVisitExpense(supabase, {
+    role: session.role,
+    stableId: session.stableId,
+    userId: session.userId,
+    existingExpenseId,
+    expenseCents: input.expense_cents ?? null,
+    kind,
+    farrierName,
+    startsISO: input.starts_at,
+  });
+  await supabase
+    .from("farrier_visits")
+    .update({ expense_cents: input.expense_cents ?? null, expense_id: expenseId })
+    .eq("id", id);
 
   // Preserve paid_at across the rebuild.
   const { data: existing } = await supabase

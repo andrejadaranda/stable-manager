@@ -305,10 +305,19 @@ function CareVisitModal({
           </label>
         </div>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-medium text-ink-700">Farrier / vet name <span className="text-ink-400 font-normal">(optional)</span></span>
-          <input type="text" name="farrier_name" defaultValue={edit?.farrier_name ?? ""} placeholder="e.g. Tom the farrier, Dr. Weber" className={fieldCls} />
-        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-medium text-ink-700">Farrier / vet name <span className="text-ink-400 font-normal">(optional)</span></span>
+            <input type="text" name="farrier_name" defaultValue={edit?.farrier_name ?? ""} placeholder="e.g. Tom, Dr. Weber" className={fieldCls} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[13px] font-medium text-ink-700">Paid to farrier/vet €</span>
+            <input type="number" min="0" step="0.01" inputMode="decimal" name="expense"
+              defaultValue={edit?.expense_cents != null ? (edit.expense_cents / 100).toString() : ""}
+              placeholder="0.00" className={fieldCls} />
+          </label>
+        </div>
+        <span className="-mt-2 text-[12px] text-ink-500">What you paid the farrier/vet — recorded in Expenses.</span>
 
         <div className="flex flex-col gap-1.5">
           <span className="text-[13px] font-medium text-ink-700">Horses — tick each, add cost &amp; note</span>

@@ -31,6 +31,7 @@ export function HorseCareSection({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [detail, setDetail] = useState<HorseCareVisit | null>(null);
 
   function togglePaid(visitId: string, paid: boolean) {
     setError(null);
@@ -77,14 +78,15 @@ export function HorseCareSection({
           {visits.map((v) => (
             <li key={v.id} className="flex flex-col gap-1 py-2.5 border-b border-ink-100 last:border-0">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <p className="text-sm font-semibold text-navy-900">
+                <button type="button" onClick={() => setDetail(v)}
+                  className="text-left text-sm font-semibold text-navy-900 hover:underline">
                   <span className="inline-flex items-center px-1.5 py-0.5 mr-2 rounded-md text-[10px] font-semibold text-white align-middle"
                     style={{ background: VISIT_KIND_COLOR[v.kind] ?? VISIT_KIND_COLOR.farrier }}>
                     {VISIT_KIND_LABEL[v.kind] ?? "Visit"}
                   </span>
                   {fmtDate(v.starts_at)}
                   {v.farrier_name ? <span className="font-normal text-ink-600"> · {v.farrier_name}</span> : null}
-                </p>
+                </button>
                 <span className="flex items-center gap-2">
                   {v.cost_cents != null && <span className="text-sm tabular-nums text-ink-700">{eur(v.cost_cents)}</span>}
                   {v.cost_cents != null && (
@@ -106,10 +108,56 @@ export function HorseCareSection({
                   )}
                 </span>
               </div>
-              {v.note && <p className="text-[12.5px] text-ink-500">“{v.note}”</p>}
+              {v.note && <p className="text-[12.5px] text-ink-500 line-clamp-1">“{v.note}”</p>}
             </li>
           ))}
         </ul>
+      )}
+
+      {detail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/40 p-4" role="dialog" aria-modal="true" onClick={() => setDetail(null)}>
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-lift w-full max-w-md p-5 md:p-6 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold text-white"
+                  style={{ background: VISIT_KIND_COLOR[detail.kind] ?? VISIT_KIND_COLOR.farrier }}>
+                  {VISIT_KIND_LABEL[detail.kind] ?? "Visit"}
+                </span>
+                <h3 className="mt-2 font-display text-xl text-navy-900">{fmtDate(detail.starts_at)}</h3>
+                {detail.farrier_name && <p className="text-sm text-ink-600">{detail.farrier_name}</p>}
+              </div>
+              <button type="button" onClick={() => setDetail(null)} className="text-ink-400 hover:text-navy-900 text-xl leading-none" aria-label="Close">×</button>
+            </div>
+
+            {detail.cost_cents != null && (
+              <div className="flex items-center justify-between rounded-xl bg-cream-soft px-3 py-2.5">
+                <span className="text-sm text-ink-600">Cost</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-sm font-semibold tabular-nums text-navy-900">{eur(detail.cost_cents)}</span>
+                  {detail.paid_at ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">Paid ✓</span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800">Unpaid</span>
+                  )}
+                </span>
+              </div>
+            )}
+
+            <div>
+              <p className="text-[12px] uppercase tracking-[0.12em] font-medium text-ink-500 mb-1">What was done</p>
+              <p className="text-sm text-navy-900 whitespace-pre-wrap">{detail.note || "No notes recorded for this visit."}</p>
+            </div>
+
+            {editable && detail.cost_cents != null && (
+              <button type="button" disabled={pending}
+                onClick={() => { togglePaid(detail.id, !detail.paid_at); setDetail(null); }}
+                className={`h-10 rounded-xl text-sm font-medium disabled:opacity-50 ${detail.paid_at ? "bg-ink-100 text-ink-700" : "text-white"}`}
+                style={detail.paid_at ? undefined : { background: VISIT_KIND_COLOR.farrier }}>
+                {detail.paid_at ? "Mark unpaid" : "Mark paid"}
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </section>
   );

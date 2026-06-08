@@ -45,6 +45,8 @@ export type CalendarFarrierVisit = {
   farrier_name: string | null;
   notes: string | null;
   status: string;
+  /** What the stable paid the farrier/vet for the whole visit (cents). */
+  expense_cents: number | null;
   horses: FarrierVisitHorse[];
 };
 
