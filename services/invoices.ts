@@ -49,52 +49,137 @@ export type InvoiceDetail = {
 
 export type GeneratePreview = {
   eligibleClients: number;
-  totalLessons:    number;
+  totalItems:      number;
   totalAmount:     number;
 };
 
-/** Same scan as generateMonthlyInvoices but read-only — used to populate
- *  the "Confirm generation" dialog with a preview. */
-export async function previewMonthlyInvoices(periodStart: string, periodEnd: string): Promise<GeneratePreview> {
-  await getSession();
-  const supabase = createSupabaseServerClient();
+/** One un-invoiced, billable line for a client — from a lesson, a boarding
+ *  charge, a misc client charge, or a farrier/vet per-horse cost. */
+type LineDraft = {
+  clientId:           string;
+  description:        string;
+  amount:             number;
+  lesson_id?:         string | null;
+  boarding_charge_id?: string | null;
+  client_charge_id?:  string | null;
+  farrier_visit_id?:  string | null;
+  farrier_horse_id?:  string | null;
+};
 
+/** Gather every billable, unpaid, un-invoiced item in the window across
+ *  lessons + boarding + farrier/vet + misc charges. Each source dedupes
+ *  against invoice_items so nothing is billed twice. RLS scopes to stable. */
+async function collectInvoiceDrafts(periodStart: string, periodEnd: string): Promise<LineDraft[]> {
+  const supabase = createSupabaseServerClient();
+  const startDate = periodStart.slice(0, 10);
+  const endDate = periodEnd.slice(0, 10);
+  const drafts: LineDraft[] = [];
+
+  // 1. Lessons — completed, priced, not already invoiced.
   const { data: lessons } = await supabase
     .from("lessons")
-    .select("id, client_id, price")
-    .gte("starts_at", periodStart)
-    .lte("starts_at", periodEnd)
+    .select("id, client_id, starts_at, price")
+    .gte("starts_at", periodStart).lte("starts_at", periodEnd)
     .eq("status", "completed");
-
-  const ids = (lessons ?? []).map((l) => (l as { id: string }).id);
-  const invoicedSet = new Set<string>();
-  if (ids.length > 0) {
-    const { data: items } = await supabase
-      .from("invoice_items")
-      .select("lesson_id")
-      .in("lesson_id", ids);
-    for (const it of (items ?? []) as Array<{ lesson_id: string }>) invoicedSet.add(it.lesson_id);
+  const lessonRows = (lessons ?? []) as Array<{ id: string; client_id: string; starts_at: string; price: number | null }>;
+  const lessonIds = lessonRows.map((l) => l.id);
+  const invoicedLessons = new Set<string>();
+  if (lessonIds.length) {
+    const { data } = await supabase.from("invoice_items").select("lesson_id").in("lesson_id", lessonIds);
+    for (const it of (data ?? []) as Array<{ lesson_id: string | null }>) if (it.lesson_id) invoicedLessons.add(it.lesson_id);
   }
-
-  const clientTotals = new Map<string, number>();
-  let totalLessons = 0;
-  for (const lRaw of lessons ?? []) {
-    const l = lRaw as { id: string; client_id: string; price: number | null };
-    if (invoicedSet.has(l.id)) continue;
+  for (const l of lessonRows) {
+    if (!l.client_id || invoicedLessons.has(l.id)) continue;
     const p = Number(l.price ?? 0);
-    if (p <= 0) continue;
-    clientTotals.set(l.client_id, (clientTotals.get(l.client_id) ?? 0) + p);
-    totalLessons += 1;
+    if (p <= 0) continue; // package-covered
+    drafts.push({ clientId: l.client_id, description: `Lesson · ${new Date(l.starts_at).toLocaleDateString("en-GB")}`, amount: p, lesson_id: l.id });
   }
 
-  let totalAmount = 0;
-  for (const t of clientTotals.values()) totalAmount += t;
+  // 2. Boarding charges — unpaid, in period (billed to the horse's owner).
+  const { data: boarding } = await supabase
+    .from("horse_boarding_summary")
+    .select("id, owner_client_id, period_label, period_start, amount, paid_amount, payment_status")
+    .gte("period_start", startDate).lte("period_start", endDate);
+  const boardingRows = (boarding ?? []) as Array<any>;
+  const boardingIds = boardingRows.map((b) => b.id);
+  const invoicedBoarding = new Set<string>();
+  if (boardingIds.length) {
+    const { data } = await supabase.from("invoice_items").select("boarding_charge_id").in("boarding_charge_id", boardingIds);
+    for (const it of (data ?? []) as Array<{ boarding_charge_id: string | null }>) if (it.boarding_charge_id) invoicedBoarding.add(it.boarding_charge_id);
+  }
+  for (const b of boardingRows) {
+    if (!b.owner_client_id || b.payment_status === "paid" || invoicedBoarding.has(b.id)) continue;
+    const due = Number(b.amount) - Number(b.paid_amount);
+    if (due <= 0) continue;
+    drafts.push({ clientId: b.owner_client_id, description: `Boarding · ${b.period_label ?? b.period_start}`, amount: due, boarding_charge_id: b.id });
+  }
 
-  return {
-    eligibleClients: clientTotals.size,
-    totalLessons,
-    totalAmount,
-  };
+  // 3. Misc client charges — unpaid, in period.
+  const { data: misc } = await supabase
+    .from("client_charge_summary")
+    .select("id, client_id, kind, custom_label, incurred_on, amount, paid_amount, payment_status")
+    .gte("incurred_on", startDate).lte("incurred_on", endDate);
+  const miscRows = (misc ?? []) as Array<any>;
+  const miscIds = miscRows.map((m) => m.id);
+  const invoicedMisc = new Set<string>();
+  if (miscIds.length) {
+    const { data } = await supabase.from("invoice_items").select("client_charge_id").in("client_charge_id", miscIds);
+    for (const it of (data ?? []) as Array<{ client_charge_id: string | null }>) if (it.client_charge_id) invoicedMisc.add(it.client_charge_id);
+  }
+  for (const m of miscRows) {
+    if (!m.client_id || m.payment_status === "paid" || invoicedMisc.has(m.id)) continue;
+    const due = Number(m.amount) - Number(m.paid_amount);
+    if (due <= 0) continue;
+    const label = m.custom_label || m.kind || "Charge";
+    drafts.push({ clientId: m.client_id, description: `${label} · ${m.incurred_on}`, amount: due, client_charge_id: m.id });
+  }
+
+  // 4. Farrier/vet per-horse costs — unpaid (billed to the horse's owner).
+  const { data: care } = await supabase
+    .from("farrier_visit_horses")
+    .select(`cost_cents, paid_at,
+      horse:horses!farrier_visit_horses_horse_id_fkey ( id, owner_client_id ),
+      visit:farrier_visits!farrier_visit_horses_visit_id_fkey ( id, starts_at, kind, farrier_name )`)
+    .not("cost_cents", "is", null)
+    .is("paid_at", null);
+  const careRows = (care ?? []) as Array<any>;
+  const careVisitIds = Array.from(new Set(careRows.map((r) => r.visit?.id).filter(Boolean)));
+  const invoicedCare = new Set<string>();
+  if (careVisitIds.length) {
+    const { data } = await supabase.from("invoice_items").select("farrier_visit_id, farrier_horse_id").in("farrier_visit_id", careVisitIds);
+    for (const it of (data ?? []) as Array<{ farrier_visit_id: string | null; farrier_horse_id: string | null }>) {
+      if (it.farrier_visit_id && it.farrier_horse_id) invoicedCare.add(`${it.farrier_visit_id}:${it.farrier_horse_id}`);
+    }
+  }
+  for (const r of careRows) {
+    const v = r.visit; const h = r.horse;
+    if (!v || !h || !h.owner_client_id) continue;
+    const d = String(v.starts_at).slice(0, 10);
+    if (d < startDate || d > endDate) continue;
+    if (invoicedCare.has(`${v.id}:${h.id}`)) continue;
+    const amt = Number(r.cost_cents) / 100;
+    if (amt <= 0) continue;
+    const label = v.kind === "vet" ? "Vet" : "Farrier";
+    drafts.push({
+      clientId: h.owner_client_id,
+      description: `${label} · ${new Date(v.starts_at).toLocaleDateString("en-GB")}${v.farrier_name ? ` · ${v.farrier_name}` : ""}`,
+      amount: amt,
+      farrier_visit_id: v.id,
+      farrier_horse_id: h.id,
+    });
+  }
+
+  return drafts;
+}
+
+/** Read-only preview across all billable sources. */
+export async function previewMonthlyInvoices(periodStart: string, periodEnd: string): Promise<GeneratePreview> {
+  await getSession();
+  const drafts = await collectInvoiceDrafts(periodStart, periodEnd);
+  const clients = new Set<string>();
+  let totalAmount = 0;
+  for (const d of drafts) { clients.add(d.clientId); totalAmount += d.amount; }
+  return { eligibleClients: clients.size, totalItems: drafts.length, totalAmount };
 }
 
 export async function getInvoiceDetail(invoiceId: string): Promise<InvoiceDetail | null> {
@@ -171,68 +256,40 @@ export async function listInvoices(opts: { limit?: number } = {}): Promise<Array
   return data as never;
 }
 
-/** Generate invoices for every client with completed-but-unpaid-and-
- *  uninvoiced lessons in [periodStart, periodEnd]. Returns counts. */
+/** Generate invoices for every client with unpaid, un-invoiced items in
+ *  [periodStart, periodEnd] — lessons, boarding, farrier/vet, and misc
+ *  charges all roll into one invoice per client. Returns counts. */
 export async function generateMonthlyInvoices(periodStart: string, periodEnd: string): Promise<GenerateResult> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
 
   const issuer = await getStableIssuer();
   if (!isIssuerReady(issuer)) {
-    return {
-      created: 0,
-      totalAmount: 0,
-      skippedClients: 0,
-      warning: "ISSUER_NOT_READY",
-    };
+    return { created: 0, totalAmount: 0, skippedClients: 0, warning: "ISSUER_NOT_READY" };
   }
 
   const supabase = createSupabaseServerClient();
 
-  // 1. Fetch all completed lessons in window, with their already-invoiced state.
-  const { data: lessons, error: lessonsErr } = await supabase
-    .from("lessons")
-    .select("id, client_id, starts_at, price, status")
-    .gte("starts_at", periodStart)
-    .lte("starts_at", periodEnd)
-    .eq("status", "completed");
-  if (lessonsErr) throw lessonsErr;
-
-  // 2. Find lessons already invoiced (via invoice_items.lesson_id).
-  const lessonIds = (lessons ?? []).map((l) => (l as { id: string }).id);
-  let invoicedSet = new Set<string>();
-  if (lessonIds.length > 0) {
-    const { data: items } = await supabase
-      .from("invoice_items")
-      .select("lesson_id")
-      .in("lesson_id", lessonIds);
-    invoicedSet = new Set(((items ?? []) as Array<{ lesson_id: string }>).map((i) => i.lesson_id));
-  }
-
-  // 3. Group remaining lessons by client.
-  const byClient = new Map<string, Array<{ id: string; starts_at: string; price: number }>>();
-  for (const lRaw of lessons ?? []) {
-    const l = lRaw as { id: string; client_id: string; starts_at: string; price: number };
-    if (invoicedSet.has(l.id)) continue;
-    if (!l.price || Number(l.price) <= 0) continue;  // skip 0-priced (covered by package)
-    const arr = byClient.get(l.client_id) ?? [];
-    arr.push({ id: l.id, starts_at: l.starts_at, price: Number(l.price) });
-    byClient.set(l.client_id, arr);
+  // Gather every billable line across all sources, then group by client.
+  const drafts = await collectInvoiceDrafts(periodStart, periodEnd);
+  const byClient = new Map<string, LineDraft[]>();
+  for (const d of drafts) {
+    const arr = byClient.get(d.clientId) ?? [];
+    arr.push(d);
+    byClient.set(d.clientId, arr);
   }
 
   if (byClient.size === 0) {
     return { created: 0, totalAmount: 0, skippedClients: 0 };
   }
 
-  // 4. For each client, allocate an invoice number + insert invoice + items.
   let created = 0;
   let totalAmount = 0;
 
   for (const [clientId, items] of byClient.entries()) {
-    const subtotal = items.reduce((acc, it) => acc + it.price, 0);
+    const subtotal = items.reduce((acc, it) => acc + it.amount, 0);
     const total    = subtotal; // no VAT unless issuer is registered — Sprint 6 #1b
 
-    // Atomic numbering via RPC.
     const { data: numberRpc, error: rpcErr } = await supabase
       .rpc("next_invoice_number", { p_stable_id: session.stableId });
     if (rpcErr || !numberRpc) continue;
@@ -257,13 +314,17 @@ export async function generateMonthlyInvoices(periodStart: string, periodEnd: st
 
     const invoiceId = (inv as { id: string }).id;
     const itemRows  = items.map((it, idx) => ({
-      invoice_id:  invoiceId,
-      lesson_id:   it.id,
-      description: `Lesson · ${new Date(it.starts_at).toLocaleDateString("en-GB")}`,
-      quantity:    1,
-      unit_price:  it.price,
-      line_total:  it.price,
-      position:    idx,
+      invoice_id:         invoiceId,
+      lesson_id:          it.lesson_id ?? null,
+      boarding_charge_id: it.boarding_charge_id ?? null,
+      client_charge_id:   it.client_charge_id ?? null,
+      farrier_visit_id:   it.farrier_visit_id ?? null,
+      farrier_horse_id:   it.farrier_horse_id ?? null,
+      description:        it.description,
+      quantity:           1,
+      unit_price:         it.amount,
+      line_total:         it.amount,
+      position:           idx,
     }));
     await supabase.from("invoice_items").insert(itemRows);
 

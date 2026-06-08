@@ -45,8 +45,8 @@ export function BulkInvoicePanel({
         <h2 className="text-sm font-semibold text-navy-900">Generate monthly invoices</h2>
       </header>
       <p className="text-[13px] text-ink-500 mb-4">
-        Pick a month. We&apos;ll create one invoice per client containing all of
-        their completed, unpaid, uninvoiced lessons in that period.
+        Pick a month. We&apos;ll create one invoice per client covering everything
+        unpaid in that period — lessons, boarding, farrier &amp; vet, and other charges.
       </p>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -88,7 +88,7 @@ export function BulkInvoicePanel({
           a total of <strong>€{state.result.totalAmount.toFixed(2)}</strong>.
           {state.result.created === 0 && (
             <span className="ml-1 text-ink-600">
-              No new lessons to invoice for that period.
+              Nothing new to invoice for that period.
             </span>
           )}
         </p>
@@ -116,8 +116,8 @@ export function BulkInvoicePanel({
                 <p className="text-xl font-semibold text-ink-900 mt-1 tabular-nums">{preview.eligibleClients}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-[0.12em] text-ink-500 font-semibold">Lessons</p>
-                <p className="text-xl font-semibold text-ink-900 mt-1 tabular-nums">{preview.totalLessons}</p>
+                <p className="text-[10px] uppercase tracking-[0.12em] text-ink-500 font-semibold">Line items</p>
+                <p className="text-xl font-semibold text-ink-900 mt-1 tabular-nums">{preview.totalItems}</p>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-[0.12em] text-ink-500 font-semibold">Total</p>
@@ -126,7 +126,7 @@ export function BulkInvoicePanel({
             </div>
             {preview.eligibleClients === 0 ? (
               <p className="text-[12px] text-ink-500">
-                No lessons match for that period. Nothing will be created.
+                Nothing unpaid matches for that period. Nothing will be created.
               </p>
             ) : (
               <p className="text-[12px] text-ink-500">
