@@ -26,8 +26,13 @@ export default async function CalendarPage({
   const ref = searchParams.date ? new Date(searchParams.date) : new Date();
   const refDate = fmtISODate(ref);
 
-  // ── Month view: read-only 6-week overview, click a day to book ──
-  if (searchParams.view === "month") {
+  // ── Month view is the default landing (no params). Any date-based
+  //    navigation (week prev/next, day clicks) carries ?date and stays in
+  //    week; ?view=week / ?view=month are explicit overrides. ──
+  const showMonth =
+    searchParams.view === "month" || (!searchParams.view && !searchParams.date);
+
+  if (showMonth) {
     const monthFirst = new Date(ref.getFullYear(), ref.getMonth(), 1);
     const gridStart = startOfWeek(monthFirst);
     const gridEnd = addDays(gridStart, 42);
