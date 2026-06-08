@@ -123,6 +123,7 @@ export default async function CalendarPage({
         arenas={arenas ?? []}
         activePackagesByClient={activePackages}
         farrierVisits={farrierVisits ?? []}
+        blocks={blocks ?? []}
         editable
       />
 

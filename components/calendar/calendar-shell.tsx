@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { addDays, fmtISODate } from "@/lib/utils/dates";
 import type { CalendarLesson } from "@/services/lessons";
 import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
+import type { AvailabilityBlock } from "@/services/availability.pure";
 import type { PackageSummaryRow } from "@/services/packages";
 import type { ServiceRow } from "@/services/services";
 import { CreateLessonForm } from "./create-lesson-form";
@@ -52,6 +53,7 @@ export function CalendarShell({
   arenas = [],
   activePackagesByClient = {},
   farrierVisits = [],
+  blocks = [],
   editable = true,
 }: {
   lessons: CalendarLesson[];
@@ -60,6 +62,8 @@ export function CalendarShell({
   /** Farrier/vet care visits rendered as read-only colored chips in the
    *  grid (migration 66/67). Optional — omitted callers see no change. */
   farrierVisits?: CalendarFarrierVisit[];
+  /** Block-out (time off) overlays rendered red in the grid. Optional. */
+  blocks?: AvailabilityBlock[];
   /** Required when editable. Optional for read-only views. */
   clients?: ClientOpt[];
   horses?: HorseOpt[];
@@ -176,6 +180,26 @@ export function CalendarShell({
     }
     return m;
   }, [farrierVisits]);
+
+  // Block-out (time off) grouped by local day key — an all-day block can
+  // span multiple days, so each covered day gets the block.
+  const blocksByDay = useMemo(() => {
+    const m = new Map<string, AvailabilityBlock[]>();
+    for (const b of blocks) {
+      const start = new Date(b.starts_at);
+      const end = new Date(b.ends_at);
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+      while (d <= last) {
+        const k = fmtISODate(d);
+        const arr = m.get(k) ?? [];
+        arr.push(b);
+        m.set(k, arr);
+        d.setDate(d.getDate() + 1);
+      }
+    }
+    return m;
+  }, [blocks]);
 
   /** Drag-and-drop reschedule. The week grid passes a snapped local
    *  start string ("YYYY-MM-DDTHH:mm"); we preserve duration and submit. */
@@ -322,6 +346,7 @@ export function CalendarShell({
             todayKey={todayKey}
             byDay={byDay}
             farrierByDay={farrierByDay}
+            blocksByDay={blocksByDay}
             onLessonClick={handleLessonClick}
             onSlotClick={handleCreateAt}
             onDayHeaderClick={handleExpandDay}
@@ -335,6 +360,7 @@ export function CalendarShell({
             todayKey={todayKey}
             lessons={byDay.get(dayKey) ?? []}
             farrierVisits={farrierByDay.get(dayKey) ?? []}
+            blocks={blocksByDay.get(dayKey) ?? []}
             onLessonClick={handleLessonClick}
             onSlotClick={handleCreateAt}
             onLessonDrop={editable ? handleLessonDrop : undefined}
@@ -363,6 +389,7 @@ export function CalendarShell({
           onSelectDay={setDayKey}
           lessons={byDay.get(dayKey) ?? []}
           farrierVisits={farrierByDay.get(dayKey) ?? []}
+          blocks={blocksByDay.get(dayKey) ?? []}
           onLessonClick={handleLessonClick}
           onCreate={() => {
             // Mobile FAB: open form prefilled to selected day at next

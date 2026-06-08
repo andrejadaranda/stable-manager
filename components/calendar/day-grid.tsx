@@ -12,6 +12,7 @@
 import { useMemo } from "react";
 import type { CalendarLesson } from "@/services/lessons";
 import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
+import type { AvailabilityBlock } from "@/services/availability.pure";
 import {
   HOUR_START,
   HOUR_END,
@@ -27,6 +28,7 @@ export function DayGrid({
   todayKey,
   lessons,
   farrierVisits = [],
+  blocks = [],
   onLessonClick,
   onSlotClick,
   onLessonDrop,
@@ -40,6 +42,8 @@ export function DayGrid({
   lessons: CalendarLesson[];
   /** Read-only farrier/vet chips for this day. Optional. */
   farrierVisits?: CalendarFarrierVisit[];
+  /** Block-out (time off) red overlays for this day. Optional. */
+  blocks?: AvailabilityBlock[];
   onLessonClick: (l: CalendarLesson) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
   onLessonDrop?: (lessonId: string, newStartLocal: string) => void;
@@ -79,6 +83,7 @@ export function DayGrid({
             isToday={isToday}
             layout={layout}
             farrierVisits={farrierVisits}
+            blocks={blocks}
             onLessonClick={onLessonClick}
             onSlotClick={onSlotClick}
             onLessonDrop={onLessonDrop}

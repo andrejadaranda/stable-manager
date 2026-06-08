@@ -27,6 +27,7 @@ import { useMemo, useState } from "react";
 import type { CalendarLesson, LessonPaymentStatus } from "@/services/lessons";
 import type { CalendarFarrierVisit, CareVisitKind } from "@/services/farrierVisits.pure";
 import { VISIT_KIND_COLOR, VISIT_KIND_LABEL } from "@/services/farrierVisits.pure";
+import type { AvailabilityBlock } from "@/services/availability.pure";
 import {
   HOUR_START,
   HOUR_END,
@@ -70,6 +71,7 @@ export function WeekGrid({
   todayKey,
   byDay,
   farrierByDay,
+  blocksByDay,
   onLessonClick,
   onSlotClick,
   onDayHeaderClick,
@@ -83,6 +85,8 @@ export function WeekGrid({
   /** Farrier/vet care visits per day — rendered as read-only colored
    *  chips behind the lesson cards. Optional. */
   farrierByDay?: Map<string, CalendarFarrierVisit[]>;
+  /** Block-out (time off) per day — red overlays. Optional. */
+  blocksByDay?: Map<string, AvailabilityBlock[]>;
   onLessonClick: (l: CalendarLesson) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
   onDayHeaderClick: (key: string) => void;
@@ -163,6 +167,7 @@ export function WeekGrid({
               isToday={isToday}
               layout={layout}
               farrierVisits={farrierByDay?.get(k) ?? []}
+              blocks={blocksByDay?.get(k) ?? []}
               onLessonClick={onLessonClick}
               onSlotClick={onSlotClick}
               onOverflowClick={() => onDayHeaderClick(k)}
@@ -211,6 +216,7 @@ export function DayColumn({
   isToday,
   layout,
   farrierVisits = [],
+  blocks = [],
   onLessonClick,
   onSlotClick,
   onOverflowClick,
@@ -223,6 +229,8 @@ export function DayColumn({
   layout: ReturnType<typeof buildLessonLayout>;
   /** Read-only farrier/vet chips for this day. Optional. */
   farrierVisits?: CalendarFarrierVisit[];
+  /** Red block-out (time-off) overlays for this day. Optional. */
+  blocks?: AvailabilityBlock[];
   onLessonClick: (l: CalendarLesson) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
   onOverflowClick?: () => void;
@@ -328,6 +336,35 @@ export function DayColumn({
 
       {/* Now-line — only on today's column ------------------------- */}
       {isToday && <NowLine />}
+
+      {/* Block-out (time off) — red. All-day fills the column; a time
+          range paints a red band at its slot. Read-only, behind cards. */}
+      {blocks.map((b) => {
+        if (b.all_day) {
+          return (
+            <div key={`block-${b.id}`} data-lesson-card
+              className="absolute inset-x-[2px] top-0 bottom-0 rounded-lg bg-rose-100/55 border border-rose-200 pointer-events-none">
+              <div className="px-2 py-1 text-[11px] font-semibold text-rose-700">Blocked{b.reason ? ` · ${b.reason}` : ""}</div>
+            </div>
+          );
+        }
+        const bs = new Date(b.starts_at);
+        const be = new Date(b.ends_at);
+        const startMin = (bs.getHours() - HOUR_START) * 60 + bs.getMinutes();
+        const durMin = Math.max(15, (be.getTime() - bs.getTime()) / 60000);
+        const top = Math.max(0, Math.min((startMin / 60) * HOUR_HEIGHT, GRID_HEIGHT - 22));
+        const height = Math.max((durMin / 60) * HOUR_HEIGHT, 22);
+        return (
+          <div key={`block-${b.id}`} data-lesson-card
+            title={`Blocked${b.reason ? ` — ${b.reason}` : ""}`}
+            className="absolute left-[2px] right-[2px] rounded-lg bg-rose-100/70 border border-rose-200 border-l-[3px] border-l-rose-500 pointer-events-none overflow-hidden"
+            style={{ top, height }}>
+            <div className="px-2 py-1 text-[11px] font-semibold text-rose-700 leading-tight">
+              {fmtTime(b.starts_at)} blocked{b.reason ? ` · ${b.reason}` : ""}
+            </div>
+          </div>
+        );
+      })}
 
       {/* Farrier/vet care-visit chips — read-only, rendered BEFORE the
           lesson cards so lessons paint on top when overlapping. The

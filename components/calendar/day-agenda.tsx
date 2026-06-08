@@ -20,6 +20,7 @@
 import type { CalendarLesson } from "@/services/lessons";
 import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
 import { VISIT_KIND_COLOR, VISIT_KIND_LABEL } from "@/services/farrierVisits.pure";
+import type { AvailabilityBlock } from "@/services/availability.pure";
 import { fmtTime } from "@/lib/utils/dates";
 import { STATUS_LABEL, STATUS_STYLE, HOUR_START, HOUR_END } from "./grid-utils";
 import { PaymentDot, VISIT_CHIP_STYLE } from "./week-grid";
@@ -103,6 +104,7 @@ export function DayAgenda({
   onSelectDay,
   lessons,
   farrierVisits = [],
+  blocks = [],
   onLessonClick,
   onCreate,
   onSlotCreate,
@@ -116,6 +118,8 @@ export function DayAgenda({
   lessons: CalendarLesson[];
   /** Read-only farrier/vet visit cards for the selected day. Optional. */
   farrierVisits?: CalendarFarrierVisit[];
+  /** Block-out (time off) red cards for the selected day. Optional. */
+  blocks?: AvailabilityBlock[];
   onLessonClick: (l: CalendarLesson) => void;
   onCreate: () => void;
   /** Tapping a free-gap row opens the create form prefilled to that
@@ -171,6 +175,19 @@ export function DayAgenda({
 
       {/* Interleaved lesson + free-gap list -------------------- */}
       <div className="flex flex-col gap-2 pb-24">
+        {/* Block-out (time off) — red, pinned at the top of the day. */}
+        {blocks.map((b) => (
+          <div key={`block-${b.id}`} className="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-rose-500 shrink-0" aria-hidden />
+            <span className="text-[13px] font-semibold text-rose-700">
+              {b.all_day
+                ? "Blocked · all day"
+                : `Blocked ${new Date(b.starts_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}–${new Date(b.ends_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
+              {b.reason ? <span className="font-normal text-rose-600"> · {b.reason}</span> : null}
+            </span>
+          </div>
+        ))}
+
         {/* Farrier/vet care visits — pinned above the lesson flow so
             they never get lost between gap rows. Read-only. */}
         {farrierVisits.map((v) => (
