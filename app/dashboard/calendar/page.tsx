@@ -7,19 +7,51 @@ import { listActivePackagesForStable } from "@/services/packages";
 import { listServices } from "@/services/services";
 import { listArenas } from "@/services/arenas";
 import { getFarrierVisitsForCalendar } from "@/services/farrierVisits";
-import { startOfWeek, addDays } from "@/lib/utils/dates";
+import { startOfWeek, addDays, fmtISODate } from "@/lib/utils/dates";
 import { CalendarShell } from "@/components/calendar/calendar-shell";
+import { MonthView } from "@/components/calendar/month-view";
+import { CalendarViewToggle } from "@/components/calendar/view-toggle";
 import { FarrierPanel } from "@/components/calendar/farrier-panel";
 import { EmptyState } from "@/components/ui";
 
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: { date?: string };
+  searchParams: { date?: string; view?: string };
 }) {
   await requireBusinessAccount("owner", "employee");
 
   const ref = searchParams.date ? new Date(searchParams.date) : new Date();
+  const refDate = fmtISODate(ref);
+
+  // ── Month view: read-only 6-week overview, click a day to book ──
+  if (searchParams.view === "month") {
+    const monthFirst = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    const gridStart = startOfWeek(monthFirst);
+    const gridEnd = addDays(gridStart, 42);
+    const [mLessons, mFarrier] = await Promise.all([
+      getCalendar(gridStart.toISOString(), gridEnd.toISOString()),
+      getFarrierVisitsForCalendar(gridStart.toISOString(), gridEnd.toISOString()).catch(() => []),
+    ]);
+    const prev = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
+    const next = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+    return (
+      <div className="flex flex-col gap-5">
+        <CalendarViewToggle view="month" weekDate={refDate} monthDate={refDate} basePath="/dashboard/calendar" />
+        <MonthView
+          lessons={mLessons}
+          farrierVisits={mFarrier ?? []}
+          gridStart={gridStart}
+          monthIndex={ref.getMonth()}
+          monthLabel={monthFirst.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+          basePath="/dashboard/calendar"
+          prevDate={fmtISODate(prev)}
+          nextDate={fmtISODate(next)}
+        />
+      </div>
+    );
+  }
+
   const start = startOfWeek(ref);
   const end = addDays(start, 7);
 
@@ -68,6 +100,7 @@ export default async function CalendarPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <CalendarViewToggle view="week" weekDate={refDate} monthDate={refDate} basePath="/dashboard/calendar" />
       <CalendarShell
         lessons={lessons}
         weekStart={start}
