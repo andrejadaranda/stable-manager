@@ -33,8 +33,9 @@ import { listGuestContributorTokens } from "@/services/guestContributors";
 import { BoardingTab } from "@/components/horses/BoardingTab";
 import { PhotoGallery } from "@/components/horses/PhotoGallery";
 import { ScheduleRail } from "@/components/horses/ScheduleRail";
-import { HorseCareSection } from "@/components/horses/HorseCareSection";
 import { getCareVisitsForHorse } from "@/services/farrierVisits";
+import { getHorseOutstanding } from "@/services/horseBalance";
+import { HorseOutstandingCard } from "@/components/horses/HorseOutstandingCard";
 import { ComingSoonTab } from "@/components/horses/ComingSoonTab";
 import { listChargesForHorse } from "@/services/boarding";
 import { listBoardingRates } from "@/services/boardingRates";
@@ -77,6 +78,13 @@ export default async function HorseDetailPage({
   // Fetch tab-specific data only for the active tab. Schedule rail is
   // always loaded because it's visible on every tab on desktop.
   const upcomingLessons = await getHorseUpcomingLessons(params.id, 14);
+
+  const canManageCare = session.role === "owner" || session.role === "employee";
+  // Outstanding total (boarding + farrier/vet + other) — shown above the
+  // tabs so the debt is visible the moment you open the horse.
+  const outstanding = await getHorseOutstanding(params.id).catch(() => ({ total_cents: 0, lines: [] }));
+  // Farrier/vet visits feed the Health tab (single source of truth).
+  const careVisits = await getCareVisitsForHorse(params.id).catch(() => []);
 
   let tabContent: React.ReactNode = null;
   if (tab === "overview") {
@@ -150,7 +158,7 @@ export default async function HorseDetailPage({
     const appOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.longrein.eu";
     tabContent = (
       <div className="flex flex-col gap-4">
-        <HealthTab horseId={params.id} summary={summary} records={records} />
+        <HealthTab horseId={params.id} summary={summary} records={records} careVisits={careVisits} careEditable={canManageCare} />
         {canManageGuests && (
           <GuestContributorsPanel
             horseId={params.id}
@@ -178,9 +186,6 @@ export default async function HorseDetailPage({
     );
   }
 
-  const careVisits = await getCareVisitsForHorse(params.id).catch(() => []);
-  const canManageCare = session.role === "owner" || session.role === "employee";
-
   return (
     <div className="flex flex-col gap-5">
       <Link
@@ -192,14 +197,13 @@ export default async function HorseDetailPage({
 
       <HorseProfileHero horse={horse} />
 
+      {outstanding.total_cents > 0 && <HorseOutstandingCard outstanding={outstanding} />}
+
       <HorseProfileTabs activeTab={tab} horseId={params.id} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-5">
         <div className="min-w-0">{tabContent}</div>
-        <div className="flex flex-col gap-5">
-          <ScheduleRail horseId={params.id} lessons={upcomingLessons} />
-          <HorseCareSection visits={careVisits} horseId={params.id} editable={canManageCare} />
-        </div>
+        <ScheduleRail horseId={params.id} lessons={upcomingLessons} />
       </div>
     </div>
   );

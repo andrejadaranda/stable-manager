@@ -7,8 +7,10 @@ import type {
   HealthSummary,
   HealthSummaryStatus,
 } from "@/services/horseHealth";
+import type { HorseCareVisit } from "@/services/farrierVisits.pure";
 import { AddHealthRecordButton } from "./AddHealthRecordForm";
 import { ResolveInjuryButton, DeleteHealthRecordButton } from "./HealthRecordActions";
+import { HorseCareSection } from "./HorseCareSection";
 
 const KIND_LABEL = {
   vaccination: "Vaccinations",
@@ -38,10 +40,16 @@ export function HealthTab({
   horseId,
   summary,
   records,
+  careVisits = [],
+  careEditable = false,
 }: {
   horseId: string;
   summary: HealthSummary;
   records: HealthRecord[];
+  /** Scheduled farrier/vet visits (the new system) — the single source of
+   *  truth for farrier/vet on the profile. */
+  careVisits?: HorseCareVisit[];
+  careEditable?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -54,11 +62,12 @@ export function HealthTab({
         />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <StatusCard label="Vaccinations" data={summary.vaccination} />
-        <StatusCard label="Farrier"      data={summary.farrier} />
-        <StatusCard label="Vet"          data={summary.vet} />
-      </div>
+      {/* Vaccinations stays from the manual health log. Farrier & vet are
+          driven by the scheduled-visit system below (cost + paid + notes),
+          so we no longer show the empty "No record yet" farrier/vet cards. */}
+      <StatusCard label="Vaccinations" data={summary.vaccination} />
+
+      <HorseCareSection visits={careVisits} horseId={horseId} editable={careEditable} />
 
       <section className="card-elevated overflow-hidden">
         <header className="flex items-center justify-between px-5 py-3 border-b border-ink-100">
