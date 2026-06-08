@@ -134,40 +134,9 @@ async function collectInvoiceDrafts(periodStart: string, periodEnd: string): Pro
     drafts.push({ clientId: m.client_id, description: `${label} · ${m.incurred_on}`, amount: due, client_charge_id: m.id });
   }
 
-  // 4. Farrier/vet per-horse costs — unpaid (billed to the horse's owner).
-  const { data: care } = await supabase
-    .from("farrier_visit_horses")
-    .select(`cost_cents, paid_at,
-      horse:horses!farrier_visit_horses_horse_id_fkey ( id, owner_client_id ),
-      visit:farrier_visits!farrier_visit_horses_visit_id_fkey ( id, starts_at, kind, farrier_name )`)
-    .not("cost_cents", "is", null)
-    .is("paid_at", null);
-  const careRows = (care ?? []) as Array<any>;
-  const careVisitIds = Array.from(new Set(careRows.map((r) => r.visit?.id).filter(Boolean)));
-  const invoicedCare = new Set<string>();
-  if (careVisitIds.length) {
-    const { data } = await supabase.from("invoice_items").select("farrier_visit_id, farrier_horse_id").in("farrier_visit_id", careVisitIds);
-    for (const it of (data ?? []) as Array<{ farrier_visit_id: string | null; farrier_horse_id: string | null }>) {
-      if (it.farrier_visit_id && it.farrier_horse_id) invoicedCare.add(`${it.farrier_visit_id}:${it.farrier_horse_id}`);
-    }
-  }
-  for (const r of careRows) {
-    const v = r.visit; const h = r.horse;
-    if (!v || !h || !h.owner_client_id) continue;
-    const d = String(v.starts_at).slice(0, 10);
-    if (d < startDate || d > endDate) continue;
-    if (invoicedCare.has(`${v.id}:${h.id}`)) continue;
-    const amt = Number(r.cost_cents) / 100;
-    if (amt <= 0) continue;
-    const label = v.kind === "vet" ? "Vet" : "Farrier";
-    drafts.push({
-      clientId: h.owner_client_id,
-      description: `${label} · ${new Date(v.starts_at).toLocaleDateString("en-GB")}${v.farrier_name ? ` · ${v.farrier_name}` : ""}`,
-      amount: amt,
-      farrier_visit_id: v.id,
-      farrier_horse_id: h.id,
-    });
-  }
+  // Farrier/vet per-horse costs now live in the client-charge ledger
+  // (kinds farrier / vet_copay), so they are already collected by step 3
+  // above — no separate source needed (and no risk of double-billing).
 
   return drafts;
 }

@@ -5,6 +5,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
+import { markClientChargePaid, markClientChargeUnpaid } from "./clientCharges";
 import type {
   CalendarFarrierVisit,
   CareVisitKind,
@@ -121,6 +122,63 @@ async function syncVisitExpense(
   return (data as any).id as string;
 }
 
+// Sync the owner-facing per-horse cost into the client-charge ledger (the
+// single source of truth for what the owner owes). Returns the linked
+// charge id to store on the junction row (or null when there's no owner /
+// no cost). Billed to the horse's owner_client_id.
+async function upsertHorseCharge(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  opts: {
+    stableId: string;
+    horseId: string;
+    kind: CareVisitKind;
+    costCents: number | null;
+    note: string | null;
+    startsISO: string;
+    existingChargeId: string | null;
+  },
+): Promise<string | null> {
+  const { data: horse } = await supabase
+    .from("horses")
+    .select("owner_client_id")
+    .eq("id", opts.horseId)
+    .maybeSingle();
+  const ownerId = (horse as any)?.owner_client_id ?? null;
+  const cents = opts.costCents;
+
+  // No owner (stable-owned horse) or no cost → remove any existing charge.
+  if (!ownerId || !cents || cents <= 0) {
+    if (opts.existingChargeId) {
+      await supabase.from("client_charges").delete().eq("id", opts.existingChargeId);
+    }
+    return null;
+  }
+
+  const chargeKind = opts.kind === "vet" ? "vet_copay" : "farrier";
+  const label = `${opts.kind === "vet" ? "Vet" : "Farrier"} · ${new Date(opts.startsISO).toLocaleDateString("en-GB")}`;
+  const payload = {
+    client_id:    ownerId,
+    horse_id:     opts.horseId,
+    kind:         chargeKind,
+    custom_label: label,
+    amount:       cents / 100,
+    incurred_on:  opts.startsISO.slice(0, 10),
+    notes:        opts.note,
+  };
+
+  if (opts.existingChargeId) {
+    await supabase.from("client_charges").update(payload).eq("id", opts.existingChargeId);
+    return opts.existingChargeId;
+  }
+  const { data, error } = await supabase
+    .from("client_charges")
+    .insert({ ...payload, stable_id: opts.stableId })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return (data as any).id as string;
+}
+
 function dedupeHorses(horses: FarrierHorseInput[]): FarrierHorseInput[] {
   const seen = new Set<string>();
   const out: FarrierHorseInput[] = [];
@@ -167,12 +225,26 @@ export async function createFarrierVisit(input: {
   const visitId = (data as any).id as string;
   const horses = dedupeHorses(input.horses);
   if (horses.length > 0) {
-    const rows = horses.map((h) => ({
-      visit_id: visitId,
-      horse_id: h.horse_id,
-      cost_cents: h.cost_cents ?? null,
-      note: h.note?.toString().trim() || null,
-    }));
+    const rows = [];
+    for (const h of horses) {
+      const note = h.note?.toString().trim() || null;
+      const chargeId = await upsertHorseCharge(supabase, {
+        stableId: session.stableId,
+        horseId: h.horse_id,
+        kind,
+        costCents: h.cost_cents ?? null,
+        note,
+        startsISO: input.starts_at,
+        existingChargeId: null,
+      });
+      rows.push({
+        visit_id: visitId,
+        horse_id: h.horse_id,
+        cost_cents: h.cost_cents ?? null,
+        note,
+        client_charge_id: chargeId,
+      });
+    }
     const { error: jerr } = await supabase.from("farrier_visit_horses").insert(rows);
     if (jerr) throw jerr;
   }
@@ -249,13 +321,13 @@ export async function updateFarrierVisit(
     .update({ expense_cents: input.expense_cents ?? null, expense_id: expenseId })
     .eq("id", id);
 
-  // Preserve paid_at across the rebuild.
+  // Preserve paid_at + the linked charge across the rebuild.
   const { data: existing } = await supabase
     .from("farrier_visit_horses")
-    .select("horse_id, paid_at")
+    .select("horse_id, paid_at, client_charge_id")
     .eq("visit_id", id);
-  const paidByHorse = new Map<string, string | null>(
-    (existing ?? []).map((r: any) => [r.horse_id, r.paid_at ?? null]),
+  const priorByHorse = new Map<string, { paid_at: string | null; charge_id: string | null }>(
+    (existing ?? []).map((r: any) => [r.horse_id, { paid_at: r.paid_at ?? null, charge_id: r.client_charge_id ?? null }]),
   );
 
   const { error: derr } = await supabase
@@ -265,20 +337,45 @@ export async function updateFarrierVisit(
   if (derr) throw derr;
 
   const horses = dedupeHorses(input.horses);
+  const keep = new Set(horses.map((h) => h.horse_id));
+  // Drop charges for horses removed from this visit.
+  for (const [hid, prior] of priorByHorse.entries()) {
+    if (!keep.has(hid) && prior.charge_id) {
+      await supabase.from("client_charges").delete().eq("id", prior.charge_id);
+    }
+  }
+
   if (horses.length > 0) {
-    const rows = horses.map((h) => ({
-      visit_id: id,
-      horse_id: h.horse_id,
-      cost_cents: h.cost_cents ?? null,
-      note: h.note?.toString().trim() || null,
-      paid_at: paidByHorse.get(h.horse_id) ?? null,
-    }));
+    const rows = [];
+    for (const h of horses) {
+      const note = h.note?.toString().trim() || null;
+      const prior = priorByHorse.get(h.horse_id);
+      const chargeId = await upsertHorseCharge(supabase, {
+        stableId: session.stableId,
+        horseId: h.horse_id,
+        kind,
+        costCents: h.cost_cents ?? null,
+        note,
+        startsISO: input.starts_at,
+        existingChargeId: prior?.charge_id ?? null,
+      });
+      rows.push({
+        visit_id: id,
+        horse_id: h.horse_id,
+        cost_cents: h.cost_cents ?? null,
+        note,
+        paid_at: prior?.paid_at ?? null,
+        client_charge_id: chargeId,
+      });
+    }
     const { error: ierr } = await supabase.from("farrier_visit_horses").insert(rows);
     if (ierr) throw ierr;
   }
 }
 
-/** Toggle the paid flag for one horse in one visit. Staff only. */
+/** Mark one horse's care cost paid/unpaid. Routes through the linked
+ *  client charge, so paying creates a real payment (moving Collected /
+ *  dashboard) and the owner's "Other charges" ledger stays in sync. */
 export async function setFarrierHorsePaid(
   visitId: string,
   horseId: string,
@@ -287,12 +384,25 @@ export async function setFarrierHorsePaid(
   const session = await getSession();
   requireRole(session, "owner", "employee");
   const supabase = createSupabaseServerClient();
-  const { error } = await supabase.rpc("set_farrier_horse_paid", {
-    p_visit_id: visitId,
-    p_horse_id: horseId,
-    p_paid: paid,
-  });
-  if (error) throw error;
+
+  const { data: row } = await supabase
+    .from("farrier_visit_horses")
+    .select("client_charge_id")
+    .eq("visit_id", visitId)
+    .eq("horse_id", horseId)
+    .maybeSingle();
+  const chargeId = (row as any)?.client_charge_id ?? null;
+  if (!chargeId) return; // no cost recorded → nothing to settle
+
+  if (paid) await markClientChargePaid(chargeId);
+  else await markClientChargeUnpaid(chargeId);
+
+  // Keep the junction's display flag in step with the charge.
+  await supabase
+    .from("farrier_visit_horses")
+    .update({ paid_at: paid ? new Date().toISOString() : null })
+    .eq("visit_id", visitId)
+    .eq("horse_id", horseId);
 }
 
 /** Care visits for a single horse — for the horse dashboard. RLS lets
@@ -306,7 +416,7 @@ export async function getCareVisitsForHorse(
     .from("farrier_visit_horses")
     .select(
       `
-      cost_cents, note, paid_at,
+      cost_cents, note, paid_at, client_charge_id,
       visit:farrier_visits!farrier_visit_horses_visit_id_fkey (
         id, kind, starts_at, farrier_name
       )
@@ -315,17 +425,37 @@ export async function getCareVisitsForHorse(
     .eq("horse_id", horseId);
   if (error) throw error;
 
+  // Paid status is canonical on the linked charge — fetch it so the card
+  // reflects payments made anywhere (farrier section or Other charges).
+  const chargeIds = (data ?? [])
+    .map((r: any) => r.client_charge_id)
+    .filter((x: any): x is string => Boolean(x));
+  const paidCharges = new Set<string>();
+  if (chargeIds.length) {
+    const { data: charges } = await supabase
+      .from("client_charge_summary")
+      .select("id, payment_status")
+      .in("id", chargeIds);
+    for (const c of (charges ?? []) as Array<{ id: string; payment_status: string }>) {
+      if (c.payment_status === "paid") paidCharges.add(c.id);
+    }
+  }
+
   return (data ?? [])
     .filter((r: any) => r.visit)
-    .map((r: any): HorseCareVisit => ({
-      id: r.visit.id,
-      kind: r.visit.kind === "vet" ? "vet" : "farrier",
-      starts_at: r.visit.starts_at,
-      farrier_name: r.visit.farrier_name ?? null,
-      cost_cents: r.cost_cents ?? null,
-      note: r.note ?? null,
-      paid_at: r.paid_at ?? null,
-    }))
+    .map((r: any): HorseCareVisit => {
+      const charged = Boolean(r.client_charge_id);
+      const paid = charged ? paidCharges.has(r.client_charge_id) : Boolean(r.paid_at);
+      return {
+        id: r.visit.id,
+        kind: r.visit.kind === "vet" ? "vet" : "farrier",
+        starts_at: r.visit.starts_at,
+        farrier_name: r.visit.farrier_name ?? null,
+        cost_cents: r.cost_cents ?? null,
+        note: r.note ?? null,
+        paid_at: paid ? (r.paid_at ?? r.visit.starts_at) : null,
+      };
+    })
     .sort((a: HorseCareVisit, b: HorseCareVisit) => b.starts_at.localeCompare(a.starts_at));
 }
 
