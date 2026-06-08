@@ -19,6 +19,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EditMyHorseButton } from "@/components/myHorses/edit-my-horse-dialog";
 import { NewCareRequestButton } from "@/components/careRequests/new-care-request-button";
 import { RequestLessonButton } from "@/components/lessonRequests/request-lesson-button";
+import { HorseCareSection } from "@/components/horses/HorseCareSection";
+import { getCareVisitsForHorse } from "@/services/farrierVisits";
 import {
   listCareRequestsForHorse,
   CARE_TYPE_LABEL,
@@ -91,6 +93,9 @@ export default async function MyHorseDetailPage({
 
   // Care requests — only the owner-client sees & creates these.
   const careRequests = isOwner ? await listCareRequestsForHorse(h.id) : [];
+
+  // Farrier/vet visits + costs — owner sees their own horse's debts/notes.
+  const careVisits = isOwner ? await getCareVisitsForHorse(h.id).catch(() => []) : [];
 
   const initial = (h.name?.[0] ?? "?").toUpperCase();
   const age = h.date_of_birth ? ageYears(h.date_of_birth) : null;
@@ -305,6 +310,10 @@ export default async function MyHorseDetailPage({
             </ul>
           )}
         </section>
+      )}
+
+      {isOwner && (
+        <HorseCareSection visits={careVisits} horseId={h.id} editable={false} />
       )}
 
       <section className="bg-white rounded-2xl shadow-soft p-5">

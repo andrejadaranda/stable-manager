@@ -7,7 +7,34 @@
 
 export type CareVisitKind = "farrier" | "vet";
 
-export type FarrierVisitHorse = { id: string; name: string };
+export type FarrierVisitHorse = {
+  id: string;
+  name: string;
+  /** What this horse's owner owes for the work on this horse (cents). */
+  cost_cents: number | null;
+  /** What the farrier/vet said about this specific horse. */
+  note: string | null;
+  /** ISO timestamp when this horse's charge was marked paid; null = unpaid. */
+  paid_at: string | null;
+};
+
+/** Per-horse input when creating/editing a visit. */
+export type FarrierHorseInput = {
+  horse_id: string;
+  cost_cents?: number | null;
+  note?: string | null;
+};
+
+/** One care visit as seen on a single horse's dashboard. */
+export type HorseCareVisit = {
+  id: string;
+  kind: CareVisitKind;
+  starts_at: string;
+  farrier_name: string | null;
+  cost_cents: number | null;
+  note: string | null;
+  paid_at: string | null;
+};
 
 export type CalendarFarrierVisit = {
   id: string;

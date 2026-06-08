@@ -33,6 +33,8 @@ import { listGuestContributorTokens } from "@/services/guestContributors";
 import { BoardingTab } from "@/components/horses/BoardingTab";
 import { PhotoGallery } from "@/components/horses/PhotoGallery";
 import { ScheduleRail } from "@/components/horses/ScheduleRail";
+import { HorseCareSection } from "@/components/horses/HorseCareSection";
+import { getCareVisitsForHorse } from "@/services/farrierVisits";
 import { ComingSoonTab } from "@/components/horses/ComingSoonTab";
 import { listChargesForHorse } from "@/services/boarding";
 import { listBoardingRates } from "@/services/boardingRates";
@@ -176,6 +178,9 @@ export default async function HorseDetailPage({
     );
   }
 
+  const careVisits = await getCareVisitsForHorse(params.id).catch(() => []);
+  const canManageCare = session.role === "owner" || session.role === "employee";
+
   return (
     <div className="flex flex-col gap-5">
       <Link
@@ -191,7 +196,10 @@ export default async function HorseDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-5">
         <div className="min-w-0">{tabContent}</div>
-        <ScheduleRail horseId={params.id} lessons={upcomingLessons} />
+        <div className="flex flex-col gap-5">
+          <ScheduleRail horseId={params.id} lessons={upcomingLessons} />
+          <HorseCareSection visits={careVisits} horseId={params.id} editable={canManageCare} />
+        </div>
       </div>
     </div>
   );
