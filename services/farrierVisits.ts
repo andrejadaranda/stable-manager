@@ -155,7 +155,10 @@ async function upsertHorseCharge(
   }
 
   const chargeKind = opts.kind === "vet" ? "vet_copay" : "farrier";
-  const label = `${opts.kind === "vet" ? "Vet" : "Farrier"} · ${new Date(opts.startsISO).toLocaleDateString("en-GB")}`;
+  // It's a reimbursement of what the stable paid the farrier/vet on the
+  // owner's behalf — not a sold service. The label makes that explicit on
+  // the invoice. (Date comes from incurred_on.)
+  const label = `${opts.kind === "vet" ? "Vet" : "Farrier"} reimbursement`;
   const payload = {
     client_id:    ownerId,
     horse_id:     opts.horseId,
@@ -249,21 +252,26 @@ export async function createFarrierVisit(input: {
     if (jerr) throw jerr;
   }
 
+  // Money out: what the stable pays the farrier = the total of every
+  // horse's cost (the owner isn't usually there, so the stable pays the
+  // whole bill). Client-owned horses are reimbursed via their charge;
+  // the stable's own horses are a pure expense. Manual "Paid to farrier"
+  // overrides (e.g. a call-out fee on top).
+  const horseCostSum = horses.reduce((s, h) => s + (h.cost_cents ?? 0), 0);
+  const effectiveExpense =
+    input.expense_cents && input.expense_cents > 0 ? input.expense_cents : horseCostSum > 0 ? horseCostSum : null;
+
   const expenseId = await syncVisitExpense(supabase, {
     role: session.role,
     stableId: session.stableId,
     userId: session.userId,
     existingExpenseId: null,
-    expenseCents: input.expense_cents ?? null,
+    expenseCents: effectiveExpense,
     kind,
     farrierName,
     startsISO: input.starts_at,
   });
-  if (expenseId) {
-    await supabase.from("farrier_visits").update({ expense_cents: input.expense_cents ?? null, expense_id: expenseId }).eq("id", visitId);
-  } else if (input.expense_cents) {
-    await supabase.from("farrier_visits").update({ expense_cents: input.expense_cents }).eq("id", visitId);
-  }
+  await supabase.from("farrier_visits").update({ expense_cents: effectiveExpense, expense_id: expenseId }).eq("id", visitId);
   return { id: visitId };
 }
 
@@ -306,19 +314,24 @@ export async function updateFarrierVisit(
     .eq("id", id);
   if (uerr) throw uerr;
 
+  // Money out = total of all horse costs (manual "Paid to farrier" wins).
+  const horseCostSumU = dedupeHorses(input.horses).reduce((s, h) => s + (h.cost_cents ?? 0), 0);
+  const effectiveExpenseU =
+    input.expense_cents && input.expense_cents > 0 ? input.expense_cents : horseCostSumU > 0 ? horseCostSumU : null;
+
   const expenseId = await syncVisitExpense(supabase, {
     role: session.role,
     stableId: session.stableId,
     userId: session.userId,
     existingExpenseId,
-    expenseCents: input.expense_cents ?? null,
+    expenseCents: effectiveExpenseU,
     kind,
     farrierName,
     startsISO: input.starts_at,
   });
   await supabase
     .from("farrier_visits")
-    .update({ expense_cents: input.expense_cents ?? null, expense_id: expenseId })
+    .update({ expense_cents: effectiveExpenseU, expense_id: expenseId })
     .eq("id", id);
 
   // Preserve paid_at + the linked charge across the rebuild.

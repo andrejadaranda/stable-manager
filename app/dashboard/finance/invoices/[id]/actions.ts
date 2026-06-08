@@ -1,10 +1,28 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { setInvoiceStatus } from "@/services/invoices";
+import { setInvoiceStatus, emailInvoiceToClient } from "@/services/invoices";
 
 export type InvoiceStatusState = { error: string | null; success: boolean };
 const initial: InvoiceStatusState = { error: null, success: false };
+
+export type EmailInvoiceState = { error: string | null; sentTo: string | null };
+
+export async function emailInvoiceAction(
+  _p: EmailInvoiceState,
+  fd: FormData,
+): Promise<EmailInvoiceState> {
+  const id = String(fd.get("invoice_id") ?? "");
+  if (!id) return { error: "Missing invoice id.", sentTo: null };
+  try {
+    const { sentTo } = await emailInvoiceToClient(id);
+    return { error: null, sentTo };
+  } catch (err) {
+    const m = (err as Error)?.message ?? "";
+    if (m === "NO_CLIENT_EMAIL") return { error: "This client has no email on file.", sentTo: null };
+    return { error: `Could not send: ${m || "unknown error"}.`, sentTo: null };
+  }
+}
 
 async function changeStatus(
   invoiceId: string,

@@ -36,6 +36,7 @@ export default async function InvoiceDetailPage({
         <InvoiceActions
           invoiceId={detail.invoice.id}
           status={detail.invoice.status}
+          clientEmail={detail.invoice.client?.email ?? null}
         />
       </div>
 

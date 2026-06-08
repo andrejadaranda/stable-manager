@@ -5,6 +5,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
 import { getStableIssuer, isIssuerReady, type StableIssuer } from "@/services/stableIssuer";
+import { sendEmail, emailFooter } from "@/lib/email/send";
+
+const esc = (s: string) =>
+  String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
 
 export type InvoiceRow = {
   id:           string;
@@ -173,6 +177,58 @@ export async function getInvoiceDetail(invoiceId: string): Promise<InvoiceDetail
     items:   (itemsRes.data ?? []) as InvoiceItemRow[],
     issuer,
   };
+}
+
+/** Email a branded copy of the invoice to the client's email on file.
+ *  Staff only. Throws NO_CLIENT_EMAIL when there's no address. */
+export async function emailInvoiceToClient(invoiceId: string): Promise<{ sentTo: string }> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+
+  const detail = await getInvoiceDetail(invoiceId);
+  if (!detail) throw new Error("INVOICE_NOT_FOUND");
+  const { invoice, items, issuer } = detail;
+  const to = invoice.client?.email?.trim();
+  if (!to) throw new Error("NO_CLIENT_EMAIL");
+
+  const eur = (n: number | string) => `€${Number(n).toFixed(2)}`;
+  const fromName = issuer.legal_name ?? "Your stable";
+
+  const rows = items
+    .map(
+      (it) =>
+        `<tr><td style="padding:8px 0;border-bottom:1px solid #ECE7DD;color:#26303B">${esc(it.description)}</td>
+         <td align="right" style="padding:8px 0;border-bottom:1px solid #ECE7DD;color:#26303B;white-space:nowrap">${eur(it.line_total)}</td></tr>`,
+    )
+    .join("");
+
+  const html = `
+  <div style="font-family:Georgia,'Times New Roman',serif;max-width:560px;margin:0 auto;color:#26303B">
+    <p style="font-size:20px;margin:0 0 4px"><strong>Longrein.</strong></p>
+    <p style="font-size:13px;color:#6B675E;margin:0 0 20px">Invoice from ${esc(fromName)}</p>
+    <h1 style="font-size:18px;margin:0 0 2px">Invoice ${esc(invoice.number)}</h1>
+    <p style="font-size:13px;color:#6B675E;margin:0 0 18px">Issued ${new Date(invoice.issued_at).toLocaleDateString("en-GB")}${invoice.due_at ? ` · Due ${new Date(invoice.due_at).toLocaleDateString("en-GB")}` : ""}</p>
+    <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px">
+      ${rows}
+      <tr><td style="padding:12px 0 0;font-weight:bold">Total</td>
+          <td align="right" style="padding:12px 0 0;font-weight:bold;font-size:16px">${eur(invoice.total)}</td></tr>
+    </table>
+    <div style="margin-top:22px;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;color:#6B675E;line-height:1.6">
+      <strong style="color:#26303B">${esc(fromName)}</strong><br/>
+      ${issuer.business_code ? `Reg. ${esc(issuer.business_code)}<br/>` : ""}
+      ${issuer.vat_code ? `VAT ${esc(issuer.vat_code)}<br/>` : ""}
+      ${issuer.business_address ? `${esc(issuer.business_address)}<br/>` : ""}
+      ${issuer.iban ? `IBAN ${esc(issuer.iban)}` : ""}
+    </div>
+    ${emailFooter()}
+  </div>`;
+
+  await sendEmail({
+    to,
+    subject: `Invoice ${invoice.number} from ${fromName}`,
+    html,
+  });
+  return { sentTo: to };
 }
 
 export async function setInvoiceStatus(

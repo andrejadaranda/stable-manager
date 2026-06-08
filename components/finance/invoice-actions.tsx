@@ -5,24 +5,30 @@ import {
   markPaidAction,
   markUnpaidAction,
   cancelInvoiceAction,
+  emailInvoiceAction,
   type InvoiceStatusState,
+  type EmailInvoiceState,
 } from "@/app/dashboard/finance/invoices/[id]/actions";
 
 const initial: InvoiceStatusState = { error: null, success: false };
+const emailInitial: EmailInvoiceState = { error: null, sentTo: null };
 
 export function InvoiceActions({
   invoiceId,
   status,
+  clientEmail,
 }: {
   invoiceId: string;
   status: "issued" | "paid" | "overdue" | "cancelled";
+  clientEmail?: string | null;
 }) {
   const [, paid]      = useFormState<InvoiceStatusState, FormData>(markPaidAction,      initial);
   const [, unpaid]    = useFormState<InvoiceStatusState, FormData>(markUnpaidAction,    initial);
   const [, cancelled] = useFormState<InvoiceStatusState, FormData>(cancelInvoiceAction, initial);
+  const [emailState, emailDispatch] = useFormState<EmailInvoiceState, FormData>(emailInvoiceAction, emailInitial);
 
   return (
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex gap-2 flex-wrap items-center">
       <button
         type="button"
         onClick={() => window.print()}
@@ -30,6 +36,19 @@ export function InvoiceActions({
       >
         Print / PDF
       </button>
+
+      {clientEmail && (
+        <form action={emailDispatch}>
+          <input type="hidden" name="invoice_id" value={invoiceId} />
+          <EmailButton />
+        </form>
+      )}
+      {emailState.sentTo && (
+        <span className="text-[12px] text-emerald-700">Sent to {emailState.sentTo} ✓</span>
+      )}
+      {emailState.error && (
+        <span className="text-[12px] text-rose-700">{emailState.error}</span>
+      )}
 
       {status === "issued" && (
         <form action={paid}>
@@ -50,6 +69,19 @@ export function InvoiceActions({
         </form>
       )}
     </div>
+  );
+}
+
+function EmailButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="h-9 px-3 rounded-lg text-[12px] font-medium bg-navy-50 text-navy-800 hover:bg-navy-100 disabled:opacity-50"
+    >
+      {pending ? "Sending…" : "Email to client"}
+    </button>
   );
 }
 
