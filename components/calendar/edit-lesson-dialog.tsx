@@ -14,8 +14,10 @@ import {
   deleteLessonAction,
   markLessonPaidAction,
   markLessonUnpaidAction,
+  fetchLessonChangesAction,
   type UpdateLessonState,
 } from "@/app/dashboard/calendar/actions";
+import type { LessonChange } from "@/services/lessons";
 import { useFocusTrap } from "@/lib/utils/useFocusTrap";
 
 const updateLessonInitialState: UpdateLessonState = { error: null, success: false };
@@ -77,6 +79,14 @@ export function EditLessonDialog({
   useEffect(() => {
     if (deleteState.success) onClose();
   }, [deleteState.success, onClose]);
+
+  // Change history — load on open, refresh after an edit/cancel.
+  const [changes, setChanges] = useState<LessonChange[]>([]);
+  useEffect(() => {
+    let active = true;
+    fetchLessonChangesAction(lesson.id).then((c) => { if (active) setChanges(c); });
+    return () => { active = false; };
+  }, [lesson.id, editState.success, cancelState.success]);
 
   const [status,      setStatus]      = useState<Status>(lesson.status);
   const [startsLocal, setStartsLocal] = useState<string>(toLocalInput(lesson.starts_at));
@@ -465,6 +475,22 @@ export function EditLessonDialog({
           {/* Quick-cancel rendered inside the scroll area so it stays
               accessible on small phones. Submitting it is a separate
               form via formAction below — kept below the field stack. */}
+          {changes.length > 0 && (
+            <div className="mt-1 pt-3 border-t border-ink-100">
+              <p className="text-[11px] uppercase tracking-[0.12em] text-ink-500 font-semibold mb-1.5">Change history</p>
+              <ul className="flex flex-col gap-1">
+                {changes.map((c) => (
+                  <li key={c.id} className="text-[12px] text-ink-700 flex items-baseline gap-2">
+                    <span className="text-ink-400 shrink-0 tabular-nums">
+                      {new Date(c.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                    </span>
+                    <span>{c.summary}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="mt-1 pt-3 border-t border-ink-100 flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs text-ink-500">Quick action</span>
             <div className="flex items-center gap-2">

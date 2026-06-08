@@ -6,6 +6,8 @@ import {
   createRecurringLessons,
   updateLesson,
   deleteLesson,
+  getLessonChanges,
+  type LessonChange,
 } from "@/services/lessons";
 import { createSessionFromLesson } from "@/services/sessions";
 import { addPayment } from "@/services/payments";
@@ -349,6 +351,15 @@ export async function cancelLessonAction(
 
   revalidatePath("/dashboard/calendar");
   return { error: null, success: true };
+}
+
+export async function fetchLessonChangesAction(lessonId: string): Promise<LessonChange[]> {
+  if (!lessonId) return [];
+  try {
+    return await getLessonChanges(lessonId);
+  } catch {
+    return [];
+  }
 }
 
 export async function deleteLessonAction(

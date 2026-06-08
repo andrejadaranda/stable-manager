@@ -488,6 +488,46 @@ export type UpdateLessonInput = {
   overLimitReason?: string | null;
 };
 
+export type LessonChange = { id: string; summary: string; created_at: string };
+
+/** Human-readable change history for one lesson (most recent first). */
+export async function getLessonChanges(lessonId: string): Promise<LessonChange[]> {
+  await getSession();
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("lesson_changes")
+    .select("id, summary, created_at")
+    .eq("lesson_id", lessonId)
+    .order("created_at", { ascending: false });
+  if (error) return [];
+  return (data ?? []) as LessonChange[];
+}
+
+// Diff old vs new lesson and record a readable line per change.
+async function logLessonChanges(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  lessonId: string,
+  stableId: string,
+  userId: string,
+  before: { starts_at: string; ends_at: string; status: string; price: number | null },
+  after:  { starts_at: string; ends_at: string; status: string; price: number | null },
+): Promise<void> {
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const lines: string[] = [];
+  if (before.starts_at !== after.starts_at || before.ends_at !== after.ends_at) {
+    lines.push(`Time moved: ${fmt(before.starts_at)} → ${fmt(after.starts_at)}`);
+  }
+  if (before.status !== after.status) lines.push(`Status: ${before.status} → ${after.status}`);
+  if (Number(before.price ?? 0) !== Number(after.price ?? 0)) {
+    lines.push(`Price: €${Number(before.price ?? 0).toFixed(2)} → €${Number(after.price ?? 0).toFixed(2)}`);
+  }
+  if (lines.length === 0) return;
+  await supabase.from("lesson_changes").insert(
+    lines.map((summary) => ({ lesson_id: lessonId, stable_id: stableId, changed_by: userId, summary })),
+  );
+}
+
 /** Permanently delete a lesson and its participants. Staff only. Use for
  *  mistakes/duplicates; for a lesson that genuinely happened-but-didn't,
  *  prefer "Mark cancelled" (keeps the record). */
@@ -591,6 +631,13 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
     }
   }
 
+  // Snapshot the fields we audit, before the update.
+  const { data: beforeRow } = await supabase
+    .from("lessons")
+    .select("starts_at, ends_at, status, price")
+    .eq("id", lessonId)
+    .maybeSingle();
+
   const update: Record<string, unknown> = {};
   if (input.status    !== undefined) update.status    = input.status;
   if (input.startsAt  !== undefined) update.starts_at = input.startsAt;
@@ -614,6 +661,16 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
   if (error) {
     if (error.code === "23P01") throw new Error("HORSE_OR_TRAINER_DOUBLE_BOOKED");
     throw error;
+  }
+
+  // Record the change history (best-effort — never block the edit).
+  if (beforeRow && data) {
+    try {
+      await logLessonChanges(
+        supabase, lessonId, session.stableId, session.userId,
+        beforeRow as any, data as any,
+      );
+    } catch { /* audit is non-critical */ }
   }
   return data;
 }
