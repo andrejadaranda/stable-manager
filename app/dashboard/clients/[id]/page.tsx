@@ -17,6 +17,7 @@ import { ChargesPanel } from "@/components/clients/charges-panel";
 import { OwesBreakdown } from "@/components/clients/owes-breakdown";
 import { InviteToAppButton } from "@/components/clients/invite-to-app-button";
 import { getPendingInviteForClient } from "@/services/invitations";
+import { generateClientInvoiceAction } from "./invoice-actions";
 
 const SKILL_LABEL: Record<SkillLevel, string> = {
   beginner: "Beginner",
@@ -195,20 +196,23 @@ export default async function ClientDetailPage({
                 <BalanceLine balance={balance} />
               </div>
             </div>
-            <Link
-              href={`/dashboard/clients/${client.id}/invoice`}
-              className="
-                h-10 px-4 rounded-xl text-sm font-medium
-                text-brand-700 bg-brand-50 hover:bg-brand-100
-                transition-colors inline-flex items-center gap-1.5
-              "
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
-                <path d="M14 2v6h6M9 13h6M9 17h4" />
-              </svg>
-              Print invoice
-            </Link>
+            <form action={generateClientInvoiceAction}>
+              <input type="hidden" name="client_id" value={client.id} />
+              <button
+                type="submit"
+                className="
+                  h-10 px-4 rounded-xl text-sm font-medium
+                  text-brand-700 bg-brand-50 hover:bg-brand-100
+                  transition-colors inline-flex items-center gap-1.5
+                "
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
+                  <path d="M14 2v6h6M9 13h6M9 17h4" />
+                </svg>
+                Create invoice
+              </button>
+            </form>
           </section>
 
           {/* Owes breakdown — only rendered when the client actually

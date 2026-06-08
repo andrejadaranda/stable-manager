@@ -145,6 +145,62 @@ async function collectInvoiceDrafts(periodStart: string, periodEnd: string): Pro
   return drafts;
 }
 
+/** Generate a single finance invoice for ONE client covering everything
+ *  they currently owe (all unpaid, un-invoiced items, any date). Used by
+ *  the "Print invoice" button on a client profile so it routes through the
+ *  same numbered, listed, branded invoice as bulk generation — instead of
+ *  the old ad-hoc preview. Returns null when nothing is outstanding. */
+export async function generateInvoiceForClient(clientId: string): Promise<{ id: string | null }> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const issuer = await getStableIssuer();
+  if (!isIssuerReady(issuer)) throw new Error("ISSUER_NOT_READY");
+  const supabase = createSupabaseServerClient();
+
+  const all = await collectInvoiceDrafts("2000-01-01T00:00:00.000Z", "2999-12-31T23:59:59.999Z");
+  const items = all.filter((d) => d.clientId === clientId);
+  if (items.length === 0) return { id: null };
+
+  const subtotal = items.reduce((a, it) => a + it.amount, 0);
+  const { data: numberRpc, error: rpcErr } = await supabase
+    .rpc("next_invoice_number", { p_stable_id: session.stableId });
+  if (rpcErr || !numberRpc) throw new Error("NUMBERING_FAILED");
+
+  const { data: inv, error: invErr } = await supabase
+    .from("invoices")
+    .insert({
+      stable_id: session.stableId,
+      client_id: clientId,
+      number: numberRpc as string,
+      subtotal,
+      vat_rate: 0,
+      vat_amount: 0,
+      total: subtotal,
+      status: "issued",
+    })
+    .select("id")
+    .single();
+  if (invErr || !inv) throw invErr ?? new Error("INSERT_FAILED");
+
+  const invoiceId = (inv as { id: string }).id;
+  await supabase.from("invoice_items").insert(
+    items.map((it, idx) => ({
+      invoice_id:         invoiceId,
+      lesson_id:          it.lesson_id ?? null,
+      boarding_charge_id: it.boarding_charge_id ?? null,
+      client_charge_id:   it.client_charge_id ?? null,
+      farrier_visit_id:   it.farrier_visit_id ?? null,
+      farrier_horse_id:   it.farrier_horse_id ?? null,
+      description:        it.description,
+      quantity:           1,
+      unit_price:         it.amount,
+      line_total:         it.amount,
+      position:           idx,
+    })),
+  );
+  return { id: invoiceId };
+}
+
 /** Read-only preview across all billable sources. */
 export async function previewMonthlyInvoices(periodStart: string, periodEnd: string): Promise<GeneratePreview> {
   await getSession();
