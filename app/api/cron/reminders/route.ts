@@ -29,6 +29,7 @@ import { sendHealthDueReminderEmail } from "@/lib/email/health-due-reminder";
 import { sendWeatherAlertEmail } from "@/lib/email/weather-alert";
 import { sendTrialEndingEmail } from "@/lib/email/trial-ending";
 import { sendSMS, toE164Lithuania } from "@/lib/sms/send";
+import { sendPushToUser, pushConfigured } from "@/lib/push/send";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -229,14 +230,103 @@ export async function GET(req: Request) {
   // Idempotent via trial_drip_dispatch_log (stable_id, milestone).
   const trialResults = await runTrialDrip(supabase);
 
+  // ---- 15-minutes-before lesson PUSH (client + stable staff) ---------
+  // Needs a frequent scheduler (~every 10 min) to actually fire; on a
+  // daily cron it's a no-op. Dormant until VAPID keys are set.
+  const pushResults = await runLessonPushReminders(supabase);
+
   return NextResponse.json({
     ok: true,
     ...results,
     health: healthResults,
     weather: weatherResults,
     trial: trialResults,
+    push: pushResults,
     window: { from: winFrom.toISOString(), to: winTo.toISOString() },
   });
+}
+
+// ----------------------------------------------------------------
+// 15-minutes-before lesson push reminders. Window = lessons starting
+// in the next 15–25 min (a 10-min catch window for an every-10-min
+// scheduler). Recipients: the booked client (if they have a portal
+// account + subscription) AND the stable's owner/employees. Idempotent
+// via reminder_dispatch_log (channel='push', offset_hours=0.25).
+// ----------------------------------------------------------------
+type PushResult = { candidates: number; sent: number; skipped: number };
+
+async function runLessonPushReminders(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+): Promise<PushResult> {
+  const tally: PushResult = { candidates: 0, sent: 0, skipped: 0 };
+  if (!pushConfigured()) return tally; // VAPID not set → dormant
+
+  const now = new Date();
+  const winFrom = new Date(now.getTime() + 15 * 60 * 1000);
+  const winTo = new Date(now.getTime() + 25 * 60 * 1000);
+
+  const { data: lessonRows } = await supabase
+    .from("lessons")
+    .select(`id, stable_id, starts_at, client:clients(id, full_name, profile_id), horse:horses(name)`)
+    .gte("starts_at", winFrom.toISOString())
+    .lt("starts_at", winTo.toISOString())
+    .eq("status", "scheduled");
+  const rows = (lessonRows ?? []) as Array<any>;
+  tally.candidates = rows.length;
+  if (rows.length === 0) return tally;
+
+  const ids = rows.map((r) => r.id);
+  const { data: logged } = await supabase
+    .from("reminder_dispatch_log")
+    .select("lesson_id")
+    .eq("channel", "push")
+    .eq("offset_hours", 0.25)
+    .in("lesson_id", ids);
+  const already = new Set(((logged ?? []) as Array<{ lesson_id: string }>).map((r) => r.lesson_id));
+
+  for (const l of rows) {
+    if (already.has(l.id)) { tally.skipped += 1; continue; }
+    const time = formatTime(l.starts_at);
+    const horse = l.horse?.name ? ` (${l.horse.name})` : "";
+    const who = l.client?.full_name ?? "Lesson";
+
+    const recipients = new Set<string>();
+    if (l.client?.profile_id) {
+      const { data: cp } = await supabase
+        .from("profiles").select("auth_user_id").eq("id", l.client.profile_id).maybeSingle();
+      const uid = (cp as { auth_user_id?: string } | null)?.auth_user_id;
+      if (uid) recipients.add(uid);
+    }
+    const { data: staff } = await supabase
+      .from("profiles").select("auth_user_id").eq("stable_id", l.stable_id).in("role", ["owner", "employee"]);
+    for (const s of (staff ?? []) as Array<{ auth_user_id: string | null }>) {
+      if (s.auth_user_id) recipients.add(s.auth_user_id);
+    }
+
+    let anySent = false;
+    for (const uid of recipients) {
+      const n = await sendPushToUser(uid, {
+        title: "Lesson in 15 minutes",
+        body: `${who}${horse} at ${time}`,
+        url: "/dashboard/calendar",
+      });
+      if (n > 0) anySent = true;
+    }
+
+    await supabase.from("reminder_dispatch_log").insert({
+      stable_id: l.stable_id,
+      lesson_id: l.id,
+      client_id: l.client?.id ?? null,
+      channel: "push",
+      offset_hours: 0.25,
+      status: anySent ? "sent" : "skipped",
+      message_body: `Lesson in 15 min — ${who}${horse} at ${time}`.slice(0, 2048),
+    });
+    if (anySent) tally.sent += 1;
+    else tally.skipped += 1;
+  }
+
+  return tally;
 }
 
 // ----------------------------------------------------------------

@@ -9,6 +9,7 @@ import { requirePageRole } from "@/lib/auth/redirects";
 import { getOwnProfile, getOwnActivityStats, type ActivitySummary } from "@/services/account";
 import { Card, CardHeader, Field, Input, Button, Badge } from "@/components/ui";
 import { AvatarUploader } from "@/components/account/avatar-uploader";
+import { EnableNotificationsButton } from "@/components/push/enable-notifications";
 import { updateProfileNameAction } from "../actions";
 
 const ROLE_LABEL: Record<"owner" | "employee" | "client", string> = {
@@ -108,6 +109,17 @@ export default async function ProfileSettingsPage() {
   return (
     <div className="flex flex-col gap-6">
       {activity && <ActivityCard activity={activity} />}
+
+      <Card padded={false}>
+        <CardHeader
+          title="Notifications"
+          subtitle="Get a push notification 15 minutes before each lesson — on this device. On iPhone, add Longrein to your Home Screen first."
+        />
+        <div className="px-6 pb-6">
+          <EnableNotificationsButton />
+        </div>
+      </Card>
+
       <Card padded={false}>
         <CardHeader
           title="Profile"
