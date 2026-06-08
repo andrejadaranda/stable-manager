@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { getInvoiceDetail } from "@/services/invoices";
@@ -20,6 +21,13 @@ export default async function InvoiceDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <Link
+        href="/dashboard/finance/invoices"
+        className="text-sm text-ink-500 hover:text-ink-900 w-fit inline-flex items-center gap-1 print:hidden"
+      >
+        <span aria-hidden>←</span> Invoices
+      </Link>
+
       {/* Action bar — hidden in print */}
       <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
         <h1 className="text-2xl font-semibold tracking-tight text-ink-900">
