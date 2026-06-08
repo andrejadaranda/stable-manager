@@ -17,26 +17,26 @@ export function IssuerForm({ initial: issuer }: { initial: StableIssuer }) {
     <form action={dispatch} className="bg-white rounded-2xl shadow-soft p-5 flex flex-col gap-4">
       {/* Legal name (required) */}
       <Field
-        label="Legal name (juridinis pavadinimas)"
+        label="Legal name"
         name="legal_name"
         defaultValue={issuer.legal_name ?? ""}
         required
-        placeholder='UAB "Žirgų klubas" or first+last name for individual activity'
+        placeholder="Registered company or sole-trader name"
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field
-          label="Business code (įmonės arba individualios veiklos kodas)"
+          label="Company / registration number"
           name="business_code"
           defaultValue={issuer.business_code ?? ""}
           required
-          placeholder="e.g. 123456789 or 123456789 individuali veikla"
+          placeholder="e.g. 123456789"
         />
         <Field
-          label="VAT code (PVM mokėtojo kodas) — optional"
+          label="VAT number — optional"
           name="vat_code"
           defaultValue={issuer.vat_code ?? ""}
-          placeholder="LT123456789"
+          placeholder="e.g. DE123456789"
         />
       </div>
 
@@ -53,7 +53,7 @@ export function IssuerForm({ initial: issuer }: { initial: StableIssuer }) {
           label="IBAN (recommended)"
           name="iban"
           defaultValue={issuer.iban ?? ""}
-          placeholder="LT00 0000 0000 0000 0000"
+          placeholder="e.g. DE00 0000 0000 0000 0000"
         />
         <Field
           label="Invoice number prefix"

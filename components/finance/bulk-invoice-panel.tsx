@@ -67,7 +67,7 @@ export function BulkInvoicePanel({
           className="h-10 px-4 rounded-xl text-sm font-medium bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
           title={disabled ? "Fill issuer details first" : undefined}
         >
-          {pending ? "Calculating…" : "Preview &amp; generate"}
+          {pending ? "Calculating…" : "Preview & generate"}
         </button>
       </div>
 

@@ -11,7 +11,7 @@ export default async function IssuerSettingsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-lg font-semibold tracking-tight text-ink-900">
-          Issuer details (sąskaitos rekvizitai)
+          Issuer details
         </h2>
         <p className="text-sm text-ink-500 mt-1">
           Required on every invoice. Without these your generated documents
