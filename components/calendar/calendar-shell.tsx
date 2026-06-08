@@ -185,16 +185,26 @@ export function CalendarShell({
   // span multiple days, so each covered day gets the block.
   const blocksByDay = useMemo(() => {
     const m = new Map<string, AvailabilityBlock[]>();
+    const add = (k: string, b: AvailabilityBlock) => {
+      const arr = m.get(k) ?? [];
+      arr.push(b);
+      m.set(k, arr);
+    };
     for (const b of blocks) {
+      // An all-day block covers exactly the date it was created for — pin it
+      // to the start day only (the stored 23:59 end can otherwise bleed into
+      // the next day once converted to local time). Time ranges span their
+      // actual local days.
+      if (b.all_day) {
+        add(fmtISODate(new Date(b.starts_at)), b);
+        continue;
+      }
       const start = new Date(b.starts_at);
       const end = new Date(b.ends_at);
       const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
       const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
       while (d <= last) {
-        const k = fmtISODate(d);
-        const arr = m.get(k) ?? [];
-        arr.push(b);
-        m.set(k, arr);
+        add(fmtISODate(d), b);
         d.setDate(d.getDate() + 1);
       }
     }
