@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   bulkGenerateAction,
@@ -23,6 +23,14 @@ export function BulkInvoicePanel({
   const [preview, setPreview] = useState<GeneratePreview | null>(null);
   const [previewErr, setPreviewErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Close the confirm dialog once generation finishes (success or error).
+  useEffect(() => {
+    if (state.result || state.error) {
+      setPreview(null);
+      setPreviewErr(null);
+    }
+  }, [state.result, state.error]);
 
   async function openConfirm() {
     setPreviewErr(null);
