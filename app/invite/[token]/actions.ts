@@ -66,13 +66,19 @@ export async function acceptInviteAction(
     email_confirm: true,
   });
   if (createErr || !created?.user) {
-    // Most common cause: this email already has an auth user (the
-    // client previously had an account). We don't auto-link to avoid
-    // surprise account merges.
+    // Most common cause: this email already has an auth user (the client
+    // previously signed up, or it's also an owner account). We don't
+    // auto-link to avoid surprise account merges. Show a clear, friendly
+    // message instead of the raw Supabase error.
+    const raw = createErr?.message?.toLowerCase() ?? "";
+    if (raw.includes("already") && (raw.includes("registered") || raw.includes("exist"))) {
+      return {
+        error:
+          "This email already has a Longrein account — there's no need to set up a new one. Just sign in with it instead.",
+      };
+    }
     return {
-      error:
-        createErr?.message
-          ?? "Could not create account. This email may already be registered — try signing in instead.",
+      error: "We couldn't set up your account just now. Please try again, or ask your trainer for a fresh invite link.",
     };
   }
 
