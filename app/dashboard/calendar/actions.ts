@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   createLesson,
   createRecurringLessons,
   updateLesson,
   deleteLesson,
+  duplicateLesson,
   getLessonChanges,
   type LessonChange,
 } from "@/services/lessons";
@@ -351,6 +353,28 @@ export async function cancelLessonAction(
 
   revalidatePath("/dashboard/calendar");
   return { error: null, success: true };
+}
+
+export async function duplicateLessonAction(
+  _prev: UpdateLessonState,
+  formData: FormData,
+): Promise<UpdateLessonState> {
+  const lessonId = String(formData.get("lesson_id") ?? "");
+  if (!lessonId) return { error: "Missing lesson id.", success: false };
+  let day: string;
+  try {
+    const { startsAt } = await duplicateLesson(lessonId);
+    day = startsAt.slice(0, 10);
+  } catch (err: any) {
+    const m = err?.message ?? "";
+    if (m === "HORSE_DOUBLE_BOOKED" || m === "HORSE_OR_TRAINER_DOUBLE_BOOKED")
+      return { error: "That slot next week is already taken — pick another time.", success: false };
+    if (m === "HORSE_OVER_DAILY_LIMIT" || m === "HORSE_OVER_WEEKLY_LIMIT")
+      return { error: "That would push the horse over its workload cap next week.", success: false };
+    return { error: `Could not book again: ${m || "unknown error"}.`, success: false };
+  }
+  revalidatePath("/dashboard/calendar");
+  redirect(`/dashboard/calendar?date=${day}`);
 }
 
 export async function fetchLessonChangesAction(lessonId: string): Promise<LessonChange[]> {

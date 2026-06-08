@@ -12,6 +12,7 @@ import {
   updateLessonAction,
   cancelLessonAction,
   deleteLessonAction,
+  duplicateLessonAction,
   markLessonPaidAction,
   markLessonUnpaidAction,
   fetchLessonChangesAction,
@@ -73,6 +74,9 @@ export function EditLessonDialog({
   );
   const [deleteState, deleteAction] = useFormState<UpdateLessonState, FormData>(
     deleteLessonAction, updateLessonInitialState,
+  );
+  const [bookAgainState, bookAgainAction] = useFormState<UpdateLessonState, FormData>(
+    duplicateLessonAction, updateLessonInitialState,
   );
 
   // Close the dialog once a delete succeeds (the row is gone).
@@ -494,6 +498,7 @@ export function EditLessonDialog({
           <div className="mt-1 pt-3 border-t border-ink-100 flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs text-ink-500">Quick action</span>
             <div className="flex items-center gap-2">
+              <BookAgainButton formAction={bookAgainAction} lessonId={lesson.id} />
               <DeleteLessonButton formAction={deleteAction} lessonId={lesson.id} />
               <CancelButton
                 disabled={lesson.status === "cancelled"}
@@ -502,8 +507,8 @@ export function EditLessonDialog({
               />
             </div>
           </div>
-          {deleteState.error && (
-            <p className="mt-2 text-[12px] text-rose-700">{deleteState.error}</p>
+          {(deleteState.error || bookAgainState.error) && (
+            <p className="mt-2 text-[12px] text-rose-700">{deleteState.error || bookAgainState.error}</p>
           )}
         </form>
 
@@ -614,6 +619,37 @@ function SaveButton() {
       "
     >
       {pending ? "Saving…" : "Save changes"}
+    </button>
+  );
+}
+
+// "Book again" — clones this lesson to the same time next week and jumps
+// there. Same nested-form rule: no inner <form>.
+function BookAgainButton({
+  formAction,
+  lessonId,
+}: {
+  formAction: (formData: FormData) => void;
+  lessonId: string;
+}) {
+  const [pending, startTransition] = useTransition();
+  function handle() {
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    startTransition(() => formAction(fd));
+  }
+  return (
+    <button
+      type="button"
+      onClick={handle}
+      disabled={pending}
+      className="
+        h-10 px-3.5 rounded-xl text-xs font-medium
+        text-brand-700 bg-brand-50 hover:bg-brand-100 disabled:opacity-50
+        transition-colors
+      "
+    >
+      {pending ? "Booking…" : "Book again"}
     </button>
   );
 }

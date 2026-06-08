@@ -528,6 +528,39 @@ async function logLessonChanges(
   );
 }
 
+/** "Book again" — clone a lesson to the same weekday/time next week
+ *  (same client, horse, trainer, service, arena, price). Returns the new
+ *  lesson's start so the UI can jump to it. Staff only. */
+export async function duplicateLesson(lessonId: string): Promise<{ id: string; startsAt: string }> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+  const { data: l } = await supabase
+    .from("lessons")
+    .select("client_id, horse_id, trainer_id, service_id, arena_id, price, starts_at, ends_at")
+    .eq("id", lessonId)
+    .maybeSingle();
+  if (!l) throw new Error("LESSON_NOT_FOUND");
+  const row = l as {
+    client_id: string; horse_id: string | null; trainer_id: string | null;
+    service_id: string | null; arena_id: string | null; price: number | null;
+    starts_at: string; ends_at: string;
+  };
+  const plusWeek = (iso: string) => new Date(new Date(iso).getTime() + 7 * 24 * 3600 * 1000).toISOString();
+  const startsAt = plusWeek(row.starts_at);
+  const created = await createLesson({
+    clientId:  row.client_id,
+    horseId:   row.horse_id ?? null,
+    trainerId: row.trainer_id ?? null,
+    serviceId: row.service_id ?? null,
+    arenaId:   row.arena_id ?? null,
+    price:     row.price ?? undefined,
+    startsAt,
+    endsAt:    plusWeek(row.ends_at),
+  });
+  return { id: (created as { id: string }).id, startsAt };
+}
+
 /** Permanently delete a lesson and its participants. Staff only. Use for
  *  mistakes/duplicates; for a lesson that genuinely happened-but-didn't,
  *  prefer "Mark cancelled" (keeps the record). */
