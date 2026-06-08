@@ -10,6 +10,7 @@ import { listClientAgreements } from "@/services/agreements";
 import { listClientCharges } from "@/services/clientCharges";
 import { fmtDayLabel, fmtTime } from "@/lib/utils/dates";
 import { EditClientButton } from "@/components/clients/edit-client-dialog";
+import { DeleteClientButton } from "@/components/clients/delete-client-button";
 import { PackagePanel } from "@/components/clients/package-panel";
 import { ClientBoardingSection } from "@/components/clients/client-boarding-section";
 import { AgreementsPanel } from "@/components/clients/agreements-panel";
@@ -151,6 +152,7 @@ export default async function ClientDetailPage({
                 />
               )}
               <EditClientButton client={client} />
+              {session.role === "owner" && <DeleteClientButton clientId={client.id} />}
             </div>
           </div>
 

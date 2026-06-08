@@ -1,12 +1,35 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   createClient,
   updateClient,
+  deleteClient,
   type SkillLevel,
   type ReminderPref,
 } from "@/services/clients";
+
+export type DeleteClientState = { error: string | null };
+
+export async function deleteClientAction(
+  _prev: DeleteClientState,
+  formData: FormData,
+): Promise<DeleteClientState> {
+  const id = String(formData.get("client_id") ?? "");
+  if (!id) return { error: "Missing client id." };
+  try {
+    await deleteClient(id);
+  } catch (err: any) {
+    const m = err?.message ?? "";
+    if (m === "CLIENT_HAS_HISTORY")
+      return { error: "This client has lessons, horses, charges or payments on file — deactivate them instead of deleting (this keeps the records)." };
+    if (m === "FORBIDDEN") return { error: "Only the owner can delete clients." };
+    return { error: `Could not delete: ${m || "unknown error"}.` };
+  }
+  revalidatePath("/dashboard/clients");
+  redirect("/dashboard/clients");
+}
 
 export type CreateClientState = { error: string | null; success: boolean };
 

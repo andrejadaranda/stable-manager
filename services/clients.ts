@@ -201,6 +201,29 @@ export async function listClientsWithUpcomingCount(): Promise<ClientWithUpcoming
 }
 
 // ------- get one ---------------------------------------------------------
+/** Permanently delete a client — only when they have NO history (no
+ *  lessons, owned horses, charges, or payments). Otherwise throws
+ *  CLIENT_HAS_HISTORY so the caller can suggest deactivating instead
+ *  (which preserves records). Owner only. */
+export async function deleteClient(id: string): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+
+  const [lessons, horses, charges, payments] = await Promise.all([
+    supabase.from("lessons").select("id", { count: "exact", head: true }).eq("client_id", id),
+    supabase.from("horses").select("id", { count: "exact", head: true }).eq("owner_client_id", id),
+    supabase.from("client_charges").select("id", { count: "exact", head: true }).eq("client_id", id),
+    supabase.from("payments").select("id", { count: "exact", head: true }).eq("client_id", id),
+  ]);
+  const history =
+    (lessons.count ?? 0) + (horses.count ?? 0) + (charges.count ?? 0) + (payments.count ?? 0);
+  if (history > 0) throw new Error("CLIENT_HAS_HISTORY");
+
+  const { error } = await supabase.from("clients").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export async function getClient(id: string): Promise<ClientRow | null> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
