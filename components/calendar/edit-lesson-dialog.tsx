@@ -11,6 +11,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import {
   updateLessonAction,
   cancelLessonAction,
+  deleteLessonAction,
   markLessonPaidAction,
   markLessonUnpaidAction,
   type UpdateLessonState,
@@ -68,6 +69,14 @@ export function EditLessonDialog({
   const [unpaidState, unpaidAction] = useFormState<UpdateLessonState, FormData>(
     markLessonUnpaidAction, updateLessonInitialState,
   );
+  const [deleteState, deleteAction] = useFormState<UpdateLessonState, FormData>(
+    deleteLessonAction, updateLessonInitialState,
+  );
+
+  // Close the dialog once a delete succeeds (the row is gone).
+  useEffect(() => {
+    if (deleteState.success) onClose();
+  }, [deleteState.success, onClose]);
 
   const [status,      setStatus]      = useState<Status>(lesson.status);
   const [startsLocal, setStartsLocal] = useState<string>(toLocalInput(lesson.starts_at));
@@ -456,14 +465,20 @@ export function EditLessonDialog({
           {/* Quick-cancel rendered inside the scroll area so it stays
               accessible on small phones. Submitting it is a separate
               form via formAction below — kept below the field stack. */}
-          <div className="mt-1 pt-3 border-t border-ink-100 flex items-center justify-between gap-2">
+          <div className="mt-1 pt-3 border-t border-ink-100 flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs text-ink-500">Quick action</span>
-            <CancelButton
-              disabled={lesson.status === "cancelled"}
-              formAction={cancelAction}
-              lessonId={lesson.id}
-            />
+            <div className="flex items-center gap-2">
+              <DeleteLessonButton formAction={deleteAction} lessonId={lesson.id} />
+              <CancelButton
+                disabled={lesson.status === "cancelled"}
+                formAction={cancelAction}
+                lessonId={lesson.id}
+              />
+            </div>
           </div>
+          {deleteState.error && (
+            <p className="mt-2 text-[12px] text-rose-700">{deleteState.error}</p>
+          )}
         </form>
 
         {/* Sticky footer — always visible. */}
@@ -577,8 +592,43 @@ function SaveButton() {
   );
 }
 
-// Quick-cancel button. We render an inline mini-form so it has its own
-// action distinct from the edit form's action.
+// Delete (destructive) — permanently removes the lesson. Confirm first.
+// Same nested-form rule as CancelButton: no inner <form>.
+function DeleteLessonButton({
+  formAction,
+  lessonId,
+}: {
+  formAction: (formData: FormData) => void;
+  lessonId: string;
+}) {
+  const [pending, startTransition] = useTransition();
+  function handleDelete() {
+    if (!window.confirm("Delete this lesson permanently? This can't be undone. (To keep the record, use Mark cancelled instead.)")) return;
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    startTransition(() => formAction(fd));
+  }
+  return (
+    <button
+      type="button"
+      onClick={handleDelete}
+      disabled={pending}
+      className="
+        h-10 px-3.5 rounded-xl text-xs font-medium
+        text-rose-700 hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed
+        transition-colors
+      "
+    >
+      {pending ? "Deleting…" : "Delete"}
+    </button>
+  );
+}
+
+// Quick-cancel button. Like PaidQuickActions, this sits INSIDE the parent
+// <form id="edit-lesson-form">, so it must NOT render a nested <form>
+// (HTML forbids it — browsers silently drop the inner form and the click
+// does nothing; that was the "Mark cancelled does nothing" bug). Instead
+// use a plain button that builds FormData and dispatches the action.
 function CancelButton({
   disabled,
   formAction,
@@ -588,19 +638,16 @@ function CancelButton({
   formAction: (formData: FormData) => void;
   lessonId: string;
 }) {
-  return (
-    <form action={formAction}>
-      <input type="hidden" name="lesson_id" value={lessonId} />
-      <CancelSubmit disabled={disabled} />
-    </form>
-  );
-}
-
-function CancelSubmit({ disabled }: { disabled?: boolean }) {
-  const { pending } = useFormStatus();
+  const [pending, startTransition] = useTransition();
+  function handleCancel() {
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    startTransition(() => formAction(fd));
+  }
   return (
     <button
-      type="submit"
+      type="button"
+      onClick={handleCancel}
       disabled={pending || disabled}
       className="
         h-10 px-3.5 rounded-xl text-xs font-medium

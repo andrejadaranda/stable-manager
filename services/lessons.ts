@@ -488,6 +488,19 @@ export type UpdateLessonInput = {
   overLimitReason?: string | null;
 };
 
+/** Permanently delete a lesson and its participants. Staff only. Use for
+ *  mistakes/duplicates; for a lesson that genuinely happened-but-didn't,
+ *  prefer "Mark cancelled" (keeps the record). */
+export async function deleteLesson(lessonId: string): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+  // Clear participants first in case the FK isn't ON DELETE CASCADE.
+  await supabase.from("lesson_participants").delete().eq("lesson_id", lessonId);
+  const { error } = await supabase.from("lessons").delete().eq("id", lessonId);
+  if (error) throw error;
+}
+
 export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
   const session = await getSession();
   requireRole(session, "owner", "employee");

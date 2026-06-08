@@ -5,6 +5,7 @@ import {
   createLesson,
   createRecurringLessons,
   updateLesson,
+  deleteLesson,
 } from "@/services/lessons";
 import { createSessionFromLesson } from "@/services/sessions";
 import { addPayment } from "@/services/payments";
@@ -344,6 +345,26 @@ export async function cancelLessonAction(
     if (message === "FORBIDDEN")
       return { error: "You don't have permission to cancel lessons.", success: false };
     return { error: `Could not cancel: ${message || "unknown error"}.`, success: false };
+  }
+
+  revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
+
+export async function deleteLessonAction(
+  _prev: UpdateLessonState,
+  formData: FormData,
+): Promise<UpdateLessonState> {
+  const lessonId = String(formData.get("lesson_id") ?? "");
+  if (!lessonId) return { error: "Missing lesson id.", success: false };
+
+  try {
+    await deleteLesson(lessonId);
+  } catch (err: any) {
+    const message = err?.message ?? "";
+    if (message === "FORBIDDEN")
+      return { error: "You don't have permission to delete lessons.", success: false };
+    return { error: `Could not delete: ${message || "unknown error"}.`, success: false };
   }
 
   revalidatePath("/dashboard/calendar");
