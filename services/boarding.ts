@@ -229,6 +229,9 @@ export async function deleteCharge(chargeId: string): Promise<void> {
 export async function markChargePaid(
   chargeId: string,
   method: "cash" | "card" | "transfer" | "other" = "cash",
+  /** Optional partial amount. Omit (or pass >= remaining) to settle in
+   *  full; a smaller value records a partial boarding payment. */
+  amount?: number,
 ): Promise<void> {
   const session = await getSession();
   requireRole(session, "owner");
@@ -247,6 +250,9 @@ export async function markChargePaid(
   const remaining = Number(c.amount) - Number(c.paid_amount);
   if (remaining <= 0) return; // already settled
 
+  const pay = amount != null && amount > 0 ? Math.min(amount, remaining) : remaining;
+  if (pay <= 0) return;
+
   // Direct insert — payments service doesn't expose boarding_charge_id
   // yet, but the same RLS + same-stable trigger applies. The trigger
   // verifies the charge belongs to this stable + client.
@@ -258,10 +264,10 @@ export async function markChargePaid(
       lesson_id:           null,
       package_id:          null,
       boarding_charge_id:  c.id,
-      amount:              remaining,
+      amount:              pay,
       method,
       paid_at:             new Date().toISOString(),
-      notes:               "Boarding payment",
+      notes:               pay < remaining ? "Boarding — partial payment" : "Boarding payment",
     });
   if (pErr) throw pErr;
 }

@@ -97,11 +97,13 @@ export async function deleteClientCharge(chargeId: string): Promise<void> {
   if (error) throw error;
 }
 
-/** One-click "Mark paid". Creates a payments row for the remaining
- *  amount, linked via client_charge_id. */
+/** Record a payment against a charge. With no `amount`, pays the whole
+ *  remaining balance ("Mark paid"). A smaller `amount` records a PARTIAL
+ *  payment — the charge becomes "partial" and tracks the remaining. */
 export async function markClientChargePaid(
   chargeId: string,
   method: "cash" | "card" | "transfer" | "other" = "cash",
+  amount?: number,
 ): Promise<void> {
   const session = await getSession();
   requireRole(session, "owner");
@@ -118,6 +120,10 @@ export async function markClientChargePaid(
   const remaining = Number(c.amount) - Number(c.paid_amount);
   if (remaining <= 0) return;
 
+  // Clamp to the remaining balance — never overpay a charge.
+  const pay = amount != null && amount > 0 ? Math.min(amount, remaining) : remaining;
+  if (pay <= 0) return;
+
   const { error: pErr } = await supabase
     .from("payments")
     .insert({
@@ -127,10 +133,10 @@ export async function markClientChargePaid(
       package_id:          null,
       boarding_charge_id:  null,
       client_charge_id:    c.id,
-      amount:              remaining,
+      amount:              pay,
       method,
       paid_at:             new Date().toISOString(),
-      notes:               "Misc charge payment",
+      notes:               pay < remaining ? "Misc charge — partial payment" : "Misc charge payment",
     });
   if (pErr) throw pErr;
 }

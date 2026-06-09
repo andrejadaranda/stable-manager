@@ -246,8 +246,13 @@ export async function markChargePaidAction(
       : "cash";
   if (!chargeId) return { ...initial, error: "Missing charge id." };
 
+  // Optional partial amount — blank / 0 / invalid pays the full remaining.
+  const amountRaw = String(formData.get("amount") ?? "").replace(",", ".").trim();
+  const amountNum = amountRaw ? Number(amountRaw) : NaN;
+  const amount = Number.isFinite(amountNum) && amountNum > 0 ? amountNum : undefined;
+
   try {
-    await markChargePaid(chargeId, method);
+    await markChargePaid(chargeId, method, amount);
   } catch (err) {
     return { ...initial, error: toFriendlyError(err).message };
   }

@@ -318,11 +318,12 @@ function ChargeRow({
         </p>
       </div>
       {isOwner && (
-        <div className="flex items-center gap-1.5 shrink-0">
-          {status === "paid" || status === "partial" ? (
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          {status !== "paid" && (
+            <PaidButton chargeId={charge.id} clientId={clientId} horseId={charge.horse_id} remaining={Math.max(0, Number(charge.amount) - Number(charge.paid_amount))} />
+          )}
+          {(status === "paid" || status === "partial") && (
             <UnpaidButton chargeId={charge.id} clientId={clientId} horseId={charge.horse_id} />
-          ) : (
-            <PaidButton chargeId={charge.id} clientId={clientId} horseId={charge.horse_id} />
           )}
           <DeleteButton chargeId={charge.id} clientId={clientId} horseId={charge.horse_id} />
         </div>
@@ -332,17 +333,30 @@ function ChargeRow({
 }
 
 function PaidButton({
-  chargeId, clientId, horseId,
-}: { chargeId: string; clientId: string; horseId: string | null }) {
+  chargeId, clientId, horseId, remaining,
+}: { chargeId: string; clientId: string; horseId: string | null; remaining: number }) {
   const [, action] = useFormState<ChargeActionState, FormData>(
     markPaidAction, initialState,
   );
+  // Amount defaults to the full remaining — leave it for "paid in full", or
+  // type a smaller number to record a partial payment.
   return (
-    <form action={action}>
+    <form action={action} className="flex items-center gap-1">
       <input type="hidden" name="charge_id" value={chargeId} />
       <input type="hidden" name="client_id" value={clientId} />
       {horseId && <input type="hidden" name="horse_id" value={horseId} />}
       <input type="hidden" name="method"   value="cash"     />
+      <span className="text-[11px] text-ink-400">€</span>
+      <input
+        name="amount"
+        type="number"
+        step="0.01"
+        min="0.01"
+        max={remaining.toFixed(2)}
+        defaultValue={remaining.toFixed(2)}
+        aria-label="Amount to record"
+        className="h-8 w-16 rounded-lg border border-ink-200 bg-white text-[11px] tabular-nums px-1.5 text-right focus:outline-none focus:ring-1 focus:ring-emerald-500"
+      />
       <PaidSubmit />
     </form>
   );
@@ -360,7 +374,7 @@ function PaidSubmit() {
         disabled:opacity-50 transition-colors
       "
     >
-      {pending ? "…" : "Mark paid"}
+      {pending ? "…" : "Record"}
     </button>
   );
 }

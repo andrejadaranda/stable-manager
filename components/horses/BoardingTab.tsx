@@ -996,11 +996,12 @@ function ChargeRow({
         </p>
       </div>
       {isOwner && (
-        <div className="flex items-center gap-1.5 shrink-0">
-          {status === "paid" || status === "partial" ? (
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          {status !== "paid" && (
+            <PaidButton chargeId={charge.id} horseId={horseId} remaining={Math.max(0, Number(charge.amount) - Number(charge.paid_amount))} />
+          )}
+          {(status === "paid" || status === "partial") && (
             <UnpaidButton chargeId={charge.id} horseId={horseId} />
-          ) : (
-            <PaidButton chargeId={charge.id} horseId={horseId} />
           )}
           <DeleteButton chargeId={charge.id} horseId={horseId} />
         </div>
@@ -1009,15 +1010,28 @@ function ChargeRow({
   );
 }
 
-function PaidButton({ chargeId, horseId }: { chargeId: string; horseId: string }) {
+function PaidButton({ chargeId, horseId, remaining }: { chargeId: string; horseId: string; remaining: number }) {
   const [, action] = useFormState<BoardingActionState, FormData>(
     markChargePaidAction, initialState,
   );
+  // Amount defaults to the full remaining — record as-is for paid-in-full,
+  // or type a smaller number for a partial payment.
   return (
-    <form action={action}>
+    <form action={action} className="flex items-center gap-1">
       <input type="hidden" name="charge_id" value={chargeId} />
       <input type="hidden" name="horse_id"  value={horseId}  />
       <input type="hidden" name="method"    value="cash"     />
+      <span className="text-xs text-ink-400">€</span>
+      <input
+        name="amount"
+        type="number"
+        step="0.01"
+        min="0.01"
+        max={remaining.toFixed(2)}
+        defaultValue={remaining.toFixed(2)}
+        aria-label="Amount to record"
+        className="h-9 w-20 rounded-xl border border-ink-200 bg-white text-xs tabular-nums px-2 text-right focus:outline-none focus:ring-1 focus:ring-emerald-500"
+      />
       <PaidSubmit />
     </form>
   );
@@ -1035,7 +1049,7 @@ function PaidSubmit() {
         disabled:opacity-50 transition-colors
       "
     >
-      {pending ? "Marking…" : "Mark paid"}
+      {pending ? "Recording…" : "Record"}
     </button>
   );
 }

@@ -102,8 +102,13 @@ export async function markPaidAction(
       : "cash";
   if (!id) return { ...initial, error: "Missing id." };
 
+  // Optional partial amount — blank / 0 / invalid pays the full remaining.
+  const amountRaw = String(formData.get("amount") ?? "").replace(",", ".").trim();
+  const amountNum = amountRaw ? Number(amountRaw) : NaN;
+  const amount = Number.isFinite(amountNum) && amountNum > 0 ? amountNum : undefined;
+
   try {
-    await markClientChargePaid(id, method);
+    await markClientChargePaid(id, method, amount);
   } catch (err) {
     return { ...initial, error: toFriendlyError(err).message };
   }
