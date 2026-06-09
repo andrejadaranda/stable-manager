@@ -7,6 +7,8 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
+// @ts-ignore — installed on Vercel; may be absent in the local sandbox.
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { CookieBanner } from "@/components/legal/cookie-banner";
 import { InstallAppBanner } from "@/components/legal/install-app-banner";
@@ -84,6 +86,9 @@ export default function RootLayout({
         {/* Vercel Web Analytics — counts visitors and page views.
             Privacy-first (no cookies). Hobby tier: 2,500 events/mo. */}
         <Analytics />
+        {/* Vercel Speed Insights — Core Web Vitals (load speed, INP, CLS).
+            Free on Hobby. Starts collecting from real visits once deployed. */}
+        <SpeedInsights />
         {/* Google Analytics 4 — loads only when NEXT_PUBLIC_GA_ID is set.
             afterInteractive keeps it off the critical render path. */}
         {gaId ? (
