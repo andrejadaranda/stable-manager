@@ -12,6 +12,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+import { startDirectChat, sendChatMessage } from "./chat";
 import type {
   LessonRequestStatus,
   LessonRequestRow,
@@ -189,7 +190,64 @@ export async function acceptLessonRequest(input: AcceptLessonRequestInput): Prom
   });
 
   if (error) throw error;
+  await notifyClientOfRequestDecision(input.requestId, "accepted");
   return data as string;  // new lesson id
+}
+
+/**
+ * Close the loop: DM the requesting client when their request is decided,
+ * so they learn the outcome without hunting through the app. Best-effort —
+ * never let a chat hiccup fail the accept/decline. Skipped silently when the
+ * client has no app account (no profile to message).
+ */
+async function notifyClientOfRequestDecision(
+  requestId: string,
+  kind: "accepted" | "declined",
+): Promise<void> {
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data: req } = await supabase
+      .from("lesson_requests")
+      .select("requester_client_id, requested_start, requested_duration_min, decline_reason, horse_id")
+      .eq("id", requestId)
+      .maybeSingle();
+    if (!req) return;
+
+    const { data: client } = await supabase
+      .from("clients")
+      .select("profile_id")
+      .eq("id", (req as { requester_client_id: string }).requester_client_id)
+      .maybeSingle();
+    const profileId = (client as { profile_id: string | null } | null)?.profile_id;
+    if (!profileId) return; // client isn't on the app — nothing to post
+
+    const r = req as {
+      requested_start: string; requested_duration_min: number;
+      decline_reason: string | null; horse_id: string | null;
+    };
+    let horseName: string | null = null;
+    if (r.horse_id) {
+      const { data: h } = await supabase.from("horses").select("name").eq("id", r.horse_id).maybeSingle();
+      horseName = (h as { name: string } | null)?.name ?? null;
+    }
+
+    const when = new Date(r.requested_start).toLocaleString("en-GB", {
+      weekday: "short", day: "2-digit", month: "short",
+      hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius",
+    });
+    const horsePart = horseName ? ` · ${horseName}` : "";
+    const body =
+      kind === "accepted"
+        ? `Lesson request confirmed — ${when}, ${r.requested_duration_min} min${horsePart}. It's on your calendar now.`
+        : `Lesson request declined — ${when}, ${r.requested_duration_min} min${horsePart}.` +
+          (r.decline_reason ? ` Reason: ${r.decline_reason}` : "") +
+          ` You can request another time anytime.`;
+
+    const threadId = await startDirectChat(profileId);
+    await sendChatMessage(threadId, body);
+  } catch (err) {
+    console.warn("[lessonRequests] could not post decision to chat:", err);
+  }
 }
 
 export async function declineLessonRequest(requestId: string, reason?: string | null): Promise<void> {
@@ -203,6 +261,7 @@ export async function declineLessonRequest(requestId: string, reason?: string | 
   });
 
   if (error) throw error;
+  await notifyClientOfRequestDecision(requestId, "declined");
 }
 
 // =============================================================
