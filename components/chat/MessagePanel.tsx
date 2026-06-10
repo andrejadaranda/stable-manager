@@ -44,6 +44,11 @@ export function MessagePanel({
   sessionUserId: string;
 }) {
   const router = useRouter();
+  // Gate locale/timezone-dependent time rendering until after mount so the
+  // server-rendered HTML matches the first client render (avoids React
+  // hydration error #425/#422, which crashed the chat page on some devices).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   // Keep messages oldest-first for rendering. Service returns desc, reverse here.
   const [messages, setMessages] = useState<ChatMessageRow[]>(
     () => [...initialMessages].reverse(),
@@ -152,7 +157,10 @@ export function MessagePanel({
                 <div className="text-[10.5px] uppercase tracking-[0.12em] text-ink-400 mt-1 px-1">
                   {!mine && (m.sender?.full_name ?? "Member")}
                   {!mine && " · "}
-                  {formatTime(m.created_at)}
+                  {/* Time is locale/timezone-dependent — render client-only so
+                      the SSR string (server tz) doesn't clash with the browser
+                      tz on hydration (React #425/#422 → crash on some devices). */}
+                  <time suppressHydrationWarning>{mounted ? formatTime(m.created_at) : ""}</time>
                 </div>
               </li>
             );

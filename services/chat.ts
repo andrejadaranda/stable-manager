@@ -87,14 +87,16 @@ export async function listChatThreads(): Promise<ChatThreadRow[]> {
 
   const threadIds = threadRows.map((t) => t.id);
 
-  // Pull participant rows for the visible threads (own last_read_at +
-  // who's in each thread). We do NOT join profiles here: clients can't
-  // read staff profile rows under profiles_read_self RLS, which used to
-  // null out the other party's name. Names come from the SECURITY DEFINER
-  // RPC below, scoped to threads the caller participates in.
+  // Pull participant rows for the visible threads. The profiles join works
+  // for staff callers (owner/employee can read profiles in their stable). For
+  // CLIENTS the join is nulled out by profiles_read_self RLS, so we overlay
+  // names from the SECURITY DEFINER RPC below (scoped to the caller's threads).
   const { data: participants, error: pErr } = await supabase
     .from("chat_participants")
-    .select("thread_id, profile_id, last_read_at")
+    .select(`
+      thread_id, profile_id, last_read_at,
+      profile:profiles(id, full_name, role)
+    `)
     .in("thread_id", threadIds);
   if (pErr) throw pErr;
 
@@ -102,23 +104,28 @@ export async function listChatThreads(): Promise<ChatThreadRow[]> {
     thread_id: string;
     profile_id: string;
     last_read_at: string | null;
+    profile: { id: string; full_name: string | null; role: Role } | null;
   };
   const partRows = (participants ?? []) as unknown as PRow[];
 
-  // Resolve participant names (incl. staff) via the definer RPC.
-  const { data: named, error: nErr } = await supabase.rpc(
-    "get_my_chat_participants",
-    { p_thread_ids: threadIds },
-  );
-  if (nErr) throw nErr;
+  // Overlay names via the definer RPC (resilient — never let a name lookup
+  // crash the whole chat page).
   const nameMap = new Map<string, { full_name: string | null; role: Role }>();
-  for (const n of (named ?? []) as Array<{
-    thread_id: string; profile_id: string; full_name: string | null; role: Role;
-  }>) {
-    nameMap.set(`${n.thread_id}:${n.profile_id}`, { full_name: n.full_name, role: n.role });
+  try {
+    const { data: named } = await supabase.rpc("get_my_chat_participants", {
+      p_thread_ids: threadIds,
+    });
+    for (const n of (named ?? []) as Array<{
+      thread_id: string; profile_id: string; full_name: string | null; role: Role;
+    }>) {
+      nameMap.set(`${n.thread_id}:${n.profile_id}`, { full_name: n.full_name, role: n.role });
+    }
+  } catch (err) {
+    console.error("[chat] participant name RPC failed; falling back to join", err);
   }
 
-  // Index by thread.
+  // Index by thread. Prefer the RPC name (works for clients), fall back to the
+  // join (works for staff), then to a neutral default.
   const others = new Map<string, ChatThreadRow["participants"]>();
   const myReadAt = new Map<string, string | null>();
   for (const p of partRows) {
@@ -129,8 +136,8 @@ export async function listChatThreads(): Promise<ChatThreadRow[]> {
       const nm = nameMap.get(`${p.thread_id}:${p.profile_id}`);
       others.get(p.thread_id)!.push({
         id: p.profile_id,
-        full_name: nm?.full_name ?? null,
-        role: nm?.role ?? "client",
+        full_name: nm?.full_name ?? p.profile?.full_name ?? null,
+        role: nm?.role ?? p.profile?.role ?? "client",
       });
     }
   }
