@@ -17,6 +17,8 @@ import {
   getClientBalance,
 } from "@/services/payments";
 import { listChargesForClient } from "@/services/boarding";
+import { listMyInvoiceRequests } from "@/services/invoiceRequests";
+import { RequestInvoicePanel } from "@/components/invoiceRequests/request-invoice-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -42,10 +44,11 @@ export default async function MyPaymentsPage() {
     );
   }
 
-  const [payments, balance, boardingCharges] = await Promise.all([
+  const [payments, balance, boardingCharges, invoiceRequests] = await Promise.all([
     listPayments({ clientId: session.clientId }),
     getClientBalance(session.clientId),
     listChargesForClient(session.clientId).catch(() => []),
+    listMyInvoiceRequests().catch(() => []),
   ]);
 
   // Only prefix the horse name when this boarder keeps more than one horse —
@@ -67,6 +70,8 @@ export default async function MyPaymentsPage() {
       </header>
 
       <BalanceCard balance={balance} />
+
+      <RequestInvoicePanel requests={invoiceRequests} />
 
       {boardingCharges.length > 0 && (
         <section className="flex flex-col gap-3">

@@ -3,6 +3,8 @@ import { listInvoices } from "@/services/invoices";
 import { getStableIssuer, isIssuerReady } from "@/services/stableIssuer";
 import { BulkInvoicePanel } from "@/components/finance/bulk-invoice-panel";
 import { InvoiceBulkList } from "@/components/finance/invoice-bulk-list";
+import { InvoiceRequestsSection } from "@/components/finance/invoice-requests-section";
+import { listPendingInvoiceRequests } from "@/services/invoiceRequests";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +24,10 @@ export default async function InvoicesPage({
     ? (searchParams.period as string)
     : currentYearMonth();
 
-  const [invoices, issuer] = await Promise.all([
+  const [invoices, issuer, pendingRequests] = await Promise.all([
     listInvoices({ limit: 200 }),
     getStableIssuer(),
+    listPendingInvoiceRequests().catch(() => []),
   ]);
   const ready = isIssuerReady(issuer);
 
@@ -38,6 +41,8 @@ export default async function InvoicesPage({
           </p>
         </div>
       </header>
+
+      <InvoiceRequestsSection requests={pendingRequests} />
 
       {!ready && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 text-[13px] flex items-center justify-between gap-3 flex-wrap">
