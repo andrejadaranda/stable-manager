@@ -380,3 +380,65 @@ export async function getClientAccountSummary(clientId: string) {
   if (error) throw error;
   return data;
 }
+
+// Spending breakdown for the client portal — where the client's money went,
+// by category, plus total paid. Same access rules as getClientBalance.
+export type ClientSpendingBreakdown = {
+  lessons:      number;
+  lessonsCount: number;
+  boarding:     number;
+  care:         number;   // farrier + vet
+  other:        number;
+  totalBilled:  number;   // sum of the categories above (self-consistent)
+  totalPaid:    number;
+};
+
+export async function getClientSpendingBreakdown(clientId: string): Promise<ClientSpendingBreakdown> {
+  const session = await getSession();
+  requireOwnerOrClientSelf(session, clientId);
+  const supabase = createSupabaseServerClient();
+
+  const horsesRes = await supabase.from("horses").select("id").eq("owner_client_id", clientId);
+  const horseIds = ((horsesRes.data ?? []) as Array<{ id: string }>).map((h) => h.id);
+
+  const [lessonsRes, chargesRes, boardingRes, acct] = await Promise.all([
+    supabase
+      .from("lessons")
+      .select("price, status")
+      .eq("client_id", clientId)
+      .in("status", ["completed", "no_show"])
+      .gt("price", 0),
+    supabase
+      .from("client_charge_summary")
+      .select("kind, amount")
+      .eq("client_id", clientId),
+    horseIds.length
+      ? supabase.from("horse_boarding_summary").select("amount").in("horse_id", horseIds)
+      : Promise.resolve({ data: [] as Array<{ amount: number | string }> }),
+    getClientAccountSummary(clientId).catch(() => null),
+  ]);
+
+  let lessons = 0;
+  let lessonsCount = 0;
+  for (const l of (lessonsRes.data ?? []) as Array<{ price: number | string }>) {
+    lessons += Number(l.price);
+    lessonsCount += 1;
+  }
+
+  let care = 0;
+  let other = 0;
+  for (const c of (chargesRes.data ?? []) as Array<{ kind: string; amount: number | string }>) {
+    if (c.kind === "farrier" || c.kind === "vet_copay") care += Number(c.amount);
+    else other += Number(c.amount);
+  }
+
+  let boarding = 0;
+  for (const b of ((boardingRes.data ?? []) as Array<{ amount: number | string }>)) {
+    boarding += Number(b.amount);
+  }
+
+  const totalBilled = lessons + boarding + care + other;
+  const totalPaid = Number((acct as { total_paid?: number | string } | null)?.total_paid ?? 0);
+
+  return { lessons, lessonsCount, boarding, care, other, totalBilled, totalPaid };
+}
