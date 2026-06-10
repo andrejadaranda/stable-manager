@@ -74,48 +74,63 @@ export function MessagePanel({
   }, [messages]);
 
   // ---- Realtime subscription ----------------------------------
+  // Live updates are a progressive enhancement. Some environments block
+  // WebSockets (iOS privacy/Lockdown modes, content blockers, insecure
+  // contexts) and `new WebSocket()` throws "The operation is insecure",
+  // which previously crashed the whole chat page. Wrap the whole setup so
+  // a missing WebSocket just disables live updates — messages still load
+  // on navigation/refresh and sending still works via the server action.
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(`chat:thread:${threadId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "chat_messages",
-          filter: `thread_id=eq.${threadId}`,
-        },
-        (payload) => {
-          const row = payload.new as RealtimeRow;
-          if (!row || row.thread_id !== threadId) return;
-          if (seenIdsRef.current.has(row.id)) return;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`chat:thread:${threadId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "chat_messages",
+            filter: `thread_id=eq.${threadId}`,
+          },
+          (payload) => {
+            const row = payload.new as RealtimeRow;
+            if (!row || row.thread_id !== threadId) return;
+            if (seenIdsRef.current.has(row.id)) return;
 
-          const cachedSender = senderCacheRef.current.get(row.sender_profile_id) ?? null;
-          const incoming: ChatMessageRow = {
-            id: row.id,
-            stable_id: row.stable_id,
-            thread_id: row.thread_id,
-            sender_profile_id: row.sender_profile_id,
-            body: row.body,
-            created_at: row.created_at,
-            edited_at: row.edited_at,
-            sender: cachedSender,
-          };
-          setMessages((prev) => [...prev, incoming]);
+            const cachedSender = senderCacheRef.current.get(row.sender_profile_id) ?? null;
+            const incoming: ChatMessageRow = {
+              id: row.id,
+              stable_id: row.stable_id,
+              thread_id: row.thread_id,
+              sender_profile_id: row.sender_profile_id,
+              body: row.body,
+              created_at: row.created_at,
+              edited_at: row.edited_at,
+              sender: cachedSender,
+            };
+            setMessages((prev) => [...prev, incoming]);
 
-          // If sender unknown to cache, refresh server data so we can
-          // render the proper name. router.refresh() re-runs the
-          // server component without losing client state.
-          if (!cachedSender && row.sender_profile_id !== sessionUserId) {
-            router.refresh();
-          }
-        },
-      )
-      .subscribe();
+            // If sender unknown to cache, refresh server data so we can
+            // render the proper name. router.refresh() re-runs the
+            // server component without losing client state.
+            if (!cachedSender && row.sender_profile_id !== sessionUserId) {
+              router.refresh();
+            }
+          },
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn("[chat] realtime unavailable; live updates disabled", err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      try {
+        if (channel) supabase.removeChannel(channel);
+      } catch {
+        /* no-op */
+      }
     };
   }, [threadId, router, sessionUserId]);
 
