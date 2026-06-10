@@ -5,13 +5,13 @@ import {
   markPaidAction,
   markUnpaidAction,
   cancelInvoiceAction,
-  emailInvoiceAction,
+  sendInvoiceAction,
   type InvoiceStatusState,
-  type EmailInvoiceState,
+  type SendInvoiceState,
 } from "@/app/dashboard/finance/invoices/[id]/actions";
 
 const initial: InvoiceStatusState = { error: null, success: false };
-const emailInitial: EmailInvoiceState = { error: null, sentTo: null };
+const sendInitial: SendInvoiceState = { error: null, message: null };
 
 export function InvoiceActions({
   invoiceId,
@@ -25,7 +25,7 @@ export function InvoiceActions({
   const [, paid]      = useFormState<InvoiceStatusState, FormData>(markPaidAction,      initial);
   const [, unpaid]    = useFormState<InvoiceStatusState, FormData>(markUnpaidAction,    initial);
   const [, cancelled] = useFormState<InvoiceStatusState, FormData>(cancelInvoiceAction, initial);
-  const [emailState, emailDispatch] = useFormState<EmailInvoiceState, FormData>(emailInvoiceAction, emailInitial);
+  const [sendState, sendDispatch] = useFormState<SendInvoiceState, FormData>(sendInvoiceAction, sendInitial);
 
   return (
     <div className="flex gap-2 flex-wrap items-center">
@@ -37,17 +37,26 @@ export function InvoiceActions({
         Print / PDF
       </button>
 
-      {clientEmail && (
-        <form action={emailDispatch}>
-          <input type="hidden" name="invoice_id" value={invoiceId} />
-          <EmailButton />
-        </form>
+      {/* Send to client — owner picks email, chat, or both. */}
+      <form action={sendDispatch} className="flex items-center gap-1.5">
+        <input type="hidden" name="invoice_id" value={invoiceId} />
+        <select
+          name="method"
+          defaultValue={clientEmail ? "email" : "chat"}
+          aria-label="Send method"
+          className="h-9 rounded-lg border border-ink-200 bg-white text-[12px] px-2 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        >
+          <option value="email">Email</option>
+          <option value="chat">Chat</option>
+          <option value="both">Email + Chat</option>
+        </select>
+        <SendButton />
+      </form>
+      {sendState.message && (
+        <span className="text-[12px] text-emerald-700">{sendState.message}</span>
       )}
-      {emailState.sentTo && (
-        <span className="text-[12px] text-emerald-700">Sent to {emailState.sentTo} ✓</span>
-      )}
-      {emailState.error && (
-        <span className="text-[12px] text-rose-700">{emailState.error}</span>
+      {sendState.error && (
+        <span className="text-[12px] text-rose-700">{sendState.error}</span>
       )}
 
       {status === "issued" && (
@@ -72,7 +81,7 @@ export function InvoiceActions({
   );
 }
 
-function EmailButton() {
+function SendButton() {
   const { pending } = useFormStatus();
   return (
     <button
@@ -80,7 +89,7 @@ function EmailButton() {
       disabled={pending}
       className="h-9 px-3 rounded-lg text-[12px] font-medium bg-navy-50 text-navy-800 hover:bg-navy-100 disabled:opacity-50"
     >
-      {pending ? "Sending…" : "Email to client"}
+      {pending ? "Sending…" : "Send to client"}
     </button>
   );
 }

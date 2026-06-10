@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
 import { getStableIssuer, isIssuerReady, type StableIssuer } from "@/services/stableIssuer";
 import { sendEmail, emailFooter } from "@/lib/email/send";
+import { startDirectChat, sendChatMessage } from "@/services/chat";
 
 const esc = (s: string) =>
   String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
@@ -285,6 +286,77 @@ export async function emailInvoiceToClient(invoiceId: string): Promise<{ sentTo:
     html,
   });
   return { sentTo: to };
+}
+
+/** Deliver the invoice into the client↔stable chat thread with a tappable
+ *  link to the (print-to-PDF) invoice view. Returns false when the client
+ *  has no app account to message. Caller decides whether that's an error. */
+export async function deliverInvoiceToClientChat(invoiceId: string): Promise<boolean> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+
+  const supabase = createSupabaseServerClient();
+  const { data: inv } = await supabase
+    .from("invoices")
+    .select("id, number, total, client_id")
+    .eq("id", invoiceId)
+    .maybeSingle();
+  if (!inv) return false;
+  const i = inv as { id: string; number: string; total: number | string; client_id: string };
+
+  const { data: client } = await supabase
+    .from("clients")
+    .select("profile_id")
+    .eq("id", i.client_id)
+    .maybeSingle();
+  const profileId = (client as { profile_id: string | null } | null)?.profile_id;
+  if (!profileId) return false; // client isn't on the app
+
+  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.longrein.eu").replace(/\/+$/, "");
+  const url = `${base}/dashboard/my-invoices/${i.id}`;
+  const body = `Invoice ${i.number} — €${Number(i.total).toFixed(2)}. View & download PDF: ${url}`;
+
+  const threadId = await startDirectChat(profileId);
+  await sendChatMessage(threadId, body);
+  return true;
+}
+
+export type SendInvoiceResult = {
+  emailedTo:  string | null;
+  chatPosted: boolean;
+  notes:      string[];
+};
+
+/** Owner/trainer sends an invoice via email, chat, or both — their choice. */
+export async function sendInvoiceToClient(
+  invoiceId: string,
+  channels: { email: boolean; chat: boolean },
+): Promise<SendInvoiceResult> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+
+  const notes: string[] = [];
+  let emailedTo: string | null = null;
+  let chatPosted = false;
+
+  if (channels.email) {
+    try {
+      const r = await emailInvoiceToClient(invoiceId);
+      emailedTo = r.sentTo;
+    } catch (err) {
+      const m = (err as Error)?.message ?? "";
+      notes.push(m === "NO_CLIENT_EMAIL" ? "No email on file — email skipped." : "Email failed.");
+    }
+  }
+  if (channels.chat) {
+    try {
+      chatPosted = await deliverInvoiceToClientChat(invoiceId);
+      if (!chatPosted) notes.push("Client isn't on the app — chat skipped.");
+    } catch {
+      notes.push("Chat delivery failed.");
+    }
+  }
+  return { emailedTo, chatPosted, notes };
 }
 
 export async function setInvoiceStatus(

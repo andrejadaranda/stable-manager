@@ -1,26 +1,37 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { setInvoiceStatus, emailInvoiceToClient } from "@/services/invoices";
+import { setInvoiceStatus, sendInvoiceToClient } from "@/services/invoices";
 
 export type InvoiceStatusState = { error: string | null; success: boolean };
 const initial: InvoiceStatusState = { error: null, success: false };
 
-export type EmailInvoiceState = { error: string | null; sentTo: string | null };
+export type SendInvoiceState = { error: string | null; message: string | null };
 
-export async function emailInvoiceAction(
-  _p: EmailInvoiceState,
+/** Send an invoice to the client via email, chat, or both — owner's choice. */
+export async function sendInvoiceAction(
+  _p: SendInvoiceState,
   fd: FormData,
-): Promise<EmailInvoiceState> {
-  const id = String(fd.get("invoice_id") ?? "");
-  if (!id) return { error: "Missing invoice id.", sentTo: null };
+): Promise<SendInvoiceState> {
+  const id     = String(fd.get("invoice_id") ?? "");
+  const method = String(fd.get("method") ?? "email"); // "email" | "chat" | "both"
+  if (!id) return { error: "Missing invoice id.", message: null };
+
+  const channels = {
+    email: method === "email" || method === "both",
+    chat:  method === "chat"  || method === "both",
+  };
+
   try {
-    const { sentTo } = await emailInvoiceToClient(id);
-    return { error: null, sentTo };
+    const r = await sendInvoiceToClient(id, channels);
+    const parts: string[] = [];
+    if (r.emailedTo)  parts.push(`Emailed to ${r.emailedTo}`);
+    if (r.chatPosted) parts.push("Posted to chat");
+    let message = parts.join(" · ");
+    if (r.notes.length) message = (message ? `${message} — ` : "") + r.notes.join(" ");
+    return { error: null, message: message || "Nothing was sent." };
   } catch (err) {
-    const m = (err as Error)?.message ?? "";
-    if (m === "NO_CLIENT_EMAIL") return { error: "This client has no email on file.", sentTo: null };
-    return { error: `Could not send: ${m || "unknown error"}.`, sentTo: null };
+    return { error: `Could not send: ${(err as Error)?.message || "unknown error"}.`, message: null };
   }
 }
 

@@ -167,7 +167,7 @@ export function MessagePanel({
                     }
                   `}
                 >
-                  {m.body}
+                  {renderMessageBody(m.body)}
                 </div>
                 <div className="text-[10.5px] uppercase tracking-[0.12em] text-ink-400 mt-1 px-1">
                   {!mine && (m.sender?.full_name ?? "Member")}
@@ -279,6 +279,27 @@ function MessageInput({
 }
 
 // ---------- formatting ----------------------------------------
+
+// Render a message body, turning http(s) URLs into tappable links so
+// invoice / share links delivered into chat are clickable.
+function renderMessageBody(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline break-all"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
