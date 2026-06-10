@@ -87,14 +87,14 @@ export async function listChatThreads(): Promise<ChatThreadRow[]> {
 
   const threadIds = threadRows.map((t) => t.id);
 
-  // Pull every participant row for the visible threads. RLS guarantees
-  // we can only see participants of threads we can see.
+  // Pull participant rows for the visible threads (own last_read_at +
+  // who's in each thread). We do NOT join profiles here: clients can't
+  // read staff profile rows under profiles_read_self RLS, which used to
+  // null out the other party's name. Names come from the SECURITY DEFINER
+  // RPC below, scoped to threads the caller participates in.
   const { data: participants, error: pErr } = await supabase
     .from("chat_participants")
-    .select(`
-      thread_id, profile_id, last_read_at,
-      profile:profiles(id, full_name, role)
-    `)
+    .select("thread_id, profile_id, last_read_at")
     .in("thread_id", threadIds);
   if (pErr) throw pErr;
 
@@ -102,9 +102,21 @@ export async function listChatThreads(): Promise<ChatThreadRow[]> {
     thread_id: string;
     profile_id: string;
     last_read_at: string | null;
-    profile: { id: string; full_name: string | null; role: Role } | null;
   };
   const partRows = (participants ?? []) as unknown as PRow[];
+
+  // Resolve participant names (incl. staff) via the definer RPC.
+  const { data: named, error: nErr } = await supabase.rpc(
+    "get_my_chat_participants",
+    { p_thread_ids: threadIds },
+  );
+  if (nErr) throw nErr;
+  const nameMap = new Map<string, { full_name: string | null; role: Role }>();
+  for (const n of (named ?? []) as Array<{
+    thread_id: string; profile_id: string; full_name: string | null; role: Role;
+  }>) {
+    nameMap.set(`${n.thread_id}:${n.profile_id}`, { full_name: n.full_name, role: n.role });
+  }
 
   // Index by thread.
   const others = new Map<string, ChatThreadRow["participants"]>();
@@ -113,11 +125,12 @@ export async function listChatThreads(): Promise<ChatThreadRow[]> {
     if (!others.has(p.thread_id)) others.set(p.thread_id, []);
     if (p.profile_id === session.userId) {
       myReadAt.set(p.thread_id, p.last_read_at);
-    } else if (p.profile) {
+    } else {
+      const nm = nameMap.get(`${p.thread_id}:${p.profile_id}`);
       others.get(p.thread_id)!.push({
-        id: p.profile.id,
-        full_name: p.profile.full_name,
-        role: p.profile.role,
+        id: p.profile_id,
+        full_name: nm?.full_name ?? null,
+        role: nm?.role ?? "client",
       });
     }
   }
@@ -168,7 +181,26 @@ export async function getChatMessages(
 
   const { data, error } = await q;
   if (error) throw error;
-  return (data ?? []) as unknown as ChatMessageRow[];
+  const rows = (data ?? []) as unknown as ChatMessageRow[];
+
+  // The sender:profiles join is nulled out for staff senders when the
+  // caller is a client (profiles_read_self RLS). Backfill names via the
+  // definer RPC so staff replies don't render as the generic "Member".
+  if (rows.some((m) => m.sender == null)) {
+    const { data: named } = await supabase.rpc("get_my_chat_participants", {
+      p_thread_ids: [threadId],
+    });
+    const byId = new Map<string, { id: string; full_name: string | null; role: Role }>();
+    for (const n of (named ?? []) as Array<{
+      profile_id: string; full_name: string | null; role: Role;
+    }>) {
+      byId.set(n.profile_id, { id: n.profile_id, full_name: n.full_name, role: n.role });
+    }
+    for (const m of rows) {
+      if (m.sender == null) m.sender = byId.get(m.sender_profile_id) ?? null;
+    }
+  }
+  return rows;
 }
 
 /**

@@ -70,7 +70,7 @@ export function ChatLayout({
         `}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-ink-100">
-          <h2 className="text-sm font-semibold text-ink-900">Pokalbiai</h2>
+          <h2 className="text-sm font-semibold text-ink-900">Conversations</h2>
           {sessionRole !== "client" || true ? (
             // Clients can also start DMs (with employees), so always show.
             <NewDmButton onCreated={(id) => selectThread(id)} />
@@ -103,7 +103,7 @@ export function ChatLayout({
                     ${isActive ? "bg-brand-50/70" : "hover:bg-ink-50/50"}
                   `}
                 >
-                  <ThreadAvatar thread={t} />
+                  <ThreadAvatar thread={t} sessionUserId={sessionUserId} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span
@@ -148,7 +148,7 @@ export function ChatLayout({
                   <path d="M15 18l-6-6 6-6" />
                 </svg>
               </button>
-              <ThreadAvatar thread={activeThread} />
+              <ThreadAvatar thread={activeThread} sessionUserId={sessionUserId} />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-ink-900 truncate">
                   {threadLabel(activeThread, sessionUserId)}
@@ -186,20 +186,20 @@ export function ChatLayout({
 // ---------- helpers ----------
 
 function threadLabel(t: ChatThreadRow, sessionUserId: string): string {
-  if (t.type === "stable_general") return t.title || "Bendras kanalas";
+  if (t.type === "stable_general") return t.title || "Stable channel";
   // direct: show the OTHER participant's name
   const other = t.participants.find((p) => p.id !== sessionUserId);
   if (other?.full_name) return other.full_name;
-  return "Tiesioginis pokalbis";
+  return "Direct message";
 }
 
 function threadSubtitle(t: ChatThreadRow): string | null {
-  if (t.type === "stable_general") return "Visi stable'os nariai";
+  if (t.type === "stable_general") return "Everyone in the stable";
   const roles = Array.from(new Set(t.participants.map((p) => p.role))).join(" · ");
   return roles || null;
 }
 
-function ThreadAvatar({ thread }: { thread: ChatThreadRow }) {
+function ThreadAvatar({ thread, sessionUserId }: { thread: ChatThreadRow; sessionUserId?: string }) {
   if (thread.type === "stable_general") {
     return (
       <span className="w-9 h-9 shrink-0 rounded-full bg-brand-600 text-white inline-flex items-center justify-center text-xs font-semibold">
@@ -207,7 +207,9 @@ function ThreadAvatar({ thread }: { thread: ChatThreadRow }) {
       </span>
     );
   }
-  const other = thread.participants[0];
+  const other =
+    (sessionUserId && thread.participants.find((p) => p.id !== sessionUserId)) ||
+    thread.participants[0];
   const initial = (other?.full_name ?? "?")[0]?.toUpperCase() ?? "?";
   return (
     <span className="w-9 h-9 shrink-0 rounded-full bg-ink-900 text-white inline-flex items-center justify-center text-xs font-semibold">
