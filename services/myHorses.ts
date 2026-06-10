@@ -42,6 +42,25 @@ export type MyHorseSummary = {
  * One row per horse — when a client both owns and rides the same horse,
  * `relationship = "owner"` wins (broader visibility).
  */
+/** The stable's lesson pool — active horses flagged available_for_lessons.
+ *  Clients can read these via the horses_read_lesson_pool_client policy and
+ *  request a lesson on any of them (not just horses they own or have ridden).
+ *  Returns a light {id, name} list for the request-a-lesson picker. */
+export async function listStableLessonHorses(): Promise<{ id: string; name: string }[]> {
+  const session = await getSession();
+  if (session.role !== "client") throw new Error("FORBIDDEN");
+
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("horses")
+    .select("id, name")
+    .eq("active", true)
+    .eq("available_for_lessons", true)
+    .order("name");
+  if (error) throw error;
+  return (data ?? []) as { id: string; name: string }[];
+}
+
 export async function listMyHorses(): Promise<MyHorseSummary[]> {
   const session = await getSession();
   if (session.role !== "client") throw new Error("FORBIDDEN");
