@@ -14,9 +14,11 @@ import { HorseCareSection } from "./HorseCareSection";
 
 const KIND_LABEL = {
   vaccination: "Vaccinations",
+  deworming:   "Deworming",
   farrier:     "Farrier",
   vet:         "Vet",
   injury:      "Injury",
+  other:       "Other",
 } as const;
 
 const STATUS_LABEL: Record<HealthSummaryStatus, string> = {

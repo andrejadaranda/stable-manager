@@ -1,13 +1,21 @@
 // Pure types + constants for the horse health module. Safe to import
 // from client components — does NOT pull in supabase/server.ts.
 
-export type HealthRecordKind = "vaccination" | "farrier" | "vet" | "injury";
+export type HealthRecordKind =
+  | "vaccination"
+  | "farrier"
+  | "vet"
+  | "injury"
+  | "deworming"
+  | "other";
 
 export const HEALTH_RECORD_KINDS: HealthRecordKind[] = [
   "vaccination",
+  "deworming",
   "farrier",
   "vet",
   "injury",
+  "other",
 ];
 
 export type HealthRecord = {

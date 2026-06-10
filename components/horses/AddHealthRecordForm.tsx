@@ -17,9 +17,11 @@ const initial: CreateHealthState = { error: null, success: false };
 
 const KIND_LABEL = {
   vaccination: "Vaccination",
+  deworming:   "Deworming",
   farrier:     "Farrier",
   vet:         "Vet visit",
   injury:      "Injury",
+  other:       "Other",
 };
 
 const todayLocal = () => {
@@ -161,7 +163,7 @@ function AddHealthRecordForm({
           name="title"
           required
           maxLength={200}
-          placeholder={kind === "vaccination" ? "Annual EHV-1 booster" : kind === "farrier" ? "Trim + reset shoes" : kind === "vet" ? "Routine check" : "Soft tissue strain"}
+          placeholder={kind === "vaccination" ? "Annual EHV-1 booster" : kind === "deworming" ? "Spring deworming (ivermectin)" : kind === "farrier" ? "Trim + reset shoes" : kind === "vet" ? "Routine check" : kind === "injury" ? "Soft tissue strain" : "Dental float, microchip…"}
           className="w-full rounded-lg border border-ink-200 bg-white px-2.5 py-2 text-[13px] text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-600/30 focus:border-brand-600"
         />
       </label>

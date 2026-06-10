@@ -296,7 +296,7 @@ function ChargeRow({
                             "text-ink-700";
 
   return (
-    <li className="rounded-xl border border-ink-100 bg-surface px-3 py-2 flex items-center gap-3">
+    <li className="rounded-xl border border-ink-100 bg-surface px-3 py-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10.5px] font-semibold ${KIND_TONE[charge.kind]}`}>
@@ -318,7 +318,7 @@ function ChargeRow({
         </p>
       </div>
       {isOwner && (
-        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+        <div className="flex items-center gap-1.5 flex-wrap justify-end sm:shrink-0">
           {status !== "paid" && (
             <PaidButton chargeId={charge.id} clientId={clientId} horseId={charge.horse_id} remaining={Math.max(0, Number(charge.amount) - Number(charge.paid_amount))} />
           )}

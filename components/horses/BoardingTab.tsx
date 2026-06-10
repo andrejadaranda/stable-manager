@@ -983,7 +983,7 @@ function ChargeRow({
                            "text-ink-700";
 
   return (
-    <li className="rounded-2xl bg-white border border-ink-100 px-4 py-3 flex items-center gap-3">
+    <li className="rounded-2xl bg-white border border-ink-100 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-navy-900 truncate">{label}</p>
         <p className={`text-[11.5px] mt-0.5 ${tone} tabular-nums`}>
@@ -996,7 +996,7 @@ function ChargeRow({
         </p>
       </div>
       {isOwner && (
-        <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+        <div className="flex items-center gap-1.5 flex-wrap justify-end sm:shrink-0">
           {status !== "paid" && (
             <PaidButton chargeId={charge.id} horseId={horseId} remaining={Math.max(0, Number(charge.amount) - Number(charge.paid_amount))} />
           )}
