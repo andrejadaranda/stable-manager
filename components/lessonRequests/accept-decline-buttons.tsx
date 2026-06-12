@@ -19,9 +19,22 @@ import { useFormState, useFormStatus } from "react-dom";
 import {
   acceptLessonRequestAction,
   declineLessonRequestAction,
+  counterLessonRequestAction,
   type LessonRequestResponseState,
 } from "@/app/dashboard/lesson-requests/actions";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui";
+
+/** UTC ISO → Europe/Vilnius wall-clock {date,time} for date/time inputs. */
+function vilniusParts(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Vilnius",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, time: `${get("hour")}:${get("minute")}` };
+}
 
 const initial: LessonRequestResponseState = { error: null, success: false };
 
@@ -45,17 +58,24 @@ export function RespondLessonRequestButtons({
   horses:               HorseOpt[];
   trainers:             TrainerOpt[];
 }) {
-  const [open, setOpen] = useState<null | "accept" | "decline">(null);
+  const [open, setOpen] = useState<null | "accept" | "decline" | "propose">(null);
 
   return (
     <>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         <button
           type="button"
           onClick={() => setOpen("accept")}
           className="h-8 px-3 rounded-lg text-[12px] font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
         >
           Accept
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen("propose")}
+          className="h-8 px-3 rounded-lg text-[12px] font-medium bg-white border border-ink-200 text-ink-700 hover:bg-ink-50 transition-colors"
+        >
+          Propose time
         </button>
         <button
           type="button"
@@ -78,6 +98,13 @@ export function RespondLessonRequestButtons({
           onClose={() => setOpen(null)}
         />
       )}
+      {open === "propose" && (
+        <ProposeDialog
+          requestId={requestId}
+          requestedStart={requestedStart}
+          onClose={() => setOpen(null)}
+        />
+      )}
       {open === "decline" && (
         <DeclineDialog
           requestId={requestId}
@@ -85,6 +112,65 @@ export function RespondLessonRequestButtons({
         />
       )}
     </>
+  );
+}
+
+function ProposeDialog({
+  requestId,
+  requestedStart,
+  onClose,
+}: {
+  requestId:      string;
+  requestedStart: string;
+  onClose:        () => void;
+}) {
+  const [state, formAction] = useFormState<LessonRequestResponseState, FormData>(
+    counterLessonRequestAction,
+    initial,
+  );
+  useEffect(() => {
+    if (state.success) onClose();
+  }, [state.success, onClose]);
+
+  const p = vilniusParts(requestedStart);
+
+  return (
+    <Sheet
+      title="Propose another time"
+      subtitle="Suggest a time that works for you — the client gets it in chat and can accept or decline."
+      onClose={onClose}
+      onSubmit={formAction}
+    >
+      <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
+        <input type="hidden" name="request_id" value={requestId} />
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="New date" required>
+            <Input type="date" name="date" required defaultValue={p.date} />
+          </Field>
+          <Field label="New time" required>
+            <Input type="time" name="time" required step={900} defaultValue={p.time} />
+          </Field>
+        </div>
+        {state.error && (
+          <p role="alert" className="text-[13px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3.5 py-2.5 leading-relaxed">
+            {state.error}
+          </p>
+        )}
+      </div>
+      <div className="shrink-0 border-t border-ink-100 px-6 py-3 sm:py-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-2">
+        <Button type="button" variant="ghost" size="md" onClick={onClose}>Cancel</Button>
+        <ProposeSubmit />
+      </div>
+    </Sheet>
+  );
+}
+
+function ProposeSubmit() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant="primary" size="md" loading={pending}>
+      {pending ? "Sending…" : "Propose time"}
+    </Button>
   );
 }
 

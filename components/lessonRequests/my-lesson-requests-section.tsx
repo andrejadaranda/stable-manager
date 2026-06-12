@@ -7,7 +7,10 @@ import {
   LESSON_STATUS_LABEL,
   type LessonRequestWithContext,
 } from "@/services/lessonRequests.types";
-import { cancelLessonRequestAction } from "@/app/dashboard/my-lessons/request-actions";
+import {
+  cancelLessonRequestAction,
+  respondCounterAction,
+} from "@/app/dashboard/my-lessons/request-actions";
 
 export function MyLessonRequestsSection({
   items,
@@ -16,8 +19,17 @@ export function MyLessonRequestsSection({
 }) {
   if (items.length === 0) return null;
 
-  const pending = items.filter((r) => r.status === "pending");
-  const closed  = items.filter((r) => r.status !== "pending").slice(0, 5);
+  const countered = items.filter((r) => r.status === "countered");
+  const pending   = items.filter((r) => r.status === "pending");
+  const closed    = items
+    .filter((r) => r.status !== "pending" && r.status !== "countered")
+    .slice(0, 5);
+
+  const fmtWhen = (iso: string) =>
+    new Date(iso).toLocaleString("en-GB", {
+      weekday: "short", day: "2-digit", month: "short",
+      hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius",
+    });
 
   return (
     <section className="bg-white rounded-2xl shadow-soft p-5 md:p-6">
@@ -27,6 +39,49 @@ export function MyLessonRequestsSection({
           {pending.length} pending
         </span>
       </div>
+
+      {countered.length > 0 && (
+        <ul className="flex flex-col gap-2 mb-4">
+          {countered.map((r) => (
+            <li
+              key={r.id}
+              className="rounded-xl border border-brand-200 bg-brand-50/50 px-4 py-3"
+            >
+              <RowBody r={r} />
+              <div className="mt-2 rounded-lg bg-white border border-brand-100 px-3 py-2">
+                <p className="text-[12px] text-ink-600">
+                  Your stable proposed a new time:
+                </p>
+                <p className="text-sm font-medium text-navy-900 mt-0.5">
+                  {r.proposed_start ? fmtWhen(r.proposed_start) : "—"}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <form action={respondCounterAction}>
+                    <input type="hidden" name="request_id" value={r.id} />
+                    <input type="hidden" name="accept" value="yes" />
+                    <button
+                      type="submit"
+                      className="h-8 px-3 rounded-lg text-[12px] font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                    >
+                      Accept new time
+                    </button>
+                  </form>
+                  <form action={respondCounterAction}>
+                    <input type="hidden" name="request_id" value={r.id} />
+                    <input type="hidden" name="accept" value="no" />
+                    <button
+                      type="submit"
+                      className="h-8 px-3 rounded-lg text-[12px] font-medium bg-white border border-ink-200 text-ink-700 hover:bg-ink-50"
+                    >
+                      Decline
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {pending.length > 0 && (
         <ul className="flex flex-col gap-2 mb-4">
@@ -124,4 +179,5 @@ const STATUS_TONE: Record<string, string> = {
   accepted:  "bg-emerald-50 text-emerald-700",
   declined:  "bg-ink-100   text-ink-600",
   cancelled: "bg-ink-100   text-ink-500",
+  countered: "bg-brand-50  text-brand-700",
 };

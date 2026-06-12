@@ -9,8 +9,24 @@ import { revalidatePath } from "next/cache";
 import {
   acceptLessonRequest,
   declineLessonRequest,
+  counterLessonRequest,
 } from "@/services/lessonRequests";
 import { toFriendlyError } from "@/lib/errors/friendly";
+
+/** Convert a Vilnius wall-clock date+time into a UTC ISO string (mirrors the
+ *  accept action's conversion). Returns null when the input is invalid. */
+function vilniusToUtcISO(date: string, time: string): string | null {
+  const asUtc = new Date(`${date}T${time}:00Z`);
+  if (!Number.isFinite(asUtc.getTime())) return null;
+  const vilniusStr = asUtc.toLocaleString("sv-SE", {
+    timeZone: "Europe/Vilnius",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const offsetMs = new Date(vilniusStr.replace(" ", "T") + "Z").getTime() - asUtc.getTime();
+  const iso = new Date(asUtc.getTime() - offsetMs).toISOString();
+  return Number.isFinite(new Date(iso).getTime()) ? iso : null;
+}
 
 export type LessonRequestResponseState = {
   error: string | null;
@@ -66,6 +82,30 @@ export async function acceptLessonRequestAction(
   revalidatePath("/dashboard/lesson-requests");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
+
+export async function counterLessonRequestAction(
+  _prev: LessonRequestResponseState,
+  formData: FormData,
+): Promise<LessonRequestResponseState> {
+  const requestId = String(formData.get("request_id") ?? "");
+  const date      = String(formData.get("date") ?? "");
+  const time      = String(formData.get("time") ?? "");
+  if (!requestId)     return { ...initial, error: "Missing request id." };
+  if (!date || !time) return { ...initial, error: "Pick the new date and time." };
+
+  const startsAt = vilniusToUtcISO(date, time);
+  if (!startsAt) return { ...initial, error: "Invalid date / time." };
+
+  try {
+    await counterLessonRequest(requestId, startsAt);
+  } catch (err) {
+    return { ...initial, error: toFriendlyError(err).message };
+  }
+
+  revalidatePath("/dashboard/lesson-requests");
+  revalidatePath("/dashboard");
   return { error: null, success: true };
 }
 

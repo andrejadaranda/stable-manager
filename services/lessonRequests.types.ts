@@ -1,7 +1,7 @@
 // Pure types + presentation maps for lesson_requests.
 // See careRequests.types.ts for the same pattern + rationale.
 
-export type LessonRequestStatus = "pending" | "accepted" | "declined" | "cancelled";
+export type LessonRequestStatus = "pending" | "accepted" | "declined" | "cancelled" | "countered";
 
 export type LessonRequestRow = {
   id:                     string;
@@ -10,6 +10,7 @@ export type LessonRequestRow = {
   horse_id:               string | null;
   preferred_trainer_id:   string | null;
   requested_start:        string;
+  proposed_start:         string | null;
   requested_duration_min: number;
   notes:                  string | null;
   status:                 LessonRequestStatus;
@@ -32,4 +33,5 @@ export const LESSON_STATUS_LABEL: Record<LessonRequestStatus, string> = {
   accepted:  "Accepted",
   declined:  "Declined",
   cancelled: "Cancelled",
+  countered: "New time proposed",
 };

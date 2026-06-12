@@ -9,6 +9,7 @@ import { getSession } from "@/lib/auth/session";
 import {
   createLessonRequest,
   cancelLessonRequest,
+  respondToCounterOffer,
 } from "@/services/lessonRequests";
 import { toFriendlyError } from "@/lib/errors/friendly";
 
@@ -79,6 +80,20 @@ export async function submitLessonRequestAction(
   revalidatePath("/dashboard");
   if (horseId) revalidatePath(`/dashboard/my-horses/${horseId}`);
   return { error: null, success: true };
+}
+
+export async function respondCounterAction(formData: FormData): Promise<void> {
+  const id     = String(formData.get("request_id") ?? "");
+  const accept = String(formData.get("accept") ?? "") === "yes";
+  if (!id) return;
+  try {
+    await respondToCounterOffer(id, accept);
+  } catch {
+    // soft-swallow; UI re-renders with the row unchanged
+  }
+  revalidatePath("/dashboard/my-lessons");
+  revalidatePath("/dashboard/lesson-requests");
+  revalidatePath("/dashboard");
 }
 
 export async function cancelLessonRequestAction(formData: FormData): Promise<void> {

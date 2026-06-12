@@ -202,13 +202,13 @@ export async function acceptLessonRequest(input: AcceptLessonRequestInput): Prom
  */
 async function notifyClientOfRequestDecision(
   requestId: string,
-  kind: "accepted" | "declined",
+  kind: "accepted" | "declined" | "countered",
 ): Promise<void> {
   try {
     const supabase = createSupabaseServerClient();
     const { data: req } = await supabase
       .from("lesson_requests")
-      .select("requester_client_id, requested_start, requested_duration_min, decline_reason, horse_id")
+      .select("requester_client_id, requested_start, proposed_start, requested_duration_min, decline_reason, horse_id")
       .eq("id", requestId)
       .maybeSingle();
     if (!req) return;
@@ -222,7 +222,7 @@ async function notifyClientOfRequestDecision(
     if (!profileId) return; // client isn't on the app — nothing to post
 
     const r = req as {
-      requested_start: string; requested_duration_min: number;
+      requested_start: string; proposed_start: string | null; requested_duration_min: number;
       decline_reason: string | null; horse_id: string | null;
     };
     let horseName: string | null = null;
@@ -231,22 +231,77 @@ async function notifyClientOfRequestDecision(
       horseName = (h as { name: string } | null)?.name ?? null;
     }
 
-    const when = new Date(r.requested_start).toLocaleString("en-GB", {
+    const fmt = (iso: string) => new Date(iso).toLocaleString("en-GB", {
       weekday: "short", day: "2-digit", month: "short",
       hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius",
     });
+    const when = fmt(r.requested_start);
     const horsePart = horseName ? ` · ${horseName}` : "";
-    const body =
-      kind === "accepted"
-        ? `Lesson request confirmed — ${when}, ${r.requested_duration_min} min${horsePart}. It's on your calendar now.`
-        : `Lesson request declined — ${when}, ${r.requested_duration_min} min${horsePart}.` +
-          (r.decline_reason ? ` Reason: ${r.decline_reason}` : "") +
-          ` You can request another time anytime.`;
+    let body: string;
+    if (kind === "accepted") {
+      body = `Lesson request confirmed — ${when}, ${r.requested_duration_min} min${horsePart}. It's on your calendar now.`;
+    } else if (kind === "countered") {
+      const proposed = r.proposed_start ? fmt(r.proposed_start) : when;
+      body = `New time proposed for your lesson request: ${proposed}, ${r.requested_duration_min} min${horsePart}. Open My lessons to accept or decline.`;
+    } else {
+      body = `Lesson request declined — ${when}, ${r.requested_duration_min} min${horsePart}.` +
+        (r.decline_reason ? ` Reason: ${r.decline_reason}` : "") +
+        ` You can request another time anytime.`;
+    }
 
     const threadId = await startDirectChat(profileId);
     await sendChatMessage(threadId, body);
   } catch (err) {
     console.warn("[lessonRequests] could not post decision to chat:", err);
+  }
+}
+
+/** Stable proposes a different time instead of declining. Sets status
+ *  'countered' + proposed_start and DMs the client to accept/decline. */
+export async function counterLessonRequest(requestId: string, proposedStartISO: string): Promise<void> {
+  const session = await getSession();
+  if (session.role !== "owner" && session.role !== "employee") throw new Error("FORBIDDEN");
+  if (!proposedStartISO) throw new Error("MISSING_TIME");
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("lesson_requests")
+    .update({ status: "countered", proposed_start: proposedStartISO })
+    .eq("id", requestId);
+  if (error) throw error;
+  await notifyClientOfRequestDecision(requestId, "countered");
+}
+
+/** Client responds to a counter-offer. Accept → request returns to pending
+ *  at the proposed time (owner finalises with horse/trainer). Decline →
+ *  request is declined. Owner sees the outcome in their requests inbox. */
+export async function respondToCounterOffer(requestId: string, accept: boolean): Promise<void> {
+  const session = await getSession();
+  if (session.role !== "client") throw new Error("FORBIDDEN");
+
+  const supabase = createSupabaseServerClient();
+  const { data: req, error: rErr } = await supabase
+    .from("lesson_requests")
+    .select("proposed_start, status")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (rErr) throw rErr;
+  if (!req) throw new Error("REQUEST_NOT_FOUND");
+  const r = req as { proposed_start: string | null; status: string };
+  if (r.status !== "countered") throw new Error("NOT_COUNTERED");
+
+  if (accept && r.proposed_start) {
+    const { error } = await supabase
+      .from("lesson_requests")
+      .update({ status: "pending", requested_start: r.proposed_start, proposed_start: null })
+      .eq("id", requestId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("lesson_requests")
+      .update({ status: "declined", proposed_start: null })
+      .eq("id", requestId);
+    if (error) throw error;
   }
 }
 
@@ -292,6 +347,7 @@ function flattenContext(r: LessonRequestRow & {
     horse_id:               r.horse_id,
     preferred_trainer_id:   r.preferred_trainer_id,
     requested_start:        r.requested_start,
+    proposed_start:         r.proposed_start,
     requested_duration_min: r.requested_duration_min,
     notes:                  r.notes,
     status:                 r.status,
