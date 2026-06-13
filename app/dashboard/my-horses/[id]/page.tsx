@@ -23,6 +23,8 @@ import { HorseCareSection } from "@/components/horses/HorseCareSection";
 import { getCareVisitsForHorse } from "@/services/farrierVisits";
 import { getHorseOutstanding } from "@/services/horseBalance";
 import { HorseOutstandingCard } from "@/components/horses/HorseOutstandingCard";
+import { listRideLogLinks } from "@/services/guestContributors";
+import { RideLinkPanel } from "@/components/myHorses/ride-link-panel";
 import {
   listCareRequestsForHorse,
   CARE_TYPE_LABEL,
@@ -98,6 +100,7 @@ export default async function MyHorseDetailPage({
 
   // Farrier/vet visits + costs — owner sees their own horse's debts/notes.
   const careVisits = isOwner ? await getCareVisitsForHorse(h.id).catch(() => []) : [];
+  const rideLinks  = isOwner ? await listRideLogLinks(h.id).catch(() => []) : [];
   const outstanding = isOwner
     ? await getHorseOutstanding(h.id).catch(() => ({ total_cents: 0, lines: [] }))
     : { total_cents: 0, lines: [] };
@@ -323,6 +326,10 @@ export default async function MyHorseDetailPage({
 
       {isOwner && (
         <HorseCareSection visits={careVisits} horseId={h.id} editable={false} />
+      )}
+
+      {isOwner && (
+        <RideLinkPanel horseId={h.id} horseName={h.name} links={rideLinks} />
       )}
 
       <section className="bg-white rounded-2xl shadow-soft p-5">

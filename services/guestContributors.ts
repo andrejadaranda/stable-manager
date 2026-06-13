@@ -94,3 +94,75 @@ export async function revokeGuestContributorToken(tokenId: string): Promise<void
     .eq("id", tokenId);
   if (error) throw error;
 }
+
+// =============================================================
+// Co-rider ('rider') links — CLIENT side. A horse owner mints a magic
+// link so someone can log a ride on THEIR horse without an account.
+// RLS (guest_tokens_rw_owner_client) scopes this to owned horses; the
+// record_guest_ride RPC handles the guest insert.
+// =============================================================
+
+export async function createRideLogLink(input: {
+  horseId: string;
+  riderName: string;
+}): Promise<GuestContributorToken> {
+  const ctx = await getSession();
+  if (ctx.role !== "client") throw new Error("FORBIDDEN");
+  if (!ctx.clientId) throw new Error("CLIENT_NOT_LINKED");
+
+  const name = input.riderName.trim();
+  if (!name) throw new Error("INVALID_RIDER_NAME");
+  if (name.length > 80) throw new Error("RIDER_NAME_TOO_LONG");
+  if (!input.horseId) throw new Error("INVALID_HORSE");
+
+  const supabase = createSupabaseServerClient();
+  const { data: horse, error: hErr } = await supabase
+    .from("horses")
+    .select("stable_id, owner_client_id")
+    .eq("id", input.horseId)
+    .maybeSingle();
+  if (hErr || !horse) throw new Error("HORSE_NOT_FOUND");
+  if ((horse as { owner_client_id: string | null }).owner_client_id !== ctx.clientId) {
+    throw new Error("FORBIDDEN");
+  }
+
+  const expiresAt = new Date(Date.now() + 90 * 86_400_000).toISOString();
+  const { data, error } = await supabase
+    .from("guest_contributor_tokens")
+    .insert({
+      stable_id:        ctx.stableId,
+      horse_id:         input.horseId,
+      token:            mintToken(),
+      kind:             "rider",
+      contributor_name: name,
+      created_by:       ctx.userId,
+      expires_at:       expiresAt,
+    })
+    .select("id, horse_id, token, kind, contributor_name, expires_at, revoked_at, last_used_at, use_count, created_at")
+    .single();
+  if (error) throw error;
+  return data as GuestContributorToken;
+}
+
+export async function listRideLogLinks(horseId: string): Promise<GuestContributorToken[]> {
+  await getSession();
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("guest_contributor_tokens")
+    .select("id, horse_id, token, kind, contributor_name, expires_at, revoked_at, last_used_at, use_count, created_at")
+    .eq("horse_id", horseId)
+    .eq("kind", "rider")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as GuestContributorToken[];
+}
+
+export async function revokeRideLogLink(tokenId: string): Promise<void> {
+  await getSession();
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("guest_contributor_tokens")
+    .update({ revoked_at: new Date().toISOString() })
+    .eq("id", tokenId);
+  if (error) throw error;
+}
