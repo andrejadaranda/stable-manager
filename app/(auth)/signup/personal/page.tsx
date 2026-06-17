@@ -22,7 +22,7 @@ export default function SignupPersonalPage() {
       <div className="flex flex-col sm:flex-row gap-3">
         <PlanCard
           tier="mini"
-          price="€9 / month"
+          price="Free"
           cap="Up to 2 horses"
           features={[
             "Personal calendar + sessions",
@@ -33,7 +33,7 @@ export default function SignupPersonalPage() {
         />
         <PlanCard
           tier="plus"
-          price="€15 / month"
+          price="Free"
           cap="Up to 5 horses"
           features={[
             "Everything in Mini",

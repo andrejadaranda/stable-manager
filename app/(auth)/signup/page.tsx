@@ -25,8 +25,8 @@ export default function SignupLandingPage() {
         <Card
           href="/signup/owner"
           title="I run a stable"
-          body="Manage horses, lessons, clients, and payments in one place. €49/mo."
-          trustLine="14 days free · no charge before day 14 · card required at signup · cancel in one click"
+          body="Manage horses, lessons, clients, and payments in one place."
+          trustLine="Free during early access · no card · every feature unlocked"
           cta="Create a stable →"
           tone="primary"
         />
@@ -40,8 +40,8 @@ export default function SignupLandingPage() {
         <Card
           href="/signup/personal"
           title="Personal account"
-          body="For private horse owners without a stable. €9/mo up to 2 horses · €15/mo up to 5."
-          trustLine="7 days free · no charge before day 7 · card required at signup · cancel in one click"
+          body="For private horse owners without a stable. Log rides, vet and farrier visits, expenses, and goals."
+          trustLine="Free during early access · no card · every feature unlocked"
           cta="Create personal account →"
           tone="secondary"
         />

@@ -16,6 +16,7 @@ import { syncSubscriptionFromCheckoutSession } from "@/lib/stripe/sync";
 import { getSession } from "@/lib/auth/session";
 import { Card, CardHeader, Badge } from "@/components/ui";
 import { BillingActions } from "./BillingActions";
+import { FREE_MODE } from "@/lib/config/freeMode";
 
 type SubscriptionRow = {
   status:                 "trialing" | "active" | "past_due" | "cancelled" | "unpaid" | "paused";
@@ -33,6 +34,40 @@ export default async function BillingSettingsPage({
 }) {
   await requirePageRole("owner");
   const params = (await searchParams) ?? {};
+
+  // FREE_MODE (early access): the whole app is free, billing is paused.
+  // Short-circuit the entire subscribe/trial/Stripe UI with a simple notice
+  // so no owner sees a price or is sent to Checkout. To restore billing,
+  // flip FREE_MODE to false in lib/config/freeMode.ts — all the code below
+  // (and the Stripe flow it drives) becomes active again unchanged.
+  if (FREE_MODE) {
+    return (
+      <div className="flex flex-col gap-6">
+        <Card padded={false}>
+          <CardHeader
+            title="Plan"
+            subtitle="Your Longrein subscription."
+            action={<Badge tone="success" dot>Free · early access</Badge>}
+          />
+          <div className="p-6 flex flex-col gap-4">
+            <p className="text-sm text-ink-700 leading-relaxed">
+              Longrein is <strong>completely free during early access</strong> —
+              every feature is unlocked and there's nothing to pay. No card, no
+              trial clock, no subscription to manage.
+            </p>
+            <p className="text-sm text-ink-500 leading-relaxed">
+              We'll introduce pricing later as the product matures, and we'll
+              give you plenty of notice before anything changes. Questions about
+              a founding-member seat? Write to{" "}
+              <a className="text-brand-700 underline" href="mailto:hello@longrein.eu">
+                hello@longrein.eu
+              </a>.
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   // Belt-and-braces: if Stripe redirected back here with a session_id,
   // sync the subscription state directly. Without this, a user who

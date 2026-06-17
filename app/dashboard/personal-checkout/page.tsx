@@ -9,10 +9,15 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { PersonalCheckoutLauncher } from "@/components/billing/personal-checkout-launcher";
+import { FREE_MODE } from "@/lib/config/freeMode";
 
 export const dynamic = "force-dynamic";
 
 export default async function PersonalCheckoutPage() {
+  // FREE_MODE (early access): never send anyone to Stripe Checkout — the app
+  // is free. Bounce to the dashboard. Reverts when FREE_MODE is flipped off.
+  if (FREE_MODE) redirect("/dashboard");
+
   const session = await getSession().catch(() => null);
   if (!session) redirect("/login");
   if (session.role !== "owner" || session.accountType !== "personal") {

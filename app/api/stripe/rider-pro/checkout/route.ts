@@ -16,6 +16,7 @@ import { NextResponse } from "next/server";
 import { getSession, requireRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { stripeServerClient, PRICE_IDS } from "@/lib/stripe/server";
+import { FREE_MODE } from "@/lib/config/freeMode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,15 @@ export const dynamic = "force-dynamic";
 const APP_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.longrein.eu";
 
 export async function POST() {
+  // FREE_MODE (early access): Rider Pro is included free for everyone — never
+  // create a Checkout Session. Defense-in-depth; the paywall is already hidden.
+  if (FREE_MODE) {
+    return NextResponse.json(
+      { error: "Longrein is free during early access — Rider Pro is included." },
+      { status: 200 },
+    );
+  }
+
   // Auth — only stable clients hit this endpoint. Owners/employees
   // get Rider Pro for free as part of the stable plan; Personal accounts
   // get it bundled. The paywall doesn't render for those roles.

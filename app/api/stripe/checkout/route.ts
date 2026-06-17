@@ -27,6 +27,7 @@ import { cookies } from "next/headers";
 import { getSession, requireRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { stripeServerClient, PRICE_IDS } from "@/lib/stripe/server";
+import { FREE_MODE } from "@/lib/config/freeMode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,15 @@ export const dynamic = "force-dynamic";
 const APP_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.longrein.eu";
 
 export async function POST() {
+  // FREE_MODE (early access): never create a Checkout Session — the app is
+  // free. Defense-in-depth; the UI that calls this is already hidden.
+  if (FREE_MODE) {
+    return NextResponse.json(
+      { ok: false, error: "Longrein is free during early access — no payment needed." },
+      { status: 200 },
+    );
+  }
+
   // Auth — only stable owners can trigger checkout.
   let session;
   try {

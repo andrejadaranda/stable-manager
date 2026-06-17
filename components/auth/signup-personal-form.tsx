@@ -22,8 +22,8 @@ export function SignupPersonalForm() {
           defaultValue="mini"
           className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
         >
-          <option value="mini">Mini — €9/mo · up to 2 horses</option>
-          <option value="plus">Plus — €15/mo · up to 5 horses</option>
+          <option value="mini">Mini — free · up to 2 horses</option>
+          <option value="plus">Plus — free · up to 5 horses</option>
         </select>
       </Field>
 
