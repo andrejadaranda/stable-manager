@@ -1,6 +1,7 @@
 // Refreshes the Supabase session cookie on every request and gates app routes.
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { FREE_MODE } from "@/lib/config/freeMode";
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: request.headers } });
@@ -126,7 +127,9 @@ export async function middleware(request: NextRequest) {
         sub?.current_period_end != null &&
         new Date(sub.current_period_end).getTime() > now &&
         hasStripeCustomer;
-      const allowed = trialOk || sub?.status === "active";
+      // FREE_MODE (early access): skip the subscription gate entirely — the
+      // whole app is free until we turn pricing back on.
+      const allowed = FREE_MODE || trialOk || sub?.status === "active";
       if (!allowed) {
         // Personal accounts skip the business /settings/billing page —
         // they go straight to /dashboard/personal-checkout which fires

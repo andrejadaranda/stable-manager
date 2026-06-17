@@ -18,6 +18,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession } from "./session";
+import { FREE_MODE } from "@/lib/config/freeMode";
 
 export type RiderProEntitlement = {
   entitled: boolean;
@@ -41,6 +42,11 @@ export async function hasRiderPro(): Promise<RiderProEntitlement> {
     ctx = await getSession();
   } catch {
     return { entitled: false, reason: "unauthenticated", expires_at: null };
+  }
+
+  // FREE_MODE (early access): every signed-in user is entitled — no paywall.
+  if (FREE_MODE) {
+    return { entitled: true, reason: "owner-included", expires_at: null };
   }
 
   const supabase = createSupabaseServerClient();
