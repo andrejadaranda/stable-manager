@@ -5,8 +5,13 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, requireRole } from "@/lib/auth/session";
+import { sendOnboardingEmail } from "@/lib/email/client-onboarding";
 
 export type SkillLevel = "beginner" | "intermediate" | "advanced" | "pro";
+
+/** Onboarding-invitation state machine (Phase 1 of digital onboarding). */
+export type OnboardingStatus =
+  | "not_invited" | "invited" | "opened" | "submitted" | "signed" | "completed";
 
 /** Lesson-reminder channel preference per client.
  *  Captured at client-creation time; cron-driven dispatch lands in #34. */
@@ -274,6 +279,126 @@ export async function createClient(input: {
     .single();
   if (error) throw error;
   return data;
+}
+
+// ------- onboarding invitation (Phase 1) ----------------------------------
+//
+// One button, sent once. The duplicate-send guard is an ATOMIC conditional
+// UPDATE (… WHERE onboarding_status = 'not_invited'): a double-click loses
+// the race (0 rows) and can never send twice. On send failure we roll the
+// status back so the owner can retry.
+
+export type OnboardingState = {
+  status:  OnboardingStatus;
+  sent_at: string | null;
+  sent_to: string | null;
+};
+
+export type OnboardingSendResult =
+  | { ok: true;  sentTo: string; sentAt: string }
+  | { ok: false; code: "NO_EMAIL" | "BAD_EMAIL" | "ALREADY_SENT" | "NOT_FOUND" | "SEND_FAILED"; message: string };
+
+const ONBOARDING_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Current onboarding state for the client-profile button. Staff only. */
+export async function getClientOnboarding(clientId: string): Promise<OnboardingState | null> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+  const { data } = await supabase
+    .from("clients")
+    .select("onboarding_status, onboarding_sent_at, onboarding_sent_to")
+    .eq("id", clientId)
+    .maybeSingle();
+  if (!data) return null;
+  const row = data as { onboarding_status: OnboardingStatus; onboarding_sent_at: string | null; onboarding_sent_to: string | null };
+  return { status: row.onboarding_status, sent_at: row.onboarding_sent_at, sent_to: row.onboarding_sent_to };
+}
+
+export async function sendClientOnboardingInvitation(clientId: string): Promise<OnboardingSendResult> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+
+  // Load + validate (RLS scopes to the caller's stable).
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id, full_name, email, onboarding_status")
+    .eq("id", clientId)
+    .maybeSingle();
+  if (!client) return { ok: false, code: "NOT_FOUND", message: "Client not found." };
+  const c = client as { full_name: string; email: string | null; onboarding_status: OnboardingStatus };
+
+  const email = (c.email ?? "").trim();
+  if (!email)
+    return { ok: false, code: "NO_EMAIL", message: "Add an email address to this client before sending the onboarding invitation." };
+  if (!ONBOARDING_EMAIL_RE.test(email))
+    return { ok: false, code: "BAD_EMAIL", message: "This client's email address looks invalid — fix it and try again." };
+  if (c.onboarding_status !== "not_invited")
+    return { ok: false, code: "ALREADY_SENT", message: "The onboarding invitation has already been sent to this client." };
+
+  // Sender (audit) + club + signer names — best-effort.
+  const [{ data: prof }, { data: stable }] = await Promise.all([
+    supabase.from("profiles").select("id, full_name").eq("auth_user_id", session.authUserId).maybeSingle(),
+    supabase.from("stables").select("name").eq("id", session.stableId).maybeSingle(),
+  ]);
+  const senderProfileId = (prof as { id?: string } | null)?.id ?? null;
+  const signerName = ((prof as { full_name?: string } | null)?.full_name ?? "").trim();
+  const clubName = ((stable as { name?: string } | null)?.name ?? "").trim() || "Trakų jojimo klubas";
+
+  // Mint the secret token + 30-day expiry.
+  const token = (globalThis.crypto.randomUUID() + globalThis.crypto.randomUUID()).replace(/-/g, "");
+  const now = new Date();
+  const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  // ATOMIC claim — only flips not_invited -> invited.
+  const { data: claimed } = await supabase
+    .from("clients")
+    .update({
+      onboarding_status:           "invited",
+      onboarding_token:            token,
+      onboarding_token_expires_at: expires.toISOString(),
+      onboarding_sent_at:          now.toISOString(),
+      onboarding_sent_to:          email,
+      onboarding_sent_by:          senderProfileId,
+    })
+    .eq("id", clientId)
+    .eq("onboarding_status", "not_invited")
+    .select("id")
+    .maybeSingle();
+  if (!claimed)
+    return { ok: false, code: "ALREADY_SENT", message: "The onboarding invitation has already been sent to this client." };
+
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.longrein.eu";
+  const onboardingUrl = `${appUrl}/onboarding/${token}`;
+
+  try {
+    await sendOnboardingEmail({
+      to:             email,
+      clientName:     c.full_name,
+      onboardingUrl,
+      clubName,
+      signerName:     signerName || clubName,
+      replyTo:        process.env.RESEND_FROM_EMAIL ?? "hello@longrein.eu",
+      idempotencyKey: `onboarding-${clientId}-${token.slice(0, 12)}`,
+    });
+  } catch (err) {
+    // Roll back the claim so a real send failure can be retried.
+    await supabase
+      .from("clients")
+      .update({
+        onboarding_status:           "not_invited",
+        onboarding_token:            null,
+        onboarding_token_expires_at: null,
+        onboarding_sent_at:          null,
+        onboarding_sent_to:          null,
+        onboarding_sent_by:          null,
+      })
+      .eq("id", clientId);
+    return { ok: false, code: "SEND_FAILED", message: `Email could not be sent: ${(err as Error).message}. Check the address and try again.` };
+  }
+
+  return { ok: true, sentTo: email, sentAt: now.toISOString() };
 }
 
 // ------- update -----------------------------------------------------------

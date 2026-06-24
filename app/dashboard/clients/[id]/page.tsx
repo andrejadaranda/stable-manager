@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePageRole } from "@/lib/auth/redirects";
-import { getClient, type SkillLevel } from "@/services/clients";
+import { getClient, getClientOnboarding, type SkillLevel } from "@/services/clients";
 import { getClientLessons, type ClientLessonRow } from "@/services/lessons";
 import { getClientBalance, listClientOwedItems } from "@/services/payments";
 import { listClientPackages } from "@/services/packages";
@@ -17,6 +17,7 @@ import { AgreementsPanel } from "@/components/clients/agreements-panel";
 import { ChargesPanel } from "@/components/clients/charges-panel";
 import { OwesBreakdown } from "@/components/clients/owes-breakdown";
 import { InviteToAppButton } from "@/components/clients/invite-to-app-button";
+import { OnboardingInviteButton } from "@/components/clients/onboarding-invite-button";
 import { getPendingInviteForClient } from "@/services/invitations";
 import { generateClientInvoiceAction } from "./invoice-actions";
 
@@ -67,6 +68,10 @@ export default async function ClientDetailPage({
     const pending = await getPendingInviteForClient(params.id).catch(() => null);
     hasPendingInvite = pending !== null;
   }
+
+  // Onboarding-invitation state (Phase 1) — staff (owner + employee) can
+  // send the first-lesson invitation. Best-effort; never blocks the page.
+  const onboarding = await getClientOnboarding(params.id).catch(() => null);
 
   const initial = client.full_name?.[0]?.toUpperCase() ?? "?";
 
@@ -143,6 +148,14 @@ export default async function ClientDetailPage({
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 self-center md:self-end mt-3 md:mt-0 md:pb-1 flex-wrap">
+              {onboarding && (
+                <OnboardingInviteButton
+                  clientId={client.id}
+                  status={onboarding.status}
+                  sentAt={onboarding.sent_at}
+                  sentTo={onboarding.sent_to}
+                />
+              )}
               {session.role === "owner" && (
                 <InviteToAppButton
                   clientId={client.id}

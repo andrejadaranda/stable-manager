@@ -6,9 +6,33 @@ import {
   createClient,
   updateClient,
   deleteClient,
+  sendClientOnboardingInvitation,
   type SkillLevel,
   type ReminderPref,
 } from "@/services/clients";
+
+export type OnboardingActionState = {
+  error: string | null;
+  success: boolean;
+  sentTo?: string;
+  sentAt?: string;
+};
+
+export async function sendOnboardingInvitationAction(
+  _prev: OnboardingActionState,
+  formData: FormData,
+): Promise<OnboardingActionState> {
+  const id = String(formData.get("client_id") ?? "");
+  if (!id) return { error: "Missing client id.", success: false };
+  const res = await sendClientOnboardingInvitation(id).catch((err) => ({
+    ok: false as const,
+    code: "SEND_FAILED" as const,
+    message: `Unexpected error: ${err?.message ?? "unknown"}.`,
+  }));
+  if (!res.ok) return { error: res.message, success: false };
+  revalidatePath(`/dashboard/clients/${id}`);
+  return { error: null, success: true, sentTo: res.sentTo, sentAt: res.sentAt };
+}
 
 export type DeleteClientState = { error: string | null };
 
