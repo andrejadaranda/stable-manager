@@ -11,6 +11,7 @@
 // "link is no longer valid" page — no enumeration signal.
 
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { OnboardingForm } from "@/components/onboarding/onboarding-form";
 
 export const dynamic = "force-dynamic";
 
@@ -82,35 +83,27 @@ export default async function OnboardingPage({
               klaida, parašykite mums — atsiųsime naują kvietimą.
             </p>
           </div>
+        ) : client.onboarding_status === "submitted" || client.onboarding_status === "signed" || client.onboarding_status === "completed" ? (
+          <div style={{ background: "#fff", border: "1px solid #E7DECF", borderRadius: 16, padding: "32px 28px", color: "#2A2722", lineHeight: 1.6, fontSize: 15, textAlign: "center" }}>
+            <div style={{ fontSize: 34, marginBottom: 8 }}>✓</div>
+            <h1 style={{ fontFamily: "'Source Serif 4',Georgia,serif", fontSize: 22, margin: "0 0 10px", color: "#16291E" }}>Ačiū — duomenys jau gauti</h1>
+            <p style={{ margin: 0, color: "#4A453E" }}>
+              Jūsų informacija užregistruota. Su jumis susisieksime dėl pirmosios
+              pamokos. Sutarties pasirašymą internetu netrukus įdiegsime čia.
+            </p>
+          </div>
         ) : (
           <div style={{ background: "#fff", border: "1px solid #E7DECF", borderRadius: 16, padding: "32px 28px", color: "#2A2722", lineHeight: 1.6, fontSize: 15 }}>
-            <p style={{ margin: "0 0 16px" }}>Sveiki, <strong>{client.full_name}</strong>,</p>
-            <p style={{ margin: "0 0 16px" }}>dėkojame, kad registruojatės į {clubName}. Prieš pirmąją pamoką — keletas svarbių dalykų.</p>
+            <OnboardingForm token={token} riderName={client.full_name} />
 
-            <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Atvykimas</p>
-            <p style={{ margin: "0 0 16px" }}>Prašome atvykti 10–15 minučių anksčiau, kad turėtume laiko susipažinti ir pasiruošti.</p>
-
-            <p style={{ margin: "0 0 6px", fontWeight: 600 }}>Apranga</p>
-            <ul style={{ margin: "0 0 16px", paddingLeft: 20 }}>
-              <li>patogios, judesių nevaržančios kelnės;</li>
-              <li>batai su nedideliu kulnu arba tvirtesni uždari batai;</li>
-              <li>pagal oro sąlygas pritaikyta viršutinė apranga;</li>
-              <li>šalmas, jei turite savo (jei ne — susitarsime prieš pamoką).</li>
-            </ul>
-
-            <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid #EFE7D8" }}>
-              <p style={{ margin: "0 0 6px", fontWeight: 600, color: "#16291E" }}>Sutarties pasirašymas</p>
-              <p style={{ margin: 0, color: "#6E6760" }}>
-                Jojimo paslaugų sutarties pasirašymą internetu netrukus įdiegsime
-                čia, šioje nuorodoje. Iki tol sutartį pasirašysime klube prieš
-                pirmąją pamoką. Jeigu pamokoje dalyvaus vaikas, sutartį pasirašo
-                vienas iš tėvų arba globėjų.
+            <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid #EFE7D8", color: "#6E6760", fontSize: 13.5, lineHeight: 1.55 }}>
+              <p style={{ margin: "0 0 6px", fontWeight: 600, color: "#16291E" }}>Prieš pirmąją pamoką</p>
+              <p style={{ margin: 0 }}>
+                Atvykite 10–15 min anksčiau. Apranga: patogios kelnės, batai su
+                nedideliu kulnu, pagal orą pritaikyta viršutinė apranga, šalmas
+                (jei turite — jei ne, susitarsime klube).
               </p>
             </div>
-
-            <p style={{ margin: "20px 0 0", color: "#6E6760", fontSize: 13.5 }}>
-              Turite klausimų? Tiesiog atsakykite į gautą laišką.
-            </p>
           </div>
         )}
 

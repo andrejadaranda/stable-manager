@@ -46,14 +46,25 @@ export function OnboardingInviteButton({
   if (alreadySent) {
     const when = isoDate(state.sentAt ?? sentAt);
     const to = state.sentTo ?? sentTo;
+    // After a fresh send `status` is still 'not_invited' in this render —
+    // treat the optimistic success as 'invited'.
+    const effective = state.success && status === "not_invited" ? "invited" : status;
+    const LABEL: Record<OnboardingStatus, string> = {
+      not_invited: "Onboarding invitation sent",
+      invited:     "Onboarding invitation sent",
+      opened:      "Client opened the link",
+      submitted:   "Client submitted their details",
+      signed:      "Documents signed",
+      completed:   "Onboarding completed",
+    };
     return (
       <div className="flex flex-col gap-1">
         <button
           type="button"
           disabled
-          className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-medium bg-ink-100 text-ink-500 cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-medium bg-ink-100 text-ink-600 cursor-not-allowed"
         >
-          ✓ Onboarding invitation sent
+          ✓ {LABEL[effective]}
         </button>
         {when && (
           <p className="text-[11.5px] text-ink-500">
