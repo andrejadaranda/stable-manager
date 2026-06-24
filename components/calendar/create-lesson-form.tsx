@@ -140,7 +140,11 @@ export function CreateLessonForm({
   // Controlled fields so we can auto-fill defaults intelligently.
   const [clientId, setClientId] = useState("");
   const [horseId, setHorseId]   = useState("");
-  const [trainerId, setTrainerId] = useState("");
+  // Single-trainer stables (e.g. an owner who is the only coach) shouldn't
+  // be asked "who will train?" — auto-assign the only trainer and hide the
+  // picker. Multi-trainer stables still get the dropdown.
+  const soleTrainer = trainers.length === 1 ? trainers[0] : null;
+  const [trainerId, setTrainerId] = useState(soleTrainer?.id ?? "");
   const [serviceId, setServiceId] = useState("");
   // Default to the first active arena (typically "Main arena") so single-
   // arena stables don't need to touch the picker at all.
@@ -350,9 +354,8 @@ export function CreateLessonForm({
                 name="new_client_phone"
                 value={newClientPhone}
                 onChange={(e) => setNewClientPhone(e.target.value)}
-                required
                 maxLength={40}
-                placeholder="Phone (used to dedupe — typing the same number reuses the existing client)"
+                placeholder="Phone (optional — add it later)"
                 inputMode="tel"
                 className="
                   rounded-lg border border-ink-200 bg-white text-sm text-ink-900
@@ -361,7 +364,9 @@ export function CreateLessonForm({
                 "
               />
               <p className="text-[11px] text-ink-600">
-                Saved as a new client. You can fill in email / skill level later.
+                Only a name is required — phone, email and skill level can be
+                filled in later from the client profile. If you do add a phone,
+                typing the same number reuses the existing client.
               </p>
             </div>
           )}
@@ -376,7 +381,13 @@ export function CreateLessonForm({
             </button>
           )}
           <Select label="Horse (optional)" name="horse_id" value={horseId} onChange={setHorseId} options={horses.map((h) => ({ id: h.id, label: h.name }))} placeholder="No horse yet — assign later" />
-          <Select label="Trainer" name="trainer_id" value={trainerId} onChange={setTrainerId} options={trainers.map((t) => ({ id: t.id, label: `${t.full_name ?? "(no name)"} (${t.role})` }))} placeholder="No trainer yet — assign later" />
+          {soleTrainer ? (
+            // Only one trainer in the stable — no choice to make. Assign them
+            // silently and skip the picker entirely.
+            <input type="hidden" name="trainer_id" value={trainerId} />
+          ) : (
+            <Select label="Trainer" name="trainer_id" value={trainerId} onChange={setTrainerId} options={trainers.map((t) => ({ id: t.id, label: `${t.full_name ?? "(no name)"} (${t.role})` }))} placeholder="No trainer yet — assign later" />
+          )}
 
           {services.length > 0 && (
             <Select

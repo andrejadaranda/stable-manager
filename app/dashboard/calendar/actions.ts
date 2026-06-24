@@ -23,19 +23,24 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 async function ensureClientForQuickAdd(name: string, phone: string): Promise<string> {
   const supabase = createSupabaseServerClient();
   const phoneNorm = phone.replace(/\s+/g, "");
+  // Phone is OPTIONAL — trainers often onboard a walk-in before they have
+  // a number (the owner fills it in later). Only dedupe by phone when one
+  // was actually given; with no phone we always create a fresh client.
   // RLS narrows to caller's stable; phone match is exact-string here
   // because we don't normalise on insert. If we ever standardise to E.164
   // we'd update the lookup at the same time.
-  const { data: existing } = await supabase
-    .from("clients")
-    .select("id")
-    .eq("phone", phoneNorm)
-    .maybeSingle();
-  if (existing) return (existing as { id: string }).id;
+  if (phoneNorm) {
+    const { data: existing } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("phone", phoneNorm)
+      .maybeSingle();
+    if (existing) return (existing as { id: string }).id;
+  }
 
   const created = await createClient({
     fullName: name.trim(),
-    phone:    phoneNorm,
+    phone:    phoneNorm || undefined,
     active:   true,
   });
   return (created as { id: string }).id;
@@ -74,7 +79,7 @@ export async function createLessonAction(
   // Quick-add path — trainer typed a new client right in the lesson
   // form. Look them up by phone or create. The returned id replaces
   // the (empty) client_id from the dropdown for the rest of the flow.
-  if (!clientId && newClientName && newClientPhone) {
+  if (!clientId && newClientName) {
     try {
       clientId = await ensureClientForQuickAdd(newClientName, newClientPhone);
     } catch (err: any) {
