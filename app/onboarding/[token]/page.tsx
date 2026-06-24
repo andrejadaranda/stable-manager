@@ -10,8 +10,10 @@
 // never via a client directory. Expired or unknown tokens render a neutral
 // "link is no longer valid" page — no enumeration signal.
 
+import { notFound } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
+import { ONBOARDING_ENABLED } from "@/lib/config/onboarding";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +30,8 @@ export default async function OnboardingPage({
 }: {
   params: { token: string };
 }) {
+  if (!ONBOARDING_ENABLED) notFound();
+
   const token = params.token ?? "";
   let client: OnboardingClient | null = null;
   let clubName = "Trakų jojimo klubas";

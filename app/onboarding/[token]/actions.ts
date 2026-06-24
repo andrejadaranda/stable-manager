@@ -10,6 +10,7 @@
 // onboarding_status -> 'submitted'. Zero manual data entry by staff.
 
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { ONBOARDING_ENABLED } from "@/lib/config/onboarding";
 
 export type OnboardingSubmitState = { error: string | null; success: boolean };
 
@@ -23,6 +24,8 @@ export async function submitOnboardingAction(
   _prev: OnboardingSubmitState,
   formData: FormData,
 ): Promise<OnboardingSubmitState> {
+  if (!ONBOARDING_ENABLED) return { error: "Funkcija šiuo metu nepasiekiama.", success: false };
+
   const token = s(formData, "token");
   if (token.length < 16) return { error: "Neteisinga nuoroda.", success: false };
 

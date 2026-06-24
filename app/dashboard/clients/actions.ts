@@ -10,6 +10,7 @@ import {
   type SkillLevel,
   type ReminderPref,
 } from "@/services/clients";
+import { ONBOARDING_ENABLED } from "@/lib/config/onboarding";
 
 export type OnboardingActionState = {
   error: string | null;
@@ -22,6 +23,7 @@ export async function sendOnboardingInvitationAction(
   _prev: OnboardingActionState,
   formData: FormData,
 ): Promise<OnboardingActionState> {
+  if (!ONBOARDING_ENABLED) return { error: "Onboarding is currently disabled.", success: false };
   const id = String(formData.get("client_id") ?? "");
   if (!id) return { error: "Missing client id.", success: false };
   const res = await sendClientOnboardingInvitation(id).catch((err) => ({

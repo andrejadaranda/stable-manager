@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { getClient, getClientOnboarding, type SkillLevel } from "@/services/clients";
+import { ONBOARDING_ENABLED } from "@/lib/config/onboarding";
 import { getClientLessons, type ClientLessonRow } from "@/services/lessons";
 import { getClientBalance, listClientOwedItems } from "@/services/payments";
 import { listClientPackages } from "@/services/packages";
@@ -71,7 +72,10 @@ export default async function ClientDetailPage({
 
   // Onboarding-invitation state (Phase 1) — staff (owner + employee) can
   // send the first-lesson invitation. Best-effort; never blocks the page.
-  const onboarding = await getClientOnboarding(params.id).catch(() => null);
+  // Parked behind ONBOARDING_ENABLED while we decide where onboarding lives.
+  const onboarding = ONBOARDING_ENABLED
+    ? await getClientOnboarding(params.id).catch(() => null)
+    : null;
 
   const initial = client.full_name?.[0]?.toUpperCase() ?? "?";
 
