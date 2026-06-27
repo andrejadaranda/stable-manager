@@ -125,6 +125,36 @@ export async function createPackage(input: CreatePackageInput) {
   return pkg;
 }
 
+/** Record a payment against an EXISTING package — how much, how, and when.
+ *  For when a client pays for their subscription after it was created (or
+ *  pays the rest of a partial). Owner-only. Inserts a payments row linked
+ *  via package_id so revenue + the package's paid_amount stay in sync. */
+export async function addPackagePayment(input: {
+  packageId: string;
+  clientId:  string;
+  amount:    number;
+  method?:   "cash" | "card" | "transfer" | "other";
+  /** ISO timestamp the money was received; defaults to now. */
+  paidAt?:   string;
+}) {
+  const session = await getSession();
+  requireRole(session, "owner");
+  if (!Number.isFinite(input.amount) || input.amount <= 0) throw new Error("INVALID_AMOUNT");
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase.from("payments").insert({
+    stable_id:  session.stableId,
+    client_id:  input.clientId,
+    package_id: input.packageId,
+    lesson_id:  null,
+    amount:     input.amount,
+    method:     input.method ?? "cash",
+    paid_at:    input.paidAt ?? new Date().toISOString(),
+    notes:      "Package payment",
+  });
+  if (error) throw error;
+}
+
 /** Delete a package. Owner-only. Sets lessons.package_id and
  *  payments.package_id to null on the way out (handled by FKs).
  */

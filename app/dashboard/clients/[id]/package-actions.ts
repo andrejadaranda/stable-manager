@@ -5,7 +5,7 @@
 // enforce this; the actions just translate form data.
 
 import { revalidatePath } from "next/cache";
-import { createPackage, deletePackage } from "@/services/packages";
+import { createPackage, deletePackage, addPackagePayment } from "@/services/packages";
 
 export type PackageActionState = {
   error: string | null;
@@ -75,6 +75,43 @@ export async function createPackageAction(
       return { ...initial, error: "Package created, but the payment couldn't be logged. Add it manually from Payments." };
     }
     return { ...initial, error: `Could not create package: ${code || "unknown error"}.` };
+  }
+
+  revalidatePath(`/dashboard/clients/${clientId}`);
+  return { error: null, success: true };
+}
+
+export async function recordPackagePaymentAction(
+  _prev: PackageActionState,
+  formData: FormData,
+): Promise<PackageActionState> {
+  const packageId = String(formData.get("package_id") ?? "");
+  const clientId  = String(formData.get("client_id")  ?? "");
+  const amount    = Number(String(formData.get("amount") ?? ""));
+  const methodRaw = String(formData.get("method") ?? "cash");
+  const paidRaw   = String(formData.get("paid_at") ?? "").trim();
+
+  if (!packageId || !clientId) return { ...initial, error: "Missing package or client." };
+  if (!Number.isFinite(amount) || amount <= 0) return { ...initial, error: "Enter the amount paid." };
+
+  const method =
+    methodRaw === "card" || methodRaw === "transfer" || methodRaw === "other" ? methodRaw : "cash";
+
+  let paidAt: string | undefined;
+  if (paidRaw) {
+    const d = new Date(paidRaw);
+    if (Number.isNaN(d.getTime())) return { ...initial, error: "Invalid payment date." };
+    paidAt = d.toISOString();
+  }
+
+  try {
+    await addPackagePayment({ packageId, clientId, amount, method, paidAt });
+  } catch (err: any) {
+    const code = err?.message ?? "";
+    if (code === "FORBIDDEN")       return { ...initial, error: "Only owners can record payments." };
+    if (code === "UNAUTHENTICATED") return { ...initial, error: "Your session expired. Sign in again." };
+    if (code === "INVALID_AMOUNT")  return { ...initial, error: "Enter a valid amount." };
+    return { ...initial, error: `Could not record payment: ${code || "unknown error"}.` };
   }
 
   revalidatePath(`/dashboard/clients/${clientId}`);

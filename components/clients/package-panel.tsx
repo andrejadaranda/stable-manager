@@ -14,6 +14,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import {
   createPackageAction,
   deletePackageAction,
+  recordPackagePaymentAction,
   type PackageActionState,
 } from "@/app/dashboard/clients/[id]/package-actions";
 import type { PackageSummaryRow } from "@/services/packages";
@@ -134,24 +135,110 @@ function ActivePackageCard({
     : null;
 
   return (
-    <div className="rounded-2xl bg-brand-50/60 border border-brand-100 p-4 flex items-center gap-4">
-      <UsageRing usedPct={usedPct} remaining={pkg.lessons_remaining} />
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-brand-700">
-          Active package
-        </p>
-        <p className="font-display text-2xl text-navy-900 mt-0.5 leading-tight">
-          {pkg.lessons_remaining} <span className="text-base font-medium text-ink-500">of {pkg.total_lessons} left</span>
-        </p>
-        <p className="text-[12px] text-ink-600 mt-1">
-          {FMT_EUR.format(Number(pkg.price))} paid
-          {expiresLabel ? ` · expires ${expiresLabel}` : " · no expiry"}
-        </p>
+    <div className="rounded-2xl bg-brand-50/60 border border-brand-100 p-4 flex flex-col gap-3">
+      <div className="flex items-center gap-4">
+        <UsageRing usedPct={usedPct} remaining={pkg.lessons_remaining} />
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-brand-700">
+            Active package
+          </p>
+          <p className="font-display text-2xl text-navy-900 mt-0.5 leading-tight">
+            {pkg.lessons_remaining} <span className="text-base font-medium text-ink-500">of {pkg.total_lessons} left</span>
+          </p>
+          <p className="text-[12px] mt-1">
+            <PayStatusLabel pkg={pkg} />
+            {expiresLabel ? <span className="text-ink-500"> · expires {expiresLabel}</span> : <span className="text-ink-500"> · no expiry</span>}
+          </p>
+        </div>
+        {isOwner && (
+          <DeleteButton packageId={pkg.id} clientId={clientId} small />
+        )}
       </div>
-      {isOwner && (
-        <DeleteButton packageId={pkg.id} clientId={clientId} small />
-      )}
+      {isOwner && <RecordPackagePayment pkg={pkg} clientId={clientId} />}
     </div>
+  );
+}
+
+// Real payment status from paid_amount vs price (no more "always paid").
+function PayStatusLabel({ pkg }: { pkg: PackageSummaryRow }) {
+  const paid = Number(pkg.paid_amount ?? 0);
+  const price = Number(pkg.price);
+  if (paid >= price && price > 0) return <span className="text-emerald-700 font-medium">Paid · {FMT_EUR.format(price)}</span>;
+  if (paid > 0) return <span className="text-amber-700 font-medium">Partial · {FMT_EUR.format(paid)} of {FMT_EUR.format(price)}</span>;
+  return <span className="text-ink-700 font-medium">Unpaid · {FMT_EUR.format(price)}</span>;
+}
+
+// Inline "Record payment" — how much, how, and when. Shown when there's
+// still a balance owed on the package. Its own <form> (sibling of the
+// delete form, not nested).
+function RecordPackagePayment({ pkg, clientId }: { pkg: PackageSummaryRow; clientId: string }) {
+  const paid = Number(pkg.paid_amount ?? 0);
+  const price = Number(pkg.price);
+  const due = Math.max(0, Number((price - paid).toFixed(2)));
+  const [open, setOpen] = useState(false);
+  const [state, action] = useFormState<PackageActionState, FormData>(recordPackagePaymentAction, initialState);
+  useEffect(() => { if (state.success) setOpen(false); }, [state.success]);
+
+  if (due <= 0) return null;
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="self-start text-[12px] font-medium text-brand-700 hover:text-brand-800"
+      >
+        + Record payment
+      </button>
+    );
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const inputCls = "rounded-lg border border-ink-200 bg-white text-sm text-ink-900 px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500";
+
+  return (
+    <form action={action} className="rounded-xl border border-brand-200 bg-white px-3 py-3 flex flex-col gap-2.5">
+      <input type="hidden" name="package_id" value={pkg.id} />
+      <input type="hidden" name="client_id" value={clientId} />
+      <div className="flex items-center justify-between">
+        <p className="text-[12.5px] font-medium text-navy-900">Record payment</p>
+        <button type="button" onClick={() => setOpen(false)} className="text-[11px] text-ink-500 hover:text-navy-900">Cancel</button>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        <label className="flex flex-col gap-1 text-[12px] text-ink-600">
+          Amount · €
+          <input type="number" name="amount" min={0} step="0.01" defaultValue={String(due)} className={inputCls} />
+        </label>
+        <label className="flex flex-col gap-1 text-[12px] text-ink-600">
+          Method
+          <select name="method" defaultValue="cash" className={inputCls}>
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="transfer">Transfer</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+      </div>
+      <label className="flex flex-col gap-1 text-[12px] text-ink-600">
+        When
+        <input type="date" name="paid_at" defaultValue={today} className={inputCls} />
+      </label>
+      {state.error && <p className="text-[11.5px] text-rose-700">{state.error}</p>}
+      <RecordSubmit />
+    </form>
+  );
+}
+
+function RecordSubmit() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="h-9 px-3.5 rounded-lg text-[13px] font-medium bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed self-start transition-colors"
+    >
+      {pending ? "Saving…" : "Save payment"}
+    </button>
   );
 }
 
