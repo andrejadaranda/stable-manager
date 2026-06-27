@@ -6,6 +6,7 @@
 //   * Fully English copy.
 //   * 15-min step on datetime-local inputs.
 
+import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
@@ -185,8 +186,19 @@ export function EditLessonDialog({
           <div>
             <h2 className="text-base font-semibold text-navy-900">Edit lesson</h2>
             <p className="text-xs text-ink-500 mt-0.5">
-              {lesson.client?.full_name ?? "—"} · {lesson.horse?.name ?? "—"} ·{" "}
-              {lesson.trainer?.full_name ?? "—"}
+              {lesson.client?.id ? (
+                <Link
+                  href={`/dashboard/clients/${lesson.client.id}`}
+                  onClick={onClose}
+                  className="text-brand-700 font-medium hover:text-brand-800 hover:underline"
+                  title="Atidaryti kliento profilį"
+                >
+                  {lesson.client.full_name ?? "—"} ↗
+                </Link>
+              ) : (
+                lesson.client?.full_name ?? "—"
+              )}
+              {" · "}{lesson.horse?.name ?? "—"} · {lesson.trainer?.full_name ?? "—"}
             </p>
             <p className="text-xs text-ink-500 tabular-nums">
               {fmtTime(lesson.starts_at)}–{fmtTime(lesson.ends_at)}
