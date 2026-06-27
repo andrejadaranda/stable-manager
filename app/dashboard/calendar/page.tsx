@@ -35,10 +35,17 @@ export default async function CalendarPage({
     const monthFirst = new Date(ref.getFullYear(), ref.getMonth(), 1);
     const gridStart = startOfWeek(monthFirst);
     const gridEnd = addDays(gridStart, 42);
-    const [mLessons, mFarrier, mBlocks] = await Promise.all([
+    // Load the edit-needed rosters too so lessons are tappable → Edit lesson
+    // straight from the month grid (Andrėja: "paspaudus — redaguoju").
+    const [mLessons, mFarrier, mBlocks, mClients, mHorses, mServices, mArenas, mPackages] = await Promise.all([
       getCalendar(gridStart.toISOString(), gridEnd.toISOString()),
       getFarrierVisitsForCalendar(gridStart.toISOString(), gridEnd.toISOString()).catch(() => []),
       listAvailabilityBlocks(gridStart.toISOString(), gridEnd.toISOString()).catch(() => []),
+      listClients({ activeOnly: true }).catch(() => []),
+      listHorses({ activeOnly: true, lessonsOnly: true }).catch(() => []),
+      listServices({ activeOnly: true }).catch(() => []),
+      listArenas({ activeOnly: true }).catch(() => []),
+      listActivePackagesForStable().catch(() => ({})),
     ]);
     const prev = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
     const next = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
@@ -55,6 +62,12 @@ export default async function CalendarPage({
           basePath="/dashboard/calendar"
           prevDate={fmtISODate(prev)}
           nextDate={fmtISODate(next)}
+          clients={(mClients ?? []).map((c) => ({ id: c.id, full_name: c.full_name }))}
+          horses={(mHorses ?? []).map((h) => ({ id: h.id, name: h.name }))}
+          services={mServices ?? []}
+          arenas={mArenas ?? []}
+          activePackagesByClient={mPackages ?? {}}
+          editable
         />
         <TimeOffPanel blocks={mBlocks ?? []} />
       </div>

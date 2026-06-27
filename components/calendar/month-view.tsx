@@ -1,14 +1,21 @@
-// Month overview — a 6-week grid of the month containing `gridStart`.
-// Read-only: each day shows its lessons (colored by status) + farrier/vet
-// chips. Click a day to jump into the week/day view for booking. Server
-// component (links only) so it stays light.
+"use client";
 
+// Month overview — a 6-week grid of the month containing `gridStart`.
+// Each day shows ALL its lessons (colored by status) + farrier/vet chips.
+// A lesson chip is tappable → opens Edit lesson right here (Andrėja wants
+// to edit straight from the month). The day number links into that week
+// for booking. Client component so the edit dialog can live inline.
+
+import { useState } from "react";
 import Link from "next/link";
 import { fmtISODate, addDays } from "@/lib/utils/dates";
 import type { CalendarLesson } from "@/services/lessons";
 import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
 import { VISIT_KIND_COLOR } from "@/services/farrierVisits.pure";
 import type { AvailabilityBlock } from "@/services/availability.pure";
+import type { ServiceRow } from "@/services/services";
+import type { PackageSummaryRow } from "@/services/packages";
+import { EditLessonDialog } from "./edit-lesson-dialog";
 
 const STATUS_COLOR: Record<CalendarLesson["status"], string> = {
   scheduled: "#2F406A",
@@ -18,6 +25,8 @@ const STATUS_COLOR: Record<CalendarLesson["status"], string> = {
 };
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+type ActivePackagesMap = Record<string, PackageSummaryRow>;
 
 export function MonthView({
   lessons,
@@ -29,6 +38,12 @@ export function MonthView({
   basePath,
   prevDate,
   nextDate,
+  clients = [],
+  horses = [],
+  services = [],
+  arenas = [],
+  activePackagesByClient = {},
+  editable = false,
 }: {
   lessons: CalendarLesson[];
   farrierVisits: CalendarFarrierVisit[];
@@ -40,7 +55,15 @@ export function MonthView({
   basePath: string;
   prevDate: string;
   nextDate: string;
+  clients?: Array<{ id: string; full_name: string }>;
+  horses?: Array<{ id: string; name: string }>;
+  services?: ServiceRow[];
+  arenas?: Array<{ id: string; name: string; color: string }>;
+  activePackagesByClient?: ActivePackagesMap;
+  editable?: boolean;
 }) {
+  const [selected, setSelected] = useState<CalendarLesson | null>(null);
+
   const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
   const todayKey = fmtISODate(new Date());
 
@@ -67,7 +90,7 @@ export function MonthView({
     else careByDay.set(k, [v]);
   }
   const time = (iso: string) =>
-    new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Vilnius" });
 
   return (
     <div className="flex flex-col gap-3">
@@ -104,14 +127,18 @@ export function MonthView({
           const hasAllDayBlock = dayBlocks.some((b) => b.all_day);
           const isToday = key === todayKey;
           return (
-            <Link
+            <div
               key={key}
-              href={`${basePath}?date=${key}`}
-              className={`min-h-[92px] md:min-h-[110px] p-1.5 flex flex-col gap-1 transition-colors ${hasAllDayBlock ? "bg-rose-50 hover:bg-rose-100/70" : "bg-white hover:bg-cream-soft/60"} ${inMonth ? "" : "opacity-45"}`}
+              className={`min-h-[92px] md:min-h-[110px] p-1.5 flex flex-col gap-1 ${hasAllDayBlock ? "bg-rose-50" : "bg-white"} ${inMonth ? "" : "opacity-45"}`}
             >
-              <span className={`text-[12px] font-medium w-6 h-6 inline-flex items-center justify-center rounded-full ${isToday ? "bg-brand-600 text-white" : hasAllDayBlock ? "text-rose-700" : "text-ink-700"}`}>
+              {/* Day number — links into that week for booking. */}
+              <Link
+                href={`${basePath}?date=${key}`}
+                className={`self-start text-[12px] font-medium w-6 h-6 inline-flex items-center justify-center rounded-full hover:ring-1 hover:ring-brand-300 ${isToday ? "bg-brand-600 text-white" : hasAllDayBlock ? "text-rose-700" : "text-ink-700"}`}
+                title="Open this week"
+              >
                 {day.getDate()}
-              </span>
+              </Link>
               <div className="flex flex-col gap-0.5 overflow-hidden">
                 {dayBlocks.map((b) => (
                   <span key={b.id} className="text-[10.5px] leading-tight truncate px-1 py-0.5 rounded font-medium"
@@ -119,14 +146,24 @@ export function MonthView({
                     {b.all_day ? "Blocked" : `${time(b.starts_at)}–${time(b.ends_at)} blocked`}{b.reason ? ` · ${b.reason}` : ""}
                   </span>
                 ))}
-                {dayLessons.slice(0, 3).map((l) => (
-                  <span key={l.id} className="text-[10.5px] leading-tight truncate px-1 py-0.5 rounded"
-                    style={{ background: `${STATUS_COLOR[l.status]}1A`, color: STATUS_COLOR[l.status] }}>
-                    {time(l.starts_at)} {l.client?.full_name ?? l.horse?.name ?? "Lesson"}
-                  </span>
-                ))}
-                {dayLessons.length > 3 && (
-                  <span className="text-[10px] text-ink-400 px-1">+{dayLessons.length - 3} more</span>
+                {dayLessons.map((l) =>
+                  editable ? (
+                    <button
+                      key={l.id}
+                      type="button"
+                      onClick={() => setSelected(l)}
+                      className="text-left text-[10.5px] leading-tight truncate px-1 py-0.5 rounded hover:ring-1 hover:ring-inset"
+                      style={{ background: `${STATUS_COLOR[l.status]}1A`, color: STATUS_COLOR[l.status] }}
+                      title="Edit lesson"
+                    >
+                      {time(l.starts_at)} {l.client?.full_name ?? l.horse?.name ?? "Lesson"}
+                    </button>
+                  ) : (
+                    <span key={l.id} className="text-[10.5px] leading-tight truncate px-1 py-0.5 rounded"
+                      style={{ background: `${STATUS_COLOR[l.status]}1A`, color: STATUS_COLOR[l.status] }}>
+                      {time(l.starts_at)} {l.client?.full_name ?? l.horse?.name ?? "Lesson"}
+                    </span>
+                  ),
                 )}
                 {dayCare.map((v) => (
                   <span key={v.id} className="text-[10.5px] leading-tight truncate px-1 py-0.5 rounded text-white"
@@ -135,10 +172,24 @@ export function MonthView({
                   </span>
                 ))}
               </div>
-            </Link>
+            </div>
           );
         })}
       </div>
+
+      {/* Edit modal — same dialog the week view uses. */}
+      {editable && selected && (
+        <EditLessonDialog
+          key={selected.id}
+          lesson={selected}
+          services={services}
+          activePackage={activePackagesByClient[selected.client?.id ?? ""] ?? null}
+          clients={clients}
+          horses={horses}
+          arenas={arenas}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </div>
   );
 }
