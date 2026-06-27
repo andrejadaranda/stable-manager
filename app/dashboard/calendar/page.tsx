@@ -26,11 +26,10 @@ export default async function CalendarPage({
   const ref = searchParams.date ? new Date(searchParams.date) : new Date();
   const refDate = fmtISODate(ref);
 
-  // ── Month view is the default landing (no params). Any date-based
-  //    navigation (week prev/next, day clicks) carries ?date and stays in
-  //    week; ?view=week / ?view=month are explicit overrides. ──
-  const showMonth =
-    searchParams.view === "month" || (!searchParams.view && !searchParams.date);
+  // ── WEEK view is the default landing (Andrėja's choice 2026-06-27 —
+  //    "noriu matyt pirma savaites view"). Month is one tap away via the
+  //    toggle (?view=month). Only show month when explicitly asked. ──
+  const showMonth = searchParams.view === "month";
 
   if (showMonth) {
     const monthFirst = new Date(ref.getFullYear(), ref.getMonth(), 1);
