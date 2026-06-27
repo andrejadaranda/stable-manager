@@ -110,14 +110,15 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
       .from("payments")
       .select(
         `
-        id, amount, lesson_id, package_id, boarding_charge_id,
+        id, amount, lesson_id, package_id, boarding_charge_id, client_charge_id,
         lesson:lessons(id, horse_id, service_id,
           service:services(id, name),
           horse:horses(id, name)
         ),
         boarding_charge:horse_boarding_charges(id, horse_id,
           horse:horses(id, name)
-        )
+        ),
+        client_charge:client_charges(id, kind)
         `,
       )
       .gte("paid_at", periodStart)
@@ -144,6 +145,7 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
     lesson_id: string | null;
     package_id: string | null;
     boarding_charge_id: string | null;
+    client_charge_id: string | null;
     lesson: {
       id: string;
       horse_id: string;
@@ -156,6 +158,7 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
       horse_id: string;
       horse: { id: string; name: string } | null;
     } | null;
+    client_charge: { id: string; kind: string } | null;
   };
   const payments = (paymentsRes.data ?? []) as unknown as PaymentRow[];
 
@@ -164,6 +167,19 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
   };
   const serviceMap = new Map<string, RevenueByService>();
   const horseRevenueMap = new Map<string, { name: string; amount: number }>();
+
+  // Misc-charge "kinds" that recover a stable expense — their payments are
+  // NOT revenue; they NET against that expense category (a farrier
+  // reimbursement from an owner just offsets the farrier bill the stable
+  // fronted). Kinds not listed here (training_extra, other) stay as revenue.
+  const REIMBURSE_TO_EXPENSE: Partial<Record<string, ExpenseCategory>> = {
+    farrier:    "farrier",
+    vet_copay:  "vet",
+    equipment:  "equipment",
+    transport:  "transport",
+    supplement: "feed",
+  };
+  const reimbursementByCat = new Map<ExpenseCategory, number>();
 
   for (const p of payments) {
     const a = Number(p.amount ?? 0);
@@ -203,13 +219,22 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
       cur.amount += a;
       cur.lessonCount += 1;
       serviceMap.set(svcKey, cur);
+    } else if (p.client_charge_id) {
+      // Misc charge. Reimbursement kinds net against expenses; the rest
+      // (training_extra / other) are genuine revenue.
+      const cat = REIMBURSE_TO_EXPENSE[p.client_charge?.kind ?? "other"];
+      if (cat) {
+        reimbursementByCat.set(cat, (reimbursementByCat.get(cat) ?? 0) + a);
+      } else {
+        byCategory.uncategorized += a;
+      }
     } else {
       byCategory.uncategorized += a;
     }
   }
 
-  const totalRevenue =
-    byCategory.lessons + byCategory.packages + byCategory.boarding + byCategory.uncategorized;
+  // totalRevenue is computed AFTER reimbursement netting below (netting can
+  // push leftover into uncategorized when there's no expense to offset).
 
   const byService = Array.from(serviceMap.values()).sort(
     (a, b) => b.amount - a.amount,
@@ -251,9 +276,33 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
     }
   }
 
-  const totalExpenses = expenses.reduce(
+  const grossExpenses = expenses.reduce(
     (acc, e) => acc + Number(e.amount ?? 0), 0,
   );
+
+  // Net reimbursement client charges against their expense category. This
+  // lowers BOTH the expense total and (vs. the old behaviour) keeps them out
+  // of revenue — net profit is unchanged, the categorisation is just honest.
+  // If a reimbursement has no matching expense to offset, the leftover is
+  // counted as revenue so the books still balance.
+  let reimbursedTotal = 0;
+  for (const [cat, amt] of reimbursementByCat) {
+    const cur = expByCat.get(cat);
+    if (cur && cur.amount >= amt) {
+      cur.amount -= amt;
+      reimbursedTotal += amt;
+    } else if (cur) {
+      reimbursedTotal += cur.amount;
+      byCategory.uncategorized += amt - cur.amount;
+      cur.amount = 0;
+    } else {
+      byCategory.uncategorized += amt;
+    }
+  }
+
+  const totalExpenses = Math.max(0, grossExpenses - reimbursedTotal);
+  const totalRevenue =
+    byCategory.lessons + byCategory.packages + byCategory.boarding + byCategory.uncategorized;
 
   // ---------- Per-horse roll-up ---------------------------
   const horseIds = new Set<string>([
@@ -293,7 +342,7 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
 
     expenses: {
       total: totalExpenses,
-      byCategory: Array.from(expByCat.values()).sort((a, b) => b.amount - a.amount),
+      byCategory: Array.from(expByCat.values()).filter((c) => c.amount > 0).sort((a, b) => b.amount - a.amount),
       byHorse:    Array.from(expByHorse.values()).sort((a, b) => b.amount - a.amount),
       unattributed,
     },
