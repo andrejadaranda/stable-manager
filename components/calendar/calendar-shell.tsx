@@ -92,10 +92,10 @@ export function CalendarShell({
   // Mobile defaults to Day view so trainers in the arena see today
   // immediately instead of scanning a full week. Desktop keeps Week.
   // Uses matchMedia at mount; user can flip with the existing toggle.
-  const [view, setView] = useState<"week" | "day">(() => {
-    if (typeof window === "undefined") return "week";
-    return window.matchMedia("(max-width: 768px)").matches ? "day" : "week";
-  });
+  // Open on the WEEK view everywhere (incl. mobile) — Andrėja wants the
+  // week first; the day view stays one tap away (tap a day) and the toggle
+  // flips back any time.
+  const [view, setView] = useState<"week" | "day">("week");
   const [dayKey,  setDayKey]  = useState<string>(initialDayKey);
   const [slot,    setSlot]    = useState<Slot | null>(null);
   const [selected, setSelected] = useState<CalendarLesson | null>(null);
