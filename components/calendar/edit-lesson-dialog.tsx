@@ -16,6 +16,7 @@ import {
   markLessonPaidAction,
   markLessonUnpaidAction,
   fetchLessonChangesAction,
+  sellPackageForLessonAction,
   type UpdateLessonState,
 } from "@/app/dashboard/calendar/actions";
 import type { LessonChange } from "@/services/lessons";
@@ -78,6 +79,14 @@ export function EditLessonDialog({
   const [bookAgainState, bookAgainAction] = useFormState<UpdateLessonState, FormData>(
     duplicateLessonAction, updateLessonInitialState,
   );
+  const [sellPkgState, sellPkgAction] = useFormState<UpdateLessonState, FormData>(
+    sellPackageForLessonAction, updateLessonInitialState,
+  );
+
+  // Close once a just-sold package has covered the lesson.
+  useEffect(() => {
+    if (sellPkgState.success) onClose();
+  }, [sellPkgState.success, onClose]);
 
   // Close the dialog once a delete succeeds (the row is gone).
   useEffect(() => {
@@ -271,6 +280,18 @@ export function EditLessonDialog({
                 </div>
               </label>
             </div>
+          )}
+
+          {/* No active package yet — let the owner sell one on the spot and
+              cover this lesson with it (client decided to take a subscription
+              mid-edit). */}
+          {!initiallyOnPackage && !activePackage && lesson.client?.id && (
+            <SellPackageInline
+              lessonId={lesson.id}
+              clientId={lesson.client.id}
+              sellAction={sellPkgAction}
+              error={sellPkgState.error}
+            />
           )}
 
           {/* Detach toggle — when the lesson IS on a package, allow
@@ -720,6 +741,84 @@ function CancelButton({
     >
       {pending ? "Cancelling…" : "Mark cancelled"}
     </button>
+  );
+}
+
+// Inline "sell a package" — shown in the edit dialog when the lesson's
+// client has no active package. Lets the owner create the subscription and
+// cover this lesson in one go. Plain button (no nested <form>) per the
+// nested-form rule that bit Mark-paid/Cancel earlier.
+function SellPackageInline({
+  lessonId,
+  clientId,
+  sellAction,
+  error,
+}: {
+  lessonId: string;
+  clientId: string;
+  sellAction: (fd: FormData) => void;
+  error: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [lessons, setLessons] = useState("10");
+  const [price, setPrice] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function submit() {
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    fd.set("client_id", clientId);
+    fd.set("total_lessons", lessons);
+    fd.set("price", price);
+    startTransition(() => sellAction(fd));
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="self-start text-[12.5px] font-medium text-brand-700 hover:text-brand-800"
+      >
+        + Klientas ima abonementą — sukurti ir priskirti
+      </button>
+    );
+  }
+
+  const fieldCls =
+    "rounded-lg border border-ink-200 bg-white text-sm text-ink-900 px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500";
+
+  return (
+    <div className="rounded-xl border border-brand-200 bg-brand-50/50 px-3 py-3 flex flex-col gap-2.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[12.5px] font-medium text-navy-900">Naujas abonementas</p>
+        <button type="button" onClick={() => setOpen(false)} className="text-[11px] text-ink-500 hover:text-navy-900">
+          Atšaukti
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        <label className="flex flex-col gap-1 text-[12px] text-ink-600">
+          Treniruočių sk.
+          <input type="number" min={1} value={lessons} onChange={(e) => setLessons(e.target.value)} className={fieldCls} />
+        </label>
+        <label className="flex flex-col gap-1 text-[12px] text-ink-600">
+          Kaina · €
+          <input type="number" min={0} step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" className={fieldCls} />
+        </label>
+      </div>
+      <p className="text-[11px] text-ink-600 leading-snug">
+        Sukuria abonementą (apmokėjimas užfiksuojamas) ir priskiria šią pamoką — jos kaina tampa €0.
+      </p>
+      {error && <p className="text-[11.5px] text-rose-700">{error}</p>}
+      <button
+        type="button"
+        onClick={submit}
+        disabled={pending}
+        className="h-9 px-3.5 rounded-lg text-[13px] font-medium bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed self-start transition-colors"
+      >
+        {pending ? "Kuriama…" : "Sukurti ir priskirti"}
+      </button>
+    </div>
   );
 }
 

@@ -14,6 +14,7 @@ import {
 import { createSessionFromLesson } from "@/services/sessions";
 import { addPayment } from "@/services/payments";
 import { createClient } from "@/services/clients";
+import { createPackage } from "@/services/packages";
 import { getSession, requireRole } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -229,6 +230,39 @@ export type UpdateLessonState = { error: string | null; success: boolean };
 
 const VALID_STATUSES = ["scheduled", "completed", "cancelled", "no_show"] as const;
 type LessonStatus = (typeof VALID_STATUSES)[number];
+
+// Sell a package right from the Edit-lesson dialog and cover this lesson
+// with it — for when a client decides on the spot to take a subscription
+// instead of paying per lesson. Creates the package (logs the upfront
+// payment) and moves the lesson onto it (price → €0). Owner-only via
+// createPackage's own role check.
+export async function sellPackageForLessonAction(
+  _prev: UpdateLessonState,
+  formData: FormData,
+): Promise<UpdateLessonState> {
+  const lessonId     = String(formData.get("lesson_id") ?? "");
+  const clientId     = String(formData.get("client_id") ?? "");
+  const totalLessons = parseInt(String(formData.get("total_lessons") ?? ""), 10);
+  const price        = parseFloat(String(formData.get("price") ?? ""));
+
+  if (!lessonId || !clientId) return { error: "Missing lesson or client.", success: false };
+  if (!Number.isFinite(totalLessons) || totalLessons <= 0)
+    return { error: "Enter how many lessons the package includes.", success: false };
+  if (!Number.isFinite(price) || price < 0)
+    return { error: "Enter the package price.", success: false };
+
+  try {
+    const pkg = await createPackage({ clientId, totalLessons, price, recordPayment: true });
+    await updateLesson(lessonId, { packageId: (pkg as { id: string }).id, price: 0 });
+  } catch (err: any) {
+    const m = err?.message ?? "";
+    if (m === "FORBIDDEN") return { error: "Only the owner can sell packages.", success: false };
+    return { error: `Could not create the package: ${m || "unknown error"}.`, success: false };
+  }
+
+  revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
 
 export async function updateLessonAction(
   _prev: UpdateLessonState,
