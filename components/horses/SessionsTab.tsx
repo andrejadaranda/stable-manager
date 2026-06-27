@@ -201,9 +201,11 @@ function fmtHrs(mins: number): string {
 }
 
 function SessionRow({ s }: { s: SessionWithLabels }) {
-  const time = new Date(s.started_at).toLocaleTimeString(undefined, {
+  const time = new Date(s.started_at).toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Vilnius",   // server component — avoid UTC (3h-early) render
   });
   const riderName = s.rider_client?.full_name ?? s.rider_name_freeform ?? "—";
   const initial = (riderName?.[0] ?? "?").toUpperCase();

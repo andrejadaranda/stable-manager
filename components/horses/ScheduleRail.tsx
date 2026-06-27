@@ -76,7 +76,7 @@ export function ScheduleRail({
 function ScheduleRow({ l, highlight }: { l: UpcomingLesson; highlight: boolean }) {
   const start = new Date(l.starts_at);
   const end = new Date(l.ends_at);
-  const time = start.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const time = start.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/Vilnius" });
   const duration = Math.round((end.getTime() - start.getTime()) / 60000);
   const accent = highlight ? "#B25430" : "#F0C9B5";
 

@@ -24,13 +24,27 @@ export function fmtISODate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+// Single source of truth for the app's display timezone. Times are stored
+// in UTC; everything user-facing renders in Vilnius local time. Formatting
+// with an explicit timeZone (instead of the runtime default) is what keeps
+// SERVER-rendered times correct — without it, server components on Vercel
+// (UTC) showed lessons 3h early in summer (e.g. a 12:00 lesson as 09:00).
+// A fixed locale + tz also means server and client render identically (no
+// hydration drift).
+export const APP_TIME_ZONE = "Europe/Vilnius";
+
 export function fmtDayLabel(d: Date): string {
-  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-GB", {
+    weekday: "short", month: "short", day: "numeric",
+    timeZone: APP_TIME_ZONE,
+  });
 }
 
 export function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, {
+  return new Date(iso).toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,                 // 24h — LT convention; also drops the stray AM/PM
+    timeZone: APP_TIME_ZONE,
   });
 }

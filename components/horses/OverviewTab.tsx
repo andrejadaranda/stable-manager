@@ -320,10 +320,12 @@ function RecentSessionsCard({
             const riderName =
               s.rider_client?.full_name ?? s.rider_name_freeform ?? "—";
             const initial = (riderName?.[0] ?? "?").toUpperCase();
-            const time = new Date(s.started_at).toLocaleString(undefined, {
+            const time = new Date(s.started_at).toLocaleString("en-GB", {
               weekday: "short",
               hour: "2-digit",
               minute: "2-digit",
+              hour12: false,
+              timeZone: "Europe/Vilnius",   // server component — avoid UTC (3h-early) render
             });
             return (
               <li key={s.id} className="flex items-center gap-3">

@@ -419,9 +419,13 @@ function RevenueCard({
 function TimelineRow({ lesson }: { lesson: DashboardLesson }) {
   const start = new Date(lesson.starts_at);
   const end = new Date(lesson.ends_at);
-  const time = start.toLocaleTimeString(undefined, {
+  // Explicit Europe/Vilnius — this is a SERVER component, so the runtime
+  // default (UTC on Vercel) was rendering lessons 3h early (12:00 → 09:00).
+  const time = start.toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Vilnius",
   });
   const dur = Math.round((end.getTime() - start.getTime()) / 60000);
 

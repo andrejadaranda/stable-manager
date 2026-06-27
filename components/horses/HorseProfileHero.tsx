@@ -15,10 +15,12 @@ import type { HorseRow } from "@/services/horses";
 import { EditHorseButton } from "./edit-horse-dialog";
 
 const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, {
+  new Date(iso).toLocaleString("en-GB", {
     weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Vilnius",   // server component — avoid UTC (3h-early) render
   });
 
 const fmtRelative = (iso: string) => {
