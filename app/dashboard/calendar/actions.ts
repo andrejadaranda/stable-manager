@@ -244,15 +244,29 @@ export async function sellPackageForLessonAction(
   const clientId     = String(formData.get("client_id") ?? "");
   const totalLessons = parseInt(String(formData.get("total_lessons") ?? ""), 10);
   const price        = parseFloat(String(formData.get("price") ?? ""));
+  // Payment intent chosen by the owner: not paid yet / paid in full / partial.
+  const payStatus    = String(formData.get("pay_status") ?? "none"); // none | full | partial
+  const methodRaw    = String(formData.get("method") ?? "cash");
+  const method       = (["cash", "card", "transfer", "other"].includes(methodRaw) ? methodRaw : "cash") as "cash" | "card" | "transfer" | "other";
+  const partialAmt   = parseFloat(String(formData.get("paid_amount") ?? ""));
 
   if (!lessonId || !clientId) return { error: "Missing lesson or client.", success: false };
   if (!Number.isFinite(totalLessons) || totalLessons <= 0)
     return { error: "Enter how many lessons the package includes.", success: false };
   if (!Number.isFinite(price) || price < 0)
     return { error: "Enter the package price.", success: false };
+  if (payStatus === "partial" && (!Number.isFinite(partialAmt) || partialAmt <= 0 || partialAmt >= price))
+    return { error: "Enter the partial amount paid (less than the full price).", success: false };
 
   try {
-    const pkg = await createPackage({ clientId, totalLessons, price, recordPayment: true });
+    const pkg = await createPackage({
+      clientId,
+      totalLessons,
+      price,
+      recordPayment: payStatus !== "none",
+      paymentMethod: method,
+      paidAmount:    payStatus === "partial" ? partialAmt : undefined,
+    });
     await updateLesson(lessonId, { packageId: (pkg as { id: string }).id, price: 0 });
   } catch (err: any) {
     const m = err?.message ?? "";

@@ -32,9 +32,14 @@ export type CreatePackageInput = {
   /** ISO timestamp; null = never expires. */
   expiresAt?: string | null;
   notes?: string | null;
-  /** When true (default), also creates a `payments` row at `price`
-   *  linked via package_id, so the package is logged as paid up front. */
+  /** When true (default), also creates a `payments` row linked via
+   *  package_id, so the package is logged as paid up front. Set false to
+   *  leave it unpaid. */
   recordPayment?: boolean;
+  /** How much was actually collected up front. Defaults to the full price
+   *  (paid in full); pass a smaller value to log a PARTIAL package payment.
+   *  Ignored when recordPayment is false. */
+  paidAmount?: number;
   /** Optional payment method override; defaults to cash. */
   paymentMethod?: "cash" | "card" | "transfer" | "other";
 };
@@ -95,7 +100,8 @@ export async function createPackage(input: CreatePackageInput) {
 
   // Best-effort upfront payment. Skip if recordPayment === false or
   // price is 0 (a "comp'd" package the owner gives for free).
-  const shouldRecord = input.recordPayment !== false && input.price > 0;
+  const recordAmount = input.paidAmount ?? input.price;
+  const shouldRecord = input.recordPayment !== false && recordAmount > 0;
   if (shouldRecord) {
     const { error: payErr } = await supabase
       .from("payments")
@@ -104,10 +110,10 @@ export async function createPackage(input: CreatePackageInput) {
         client_id:  input.clientId,
         package_id: (pkg as { id: string }).id,
         lesson_id:  null,
-        amount:     input.price,
+        amount:     recordAmount,
         method:     input.paymentMethod ?? "cash",
         paid_at:    input.purchasedAt ?? new Date().toISOString(),
-        notes:      "Package payment",
+        notes:      recordAmount < input.price ? "Package payment (partial)" : "Package payment",
       });
     if (payErr) {
       // Surface a friendly error but leave the package itself in place

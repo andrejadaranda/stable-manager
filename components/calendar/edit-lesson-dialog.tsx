@@ -301,6 +301,7 @@ export function EditLessonDialog({
             <SellPackageInline
               lessonId={lesson.id}
               clientId={lesson.client.id}
+              packageServices={services.filter((s) => (s.sessions_included ?? 1) > 1)}
               sellAction={sellPkgAction}
               error={sellPkgState.error}
             />
@@ -763,18 +764,37 @@ function CancelButton({
 function SellPackageInline({
   lessonId,
   clientId,
+  packageServices,
   sellAction,
   error,
 }: {
   lessonId: string;
   clientId: string;
+  /** Services from the price list that represent subscriptions
+   *  (sessions_included > 1). Picking one prefills lessons + price. */
+  packageServices: ServiceRow[];
   sellAction: (fd: FormData) => void;
   error: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  const [serviceId, setServiceId] = useState("");
   const [lessons, setLessons] = useState("10");
   const [price, setPrice] = useState("");
+  const [payStatus, setPayStatus] = useState<"none" | "full" | "partial">("none");
+  const [method, setMethod] = useState("cash");
+  const [paidAmount, setPaidAmount] = useState("");
   const [pending, startTransition] = useTransition();
+
+  // Picking a subscription from the price list fills in the count + price
+  // (still editable — the owner can override either).
+  function pickService(id: string) {
+    setServiceId(id);
+    const s = packageServices.find((x) => x.id === id);
+    if (s) {
+      setLessons(String(s.sessions_included));
+      setPrice(String(Number(s.base_price)));
+    }
+  }
 
   function submit() {
     const fd = new FormData();
@@ -782,6 +802,9 @@ function SellPackageInline({
     fd.set("client_id", clientId);
     fd.set("total_lessons", lessons);
     fd.set("price", price);
+    fd.set("pay_status", payStatus);
+    fd.set("method", method);
+    if (payStatus === "partial") fd.set("paid_amount", paidAmount);
     startTransition(() => sellAction(fd));
   }
 
@@ -792,7 +815,7 @@ function SellPackageInline({
         onClick={() => setOpen(true)}
         className="self-start text-[12.5px] font-medium text-brand-700 hover:text-brand-800"
       >
-        + Klientas ima abonementą — sukurti ir priskirti
+        + Client is taking a subscription — create &amp; assign
       </button>
     );
   }
@@ -803,23 +826,78 @@ function SellPackageInline({
   return (
     <div className="rounded-xl border border-brand-200 bg-brand-50/50 px-3 py-3 flex flex-col gap-2.5">
       <div className="flex items-center justify-between">
-        <p className="text-[12.5px] font-medium text-navy-900">Naujas abonementas</p>
+        <p className="text-[12.5px] font-medium text-navy-900">New subscription</p>
         <button type="button" onClick={() => setOpen(false)} className="text-[11px] text-ink-500 hover:text-navy-900">
-          Atšaukti
+          Cancel
         </button>
       </div>
+
+      {packageServices.length > 0 && (
+        <label className="flex flex-col gap-1 text-[12px] text-ink-600">
+          Pick from price list <span className="text-ink-400">(optional)</span>
+          <select value={serviceId} onChange={(e) => pickService(e.target.value)} className={fieldCls}>
+            <option value="">— Choose a subscription —</option>
+            {packageServices.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} · {s.sessions_included}× · €{Number(s.base_price).toFixed(2)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <div className="grid grid-cols-2 gap-2.5">
         <label className="flex flex-col gap-1 text-[12px] text-ink-600">
-          Treniruočių sk.
+          Lessons
           <input type="number" min={1} value={lessons} onChange={(e) => setLessons(e.target.value)} className={fieldCls} />
         </label>
         <label className="flex flex-col gap-1 text-[12px] text-ink-600">
-          Kaina · €
+          Price · €
           <input type="number" min={0} step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" className={fieldCls} />
         </label>
       </div>
+      {/* Payment — owner chooses; nothing is auto-marked paid. */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[12px] text-ink-600">Payment</span>
+        <div className="flex gap-1.5">
+          {([["none", "Not paid"], ["full", "Paid"], ["partial", "Partial"]] as const).map(([val, lbl]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setPayStatus(val)}
+              className={`flex-1 h-8 rounded-lg text-[12.5px] font-medium border transition-colors ${
+                payStatus === val
+                  ? "border-brand-500 bg-brand-100 text-brand-800"
+                  : "border-ink-200 bg-white text-ink-600 hover:bg-ink-50"
+              }`}
+            >
+              {lbl}
+            </button>
+          ))}
+        </div>
+        {payStatus !== "none" && (
+          <div className="grid grid-cols-2 gap-2.5 mt-0.5">
+            <label className="flex flex-col gap-1 text-[12px] text-ink-600">
+              Method
+              <select value={method} onChange={(e) => setMethod(e.target.value)} className={fieldCls}>
+                <option value="cash">Cash</option>
+                <option value="card">Card</option>
+                <option value="transfer">Transfer</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            {payStatus === "partial" && (
+              <label className="flex flex-col gap-1 text-[12px] text-ink-600">
+                Amount paid · €
+                <input type="number" min={0} step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} placeholder="0.00" className={fieldCls} />
+              </label>
+            )}
+          </div>
+        )}
+      </div>
+
       <p className="text-[11px] text-ink-600 leading-snug">
-        Sukuria abonementą (apmokėjimas užfiksuojamas) ir priskiria šią pamoką — jos kaina tampa €0.
+        Creates the subscription and covers this lesson — its price becomes €0. The payment is logged only as you choose above.
       </p>
       {error && <p className="text-[11.5px] text-rose-700">{error}</p>}
       <button
@@ -828,7 +906,7 @@ function SellPackageInline({
         disabled={pending}
         className="h-9 px-3.5 rounded-lg text-[13px] font-medium bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed self-start transition-colors"
       >
-        {pending ? "Kuriama…" : "Sukurti ir priskirti"}
+        {pending ? "Creating…" : "Create & assign"}
       </button>
     </div>
   );
