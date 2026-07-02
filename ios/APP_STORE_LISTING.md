@@ -91,10 +91,10 @@ Copy-paste into App Store Connect. Written for the current **early-access = free
 
 ## App Review Information (fill in App Store Connect → App Review Information)
 
-- **Sign-in required:** Yes. Provide a demo owner account:
-  - Username: `<demo owner email>`
-  - Password: `<demo password>`
-  *(Create one real owner account with a little sample data — horses, a couple of lessons — so the reviewer can see the app working. Tell me if you want me to prep it.)*
+- **Sign-in required:** Yes. Demo owner account — data already seeded (12 horses, ~130 lessons incl. current week, ride history, payments):
+  - Username: `demo.owner@longrein.eu`
+  - Password: `<įrašyk demo paskyros slaptažodį>`  ← tik tu gali įrašyti (slaptažodžio netvarkau). Jei nepameni: Supabase → Authentication → Users → demo.owner@longrein.eu → Reset password.
+  *(Stable: Avalon Equestrian Centre. Nieko kurti nereikia — viskas prisėta.)*
 - **Notes for reviewer:** "Longrein is a stable-management tool. Native features include a live GPS ride tracker (Location) and native share. Sign in with the demo account above to reach the dashboard. The app is free — there are no in-app purchases."
 - **Contact:** your name, phone, email (hello@longrein.eu).
 
