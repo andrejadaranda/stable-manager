@@ -1,64 +1,76 @@
-# iOS Info.plist permission strings
+# iOS Info.plist permission strings (FINAL — v1)
 
 After `npx cap add ios`, open `ios/App/App/Info.plist` and add the keys below.
-Apple reviewers WILL reject the app if these strings are generic ("Allow
-location") — every string must explain the user-visible value.
+Only declare what v1 actually uses — Apple rejects generic strings ("Allow
+location") AND background modes / permissions you don't use.
 
-## Location — required for live ride tracker
+## Location — required (live ride tracker) ✅
 
 ```xml
 <key>NSLocationWhenInUseUsageDescription</key>
-<string>Longrein records your route, distance, and pace while you ride so you can review the ride afterwards and share a map with your trainer.</string>
+<string>Longrein records your route, distance, and pace while you ride so you can review the ride afterwards.</string>
 
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-<string>Allow Longrein to track your ride in the background so distance, route, and the safety beacon keep recording when your phone screen sleeps.</string>
-
-<key>NSLocationAlwaysUsageDescription</key>
-<string>Longrein keeps your live ride tracker running in the background so the safety beacon and route recording continue when your phone is in your pocket.</string>
+<string>Allow Longrein to keep recording your ride in the background so distance and route continue when your phone screen sleeps.</string>
 
 <key>UIBackgroundModes</key>
 <array>
   <string>location</string>
-  <string>fetch</string>
-  <string>remote-notification</string>
 </array>
 ```
 
-## Camera + Photos — for horse photos + profile photo
+> Also enable it in Xcode: target → **Signing & Capabilities → + Background Modes → Location updates**. This is what lets the ride keep recording with the screen off — and it's the concrete native capability that answers App Store guideline 4.2.
+
+## Camera + Photos — horse photos + profile picture ✅
 
 ```xml
 <key>NSCameraUsageDescription</key>
-<string>Take photos of your horses to add to their profile.</string>
+<string>Take a photo of your horse to add to its profile.</string>
 
 <key>NSPhotoLibraryUsageDescription</key>
-<string>Pick an existing photo of your horse, your stable, or your profile picture.</string>
+<string>Choose a photo of your horse, your stable, or your profile from your library.</string>
 
 <key>NSPhotoLibraryAddUsageDescription</key>
-<string>Save a ride share card or horse photo to your camera roll.</string>
+<string>Save a horse photo or ride card to your camera roll.</string>
 ```
 
-## Notifications — lesson reminders, vet/farrier due dates
+## Push notifications — NOT in v1
 
-The Capacitor PushNotifications plugin asks at runtime via JS;
-no Info.plist string is required. APNs cert needs Apple Dev active.
+Native push (APNs) is a post-launch add — it needs an APNs key from your
+Apple Developer account plus server-side APNs sending. v1 does **not** ask
+for notification permission and does **not** declare `remote-notification`
+background mode. (Lesson reminders go by email in the meantime; the in-app
+"Enable notifications" button is hidden inside the native app so there's no
+dead feature for the reviewer.) When native push ships, add
+`remote-notification` to UIBackgroundModes and wire `@capacitor/push-notifications`.
 
-## Contacts — emergency safety beacon contact
+## Not used in v1 (do NOT add)
 
-```xml
-<key>NSContactsUsageDescription</key>
-<string>Pick an emergency contact to share your live ride location with.</string>
+- **Contacts** — the safety-beacon share uses the native iOS share sheet, not the Contacts API. No `NSContactsUsageDescription` needed.
+- **Microphone** — no voice notes yet.
+
+## App Transport Security
+
+No exceptions needed — `app.longrein.eu` uses valid TLS. Leave ATS default.
+
+## Sign in with Apple (guideline 4.8)
+
+Only email + password login exists → not required. Becomes mandatory only if you add Google/Facebook sign-in later.
+
+---
+
+## Optional — Lithuanian permission prompts (nicer for TJK users)
+
+iOS shows these strings in the app's language. To show them in Lithuanian,
+add an `InfoPlist.strings` (Lithuanian) file in Xcode with:
+
+```
+"NSLocationWhenInUseUsageDescription" = "Longrein įrašo jūsų maršrutą, atstumą ir greitį jojant, kad galėtumėte peržiūrėti treniruotę.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Leiskite Longrein toliau įrašinėti maršrutą fone, kai telefono ekranas užrakintas.";
+"NSCameraUsageDescription" = "Nufotografuokite žirgą jo profiliui.";
+"NSPhotoLibraryUsageDescription" = "Pasirinkite žirgo, žirgyno ar profilio nuotrauką iš galerijos.";
+"NSPhotoLibraryAddUsageDescription" = "Išsaugokite žirgo nuotrauką ar treniruotės kortelę į galeriją.";
 ```
 
-## Microphone — voice notes on session log (FUTURE, skip for v1)
-
-Not in MVP. Add when voice memo session notes ship.
-
-## App Transport Security — production HTTPS only
-
-No exception entries needed — app.longrein.eu uses valid TLS.
-
-## Apple Sign-In — required by App Store guideline 4.8
-
-If we offer ANY third-party login (Google, Facebook) in the future we
-MUST also offer Sign in with Apple. For v1 we only have email +
-password, so this requirement does not apply yet.
+English strings ship by default and are fully acceptable to Apple; the LT
+file is a polish step, not a requirement.
