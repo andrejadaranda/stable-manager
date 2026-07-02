@@ -48,6 +48,96 @@ const FLUSH_INTERVAL_MS = 10_000;
 // Minimum movement (m) between accepted points — filters GPS jitter while standing.
 const MIN_DELTA_M = 3;
 
+// Normalised position fix — the shape handlePosition consumes, filled from
+// either the native Capacitor plugin or web navigator.geolocation.
+type GeoFix = {
+  latitude:  number;
+  longitude: number;
+  altitude:  number | null;
+  accuracy:  number | null;
+  speed:     number | null;
+  heading:   number | null;
+  timestamp: number;
+};
+type GeoErrKind = "denied" | "unavailable" | "timeout";
+
+// Native-aware GPS watch. On the iOS app it uses @capacitor/geolocation
+// (real CLLocationManager — works inside the WKWebView shell AND can keep
+// recording in the background with the Location Updates capability). On the
+// web it falls back to navigator.geolocation. This is what makes the native
+// app's GPS actually work + gives it functionality the web PWA can't (App
+// Store guideline 4.2). Native modules are dynamically imported + ts-ignored
+// so the sandbox build (which doesn't install them) still type-checks.
+async function startGeoWatch(
+  onFix: (fix: GeoFix) => void,
+  onErr: (kind: GeoErrKind) => void,
+): Promise<{ clear: () => void }> {
+  let isNative = false;
+  try {
+    // @ts-ignore optional native dependency (resolved on device/Vercel)
+    const cap = await import("@capacitor/core");
+    isNative = cap?.Capacitor?.isNativePlatform?.() ?? false;
+  } catch {
+    isNative = false;
+  }
+
+  if (isNative) {
+    // @ts-ignore optional native dependency (resolved on device/Vercel)
+    const { Geolocation } = await import("@capacitor/geolocation");
+    try {
+      const perm = await Geolocation.requestPermissions();
+      if (perm?.location === "denied") { onErr("denied"); return { clear: () => {} }; }
+    } catch { /* proceed — watchPosition will surface a real error */ }
+    let watchId: string | null = null;
+    try {
+      watchId = await Geolocation.watchPosition(
+        { enableHighAccuracy: true, timeout: 15_000, maximumAge: 1_000 },
+        (position: any, err: any) => {
+          if (err) { onErr("unavailable"); return; }
+          if (!position) return;
+          const c = position.coords ?? {};
+          onFix({
+            latitude:  c.latitude,
+            longitude: c.longitude,
+            altitude:  c.altitude ?? null,
+            accuracy:  c.accuracy ?? null,
+            speed:     c.speed ?? null,
+            heading:   c.heading ?? null,
+            timestamp: position.timestamp ?? Date.now(),
+          });
+        },
+      );
+    } catch {
+      onErr("unavailable");
+    }
+    return { clear: () => { try { if (watchId) Geolocation.clearWatch({ id: watchId }); } catch { /* noop */ } } };
+  }
+
+  // ---- Web fallback ----
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    onErr("unavailable");
+    return { clear: () => {} };
+  }
+  const wid = navigator.geolocation.watchPosition(
+    (pos) => onFix({
+      latitude:  pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      altitude:  pos.coords.altitude ?? null,
+      accuracy:  pos.coords.accuracy ?? null,
+      speed:     pos.coords.speed ?? null,
+      heading:   pos.coords.heading ?? null,
+      timestamp: pos.timestamp || Date.now(),
+    }),
+    (err) => onErr(
+      err.code === err.PERMISSION_DENIED ? "denied"
+      : err.code === err.TIMEOUT ? "timeout"
+      : "unavailable",
+    ),
+    { enableHighAccuracy: true, maximumAge: 1000, timeout: 15_000 },
+  );
+  return { clear: () => navigator.geolocation.clearWatch(wid) };
+}
+
 export function LiveTracker({
   horses,
   resumeSessionId,
@@ -75,7 +165,8 @@ export function LiveTracker({
   const [accuracyM, setAccuracyM]   = useState<number | null>(null);
 
   // Mutable refs (don't trigger re-renders).
-  const watchIdRef    = useRef<number | null>(null);
+  const watchRef      = useRef<{ clear: () => void } | null>(null);
+  const wantTrackingRef = useRef(false);
   const wakeLockRef   = useRef<WakeLockSentinel | null>(null);
   const bufferRef     = useRef<LocalPoint[]>([]);   // unsent points
   const allPointsRef  = useRef<LocalPoint[]>([]);   // every point this ride for local rollups
@@ -84,10 +175,10 @@ export function LiveTracker({
   const startMsRef    = useRef<number | null>(null);
 
   // ===== GEO =====
-  function handlePosition(pos: GeolocationPosition) {
-    const t = pos.timestamp || Date.now();
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
+  function handlePosition(fix: GeoFix) {
+    const t = fix.timestamp || Date.now();
+    const lat = fix.latitude;
+    const lng = fix.longitude;
     const last = allPointsRef.current[allPointsRef.current.length - 1];
 
     // Filter near-duplicate points (standing still). Accept the first
@@ -102,10 +193,10 @@ export function LiveTracker({
       recordedAt: new Date(t).toISOString(),
       lat,
       lng,
-      altitude: pos.coords.altitude ?? null,
-      accuracy: pos.coords.accuracy ?? null,
-      speed:    pos.coords.speed ?? null,
-      heading:  pos.coords.heading ?? null,
+      altitude: fix.altitude,
+      accuracy: fix.accuracy,
+      speed:    fix.speed,
+      heading:  fix.heading,
     };
 
     bufferRef.current.push(point);
@@ -118,21 +209,19 @@ export function LiveTracker({
     })));
     setDistanceM(r.distance_m);
     setPointCount(allPointsRef.current.length);
-    if (pos.coords.speed != null && pos.coords.speed >= 0) {
-      setSpeedKmh(Number((pos.coords.speed * 3.6).toFixed(1)));
+    if (fix.speed != null && fix.speed >= 0) {
+      setSpeedKmh(Number((fix.speed * 3.6).toFixed(1)));
     }
-    setAccuracyM(pos.coords.accuracy ?? null);
+    setAccuracyM(fix.accuracy);
   }
 
-  function handleGeoError(err: GeolocationPositionError) {
-    if (err.code === err.PERMISSION_DENIED) {
-      setError("Location permission denied. Enable GPS in browser settings.");
-    } else if (err.code === err.POSITION_UNAVAILABLE) {
+  function handleGeoError(kind: GeoErrKind) {
+    if (kind === "denied") {
+      setError("Location permission denied. Enable location for Longrein in Settings.");
+    } else if (kind === "unavailable") {
       setError("GPS signal unavailable. Move to open sky.");
-    } else if (err.code === err.TIMEOUT) {
-      // Soft error — keep trying.
-      return;
     }
+    // "timeout" is soft — keep trying, no message.
   }
 
   // ===== WAKE LOCK =====
@@ -198,18 +287,16 @@ export function LiveTracker({
     setSessionId(newSessionId);
     setPhase("tracking");
 
-    if (!navigator.geolocation) {
-      setError("This browser doesn't support GPS.");
-      return;
-    }
-    if (watchIdRef.current != null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-    }
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      handlePosition,
-      handleGeoError,
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15_000 },
-    );
+    // Clear any prior watch, then start a native-aware one (Capacitor
+    // Geolocation on the iOS app, navigator.geolocation on web).
+    watchRef.current?.clear();
+    watchRef.current = null;
+    wantTrackingRef.current = true;
+    startGeoWatch(handlePosition, handleGeoError).then((w) => {
+      // If tracking was stopped before the async watch resolved, clear it now.
+      if (!wantTrackingRef.current) { w.clear(); return; }
+      watchRef.current = w;
+    });
 
     acquireWakeLock();
     startTicking();
@@ -219,10 +306,9 @@ export function LiveTracker({
   }
 
   function stopWatching() {
-    if (watchIdRef.current != null && navigator.geolocation) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
+    wantTrackingRef.current = false;
+    watchRef.current?.clear();
+    watchRef.current = null;
     releaseWakeLock();
     if (flushTimerRef.current) {
       window.clearInterval(flushTimerRef.current);

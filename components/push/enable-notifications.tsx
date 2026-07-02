@@ -11,7 +11,21 @@ type Status = "idle" | "unsupported" | "unconfigured" | "granted" | "denied" | "
 
 export function EnableNotificationsButton() {
   const [status, setStatus] = useState<Status>("idle");
+  const [native, setNative] = useState(false);
   const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
+  // In the native iOS shell (WKWebView) web push / service workers don't
+  // fire — native APNs push is a later add. Hide the web flow there so the
+  // app never shows a dead button to users or App Store reviewers.
+  useEffect(() => {
+    (async () => {
+      try {
+        // @ts-ignore optional native dependency (resolved on device/Vercel)
+        const cap = await import("@capacitor/core");
+        if (cap?.Capacitor?.isNativePlatform?.()) setNative(true);
+      } catch { /* web — no-op */ }
+    })();
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -44,6 +58,15 @@ export function EnableNotificationsButton() {
     } catch {
       setStatus("idle");
     }
+  }
+
+  if (native) {
+    return (
+      <span className="text-[12px] text-ink-500 leading-relaxed">
+        Push notifications are coming to the Longrein app soon. Until then,
+        lesson reminders arrive by email.
+      </span>
+    );
   }
 
   return (
