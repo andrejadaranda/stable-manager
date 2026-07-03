@@ -270,62 +270,78 @@ export function EditLessonDialog({
             )}
           </div>
 
-          {/* Use-package toggle — only when the lesson is not already
-              on a package and the client has an active one. */}
-          {!initiallyOnPackage && activePackage && (
-            <div className="rounded-xl border border-brand-200 bg-brand-50/50 px-3 py-2.5">
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={usePackage}
-                  onChange={(e) => setUsePackage(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-navy-900">Move to package</p>
-                  <p className="text-[11.5px] text-ink-600 mt-0.5">
-                    {activePackage.lessons_remaining} of {activePackage.total_lessons} lessons left
-                    {activePackage.expires_at
-                      ? ` · expires ${new Date(activePackage.expires_at).toLocaleDateString()}`
-                      : ""}
-                  </p>
-                </div>
-              </label>
-            </div>
-          )}
+          {/* Billing & packages — tucked behind a disclosure so the
+              everyday fields (time, status, price, notes) lead. Opens
+              itself only when there's actually a package action to take.
+              A closed <details> keeps its inputs in the DOM, so the
+              Move/Detach checkbox still submits — logic unchanged. */}
+          {(initiallyOnPackage || activePackage || lesson.client?.id) && (
+            <details className="rounded-xl border border-ink-100 bg-white group" open={initiallyOnPackage}>
+              <summary className="cursor-pointer list-none px-3 py-2.5 flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-500 hover:text-ink-800 select-none">
+                <span className="transition-transform group-open:rotate-90 text-ink-400">›</span>
+                Billing &amp; packages
+              </summary>
+              <div className="px-3 pb-3 pt-0.5 flex flex-col gap-2.5">
 
-          {/* No active package yet — let the owner sell one on the spot and
-              cover this lesson with it (client decided to take a subscription
-              mid-edit). */}
-          {!initiallyOnPackage && !activePackage && lesson.client?.id && (
-            <SellPackageInline
-              lessonId={lesson.id}
-              clientId={lesson.client.id}
-              packageServices={services.filter((s) => (s.sessions_included ?? 1) > 1)}
-              sellAction={sellPkgAction}
-              error={sellPkgState.error}
-            />
-          )}
+                {/* Use-package toggle — only when the lesson is not already
+                    on a package and the client has an active one. */}
+                {!initiallyOnPackage && activePackage && (
+                  <div className="rounded-xl border border-brand-200 bg-brand-50/50 px-3 py-2.5">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={usePackage}
+                        onChange={(e) => setUsePackage(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-navy-900">Move to package</p>
+                        <p className="text-[11.5px] text-ink-600 mt-0.5">
+                          {activePackage.lessons_remaining} of {activePackage.total_lessons} lessons left
+                          {activePackage.expires_at
+                            ? ` · expires ${new Date(activePackage.expires_at).toLocaleDateString()}`
+                            : ""}
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
 
-          {/* Detach toggle — when the lesson IS on a package, allow
-              moving it back to per-lesson billing. */}
-          {initiallyOnPackage && (
-            <div className="rounded-xl border border-ink-100 bg-white px-3 py-2.5">
-              <label className="flex items-start gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!usePackage}
-                  onChange={(e) => setUsePackage(!e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-navy-900">Detach from package</p>
-                  <p className="text-[11.5px] text-ink-600 mt-0.5">
-                    Bills this lesson separately. Refunds the package slot.
-                  </p>
-                </div>
-              </label>
-            </div>
+                {/* No active package yet — let the owner sell one on the spot and
+                    cover this lesson with it (client decided to take a subscription
+                    mid-edit). */}
+                {!initiallyOnPackage && !activePackage && lesson.client?.id && (
+                  <SellPackageInline
+                    lessonId={lesson.id}
+                    clientId={lesson.client.id}
+                    packageServices={services.filter((s) => (s.sessions_included ?? 1) > 1)}
+                    sellAction={sellPkgAction}
+                    error={sellPkgState.error}
+                  />
+                )}
+
+                {/* Detach toggle — when the lesson IS on a package, allow
+                    moving it back to per-lesson billing. */}
+                {initiallyOnPackage && (
+                  <div className="rounded-xl border border-ink-100 bg-white px-3 py-2.5">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!usePackage}
+                        onChange={(e) => setUsePackage(!e.target.checked)}
+                        className="mt-0.5 w-4 h-4 rounded border-ink-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-navy-900">Detach from package</p>
+                        <p className="text-[11.5px] text-ink-600 mt-0.5">
+                          Bills this lesson separately. Refunds the package slot.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </details>
           )}
 
           {services.length > 0 && (
