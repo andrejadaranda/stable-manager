@@ -15,8 +15,6 @@ import { notFound } from "next/navigation";
 import { requirePageRole } from "@/lib/auth/redirects";
 import {
   getHorseProfileSummary,
-  getHorseHeatmap,
-  getHorseTypeBreakdown,
   getHorseUpcomingLessons,
 } from "@/services/horseProfile";
 import { listSessions } from "@/services/sessions";
@@ -88,19 +86,9 @@ export default async function HorseDetailPage({
 
   let tabContent: React.ReactNode = null;
   if (tab === "overview") {
-    const [heatmap, breakdown, recentSessions] = await Promise.all([
-      getHorseHeatmap(params.id, 84),
-      getHorseTypeBreakdown(params.id, 30),
-      listSessions({ horseId: params.id, limit: 5 }),
-    ]);
-    tabContent = (
-      <OverviewTab
-        horse={horse}
-        heatmap={heatmap}
-        breakdown={breakdown}
-        recentSessions={recentSessions}
-      />
-    );
+    // Identity-first: the heavy activity charts live on the Sessions tab
+    // ("Training load"), so Overview needs no extra queries here.
+    tabContent = <OverviewTab horse={horse} />;
   } else if (tab === "sessions") {
     const [sessions, clients] = await Promise.all([
       listSessions({ horseId: params.id, limit: 100 }),

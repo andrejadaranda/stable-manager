@@ -23,17 +23,6 @@ const fmtDate = (iso: string) =>
     timeZone: "Europe/Vilnius",   // server component — avoid UTC (3h-early) render
   });
 
-const fmtRelative = (iso: string) => {
-  const ms = Date.now() - new Date(iso).getTime();
-  const min = Math.round(ms / 60000);
-  if (min < 60)        return `${min} min ago`;
-  if (min < 60 * 24)   return `${Math.round(min / 60)} h ago`;
-  const days = Math.round(min / (60 * 24));
-  if (days === 1)      return "Yesterday";
-  if (days < 30)       return `${days} d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-};
-
 const yearsBetween = (iso: string): number => {
   const dob = new Date(iso);
   const diff = Date.now() - dob.getTime();
@@ -44,11 +33,6 @@ export function HorseProfileHero({ horse }: { horse: HorseProfileSummary }) {
   const ageLabel = horse.date_of_birth ? `${yearsBetween(horse.date_of_birth)} yrs` : null;
   const breedAndAge = [horse.breed, ageLabel].filter(Boolean).join(" · ");
   const initial = horse.name[0]?.toUpperCase() ?? "?";
-
-  const weeklyPct = Math.min(
-    100,
-    Math.round((horse.week.lesson_count / Math.max(1, horse.weekly_lesson_limit)) * 100),
-  );
 
   return (
     <header className="relative bg-white rounded-3xl shadow-soft overflow-hidden">
@@ -137,25 +121,15 @@ export function HorseProfileHero({ horse }: { horse: HorseProfileSummary }) {
           )}
         </div>
 
-        {/* KPI strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mt-5">
+        {/* KPI strip — trimmed to the two that drive action. Workload is
+            already shown by the welfare pill above; identity + last-ride
+            live on the Overview tab, so the header stays light. */}
+        <div className="grid grid-cols-2 gap-2 md:gap-3 mt-5">
           <Kpi
             label="This week"
             value={String(horse.week.lesson_count)}
             sub={horse.week.lesson_count === 1 ? "lesson" : "lessons"}
             color="brand"
-          />
-          <Kpi
-            label="Workload"
-            value={`${weeklyPct}%`}
-            sub="of weekly cap"
-            color={weeklyPct >= 100 ? "danger" : weeklyPct >= 80 ? "warning" : "ok"}
-          />
-          <Kpi
-            label="Last ridden"
-            value={horse.week.last_session_at ? fmtRelative(horse.week.last_session_at) : "—"}
-            sub={horse.week.last_session_at ? "" : "no rides logged"}
-            color="navy"
           />
           <Kpi
             label="Next lesson"
@@ -164,44 +138,8 @@ export function HorseProfileHero({ horse }: { horse: HorseProfileSummary }) {
             color="navy"
           />
         </div>
-
-        {/* Quick details — height, colour, sex, microchip, sire/dam… the
-            data entered in Edit. Renders only fields that are set. */}
-        <HorseQuickDetails horse={horse} />
       </div>
     </header>
-  );
-}
-
-// Compact key/value grid under the KPI strip, visible on every tab.
-function HorseQuickDetails({ horse }: { horse: HorseProfileSummary }) {
-  const SEX_LABEL: Record<string, string> = {
-    mare: "Mare", gelding: "Gelding", stallion: "Stallion", colt: "Colt", filly: "Filly",
-  };
-  const items: Array<[string, string | null | undefined]> = [
-    ["Sex",        horse.sex ? (SEX_LABEL[horse.sex] ?? horse.sex) : null],
-    ["Colour",     horse.color],
-    ["Height",     horse.height_cm != null ? `${horse.height_cm} cm` : null],
-    ["Discipline", horse.discipline],
-    ["Microchip",  horse.microchip_id],
-    ["Passport",   horse.passport_no],
-    ["FEI ID",     horse.fei_id],
-    ["Sire",       horse.sire_name],
-    ["Dam",        horse.dam_name],
-    ["Stable ID",  horse.unique_number],
-  ];
-  const visible = items.filter(([, v]) => v != null && String(v).trim() !== "");
-  if (visible.length === 0) return null;
-
-  return (
-    <dl className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-3 rounded-2xl bg-cream-50/70 border border-ink-100 p-4">
-      {visible.map(([label, val]) => (
-        <div key={label} className="flex flex-col gap-0.5 min-w-0">
-          <dt className="text-[10px] uppercase tracking-[0.12em] text-ink-500 font-semibold">{label}</dt>
-          <dd className="text-sm text-navy-900 font-medium truncate" title={String(val)}>{String(val)}</dd>
-        </div>
-      ))}
-    </dl>
   );
 }
 
