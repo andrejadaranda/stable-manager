@@ -739,6 +739,11 @@ export type CalendarLesson = {
   payment_status: LessonPaymentStatus;
   /** Sum of payments tagged with this lesson_id. */
   paid_amount: number;
+  /** 1-based position of this lesson within its package, ordered by date
+   *  (e.g. the 2nd of a 4-lesson subscription). Null when not on a package. */
+  package_position?: number | null;
+  /** The package's total lesson slots (e.g. 4). Null when not on a package. */
+  package_total?: number | null;
 };
 
 // All authenticated stable members can read the calendar.
@@ -781,7 +786,7 @@ export async function getCalendar(from: string, to: string): Promise<CalendarLes
     }
   >;
 
-  return rows.map((r) => {
+  const mapped: CalendarLesson[] = rows.map((r) => {
     const paid = (r.payments ?? []).reduce(
       (acc, p) => acc + Number(p.amount ?? 0),
       0,
@@ -801,8 +806,52 @@ export async function getCalendar(from: string, to: string): Promise<CalendarLes
       ...(rest as Omit<CalendarLesson, "payment_status" | "paid_amount">),
       paid_amount: paid,
       payment_status,
+      package_position: null,
+      package_total: null,
     };
   });
+
+  // Enrich package-covered lessons with "position / total" (e.g. 2 of 4).
+  // Two extra reads, only when at least one lesson is on a package.
+  // Position is counted across ALL the package's non-cancelled lessons by
+  // date — not just the current week — so the ordinal is correct.
+  const pkgIds = Array.from(
+    new Set(mapped.filter((l) => l.package_id).map((l) => l.package_id as string)),
+  );
+  if (pkgIds.length > 0) {
+    const [allPkgLessonsRes, pkgsRes] = await Promise.all([
+      supabase
+        .from("lessons")
+        .select("id, package_id, starts_at")
+        .in("package_id", pkgIds)
+        .neq("status", "cancelled")
+        .order("starts_at", { ascending: true }),
+      supabase
+        .from("lesson_packages")
+        .select("id, total_lessons")
+        .in("id", pkgIds),
+    ]);
+
+    const totalById = new Map<string, number>();
+    for (const p of (pkgsRes.data ?? []) as { id: string; total_lessons: number }[]) {
+      totalById.set(p.id, Number(p.total_lessons));
+    }
+    const positionByLessonId = new Map<string, number>();
+    const runningCount = new Map<string, number>();
+    for (const l of (allPkgLessonsRes.data ?? []) as { id: string; package_id: string }[]) {
+      const n = (runningCount.get(l.package_id) ?? 0) + 1;
+      runningCount.set(l.package_id, n);
+      positionByLessonId.set(l.id, n);
+    }
+    for (const l of mapped) {
+      if (l.package_id) {
+        l.package_position = positionByLessonId.get(l.id) ?? null;
+        l.package_total = totalById.get(l.package_id) ?? null;
+      }
+    }
+  }
+
+  return mapped;
 }
 
 // Workload summary for a horse over a window.

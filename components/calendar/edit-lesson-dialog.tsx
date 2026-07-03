@@ -121,6 +121,15 @@ export function EditLessonDialog({
       ? activePackage?.id ?? ""
       : "__none__";
 
+  // When the lesson will be covered by a package after save, per-lesson
+  // Service and Price are irrelevant (the package covers it) — hide them
+  // to keep the dialog clean. Reactive: toggling Move/Detach re-shows them.
+  const coveredByPackage = usePackage;
+
+  // "2 of 4" — which lesson of the subscription this is (from getCalendar).
+  const pkgPos   = (lesson as CalendarLesson & { package_position?: number | null }).package_position ?? null;
+  const pkgTotal = (lesson as CalendarLesson & { package_total?: number | null }).package_total ?? null;
+
   const startsISO = toISO(startsLocal);
   const endsISO   = toISO(endsLocal);
 
@@ -253,7 +262,7 @@ export function EditLessonDialog({
                 isPartial  ? "text-amber-700" :
                             "text-ink-700"
               }`}>
-                {isPackage  ? "Covered by package"
+                {isPackage  ? `Covered by package${pkgPos && pkgTotal ? ` · lesson ${pkgPos} of ${pkgTotal}` : ""}`
                  : isPaid    ? `Paid · €${Number(lesson.price).toFixed(2)}`
                  : isPartial ? `Partial · €${lesson.paid_amount.toFixed(2)} of €${Number(lesson.price).toFixed(2)}`
                  :             `Unpaid · €${Number(lesson.price).toFixed(2)}`}
@@ -344,7 +353,7 @@ export function EditLessonDialog({
             </details>
           )}
 
-          {services.length > 0 && (
+          {!coveredByPackage && services.length > 0 && (
             <label className="flex flex-col gap-1.5 text-sm">
               <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Service</span>
               <select
@@ -404,55 +413,64 @@ export function EditLessonDialog({
             </select>
           </label>
 
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Starts</span>
-            <input
-              type="datetime-local"
-              step={900}
-              required
-              value={startsLocal}
-              onChange={(e) => setStartsLocal(e.target.value)}
-              className="
-                rounded-xl border border-ink-200 bg-white text-sm text-ink-900
-                px-3 py-2.5
-                focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
-              "
-            />
-          </label>
+          {/* Starts + Ends — side by side to save vertical space. */}
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1.5 text-sm min-w-0">
+              <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Starts</span>
+              <input
+                type="datetime-local"
+                step={900}
+                required
+                value={startsLocal}
+                onChange={(e) => setStartsLocal(e.target.value)}
+                className="
+                  w-full rounded-xl border border-ink-200 bg-white text-sm text-ink-900
+                  px-3 py-2.5
+                  focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+                "
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm min-w-0">
+              <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Ends</span>
+              <input
+                type="datetime-local"
+                step={900}
+                required
+                value={endsLocal}
+                onChange={(e) => setEndsLocal(e.target.value)}
+                className="
+                  w-full rounded-xl border border-ink-200 bg-white text-sm text-ink-900
+                  px-3 py-2.5
+                  focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+                "
+              />
+            </label>
+          </div>
           <input type="hidden" name="starts_at" value={startsISO} />
-
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Ends</span>
-            <input
-              type="datetime-local"
-              step={900}
-              required
-              value={endsLocal}
-              onChange={(e) => setEndsLocal(e.target.value)}
-              className="
-                rounded-xl border border-ink-200 bg-white text-sm text-ink-900
-                px-3 py-2.5
-                focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
-              "
-            />
-          </label>
           <input type="hidden" name="ends_at" value={endsISO} />
 
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Price · €</span>
-            <input
-              type="number"
-              name="price"
-              min="0"
-              step="0.01"
-              defaultValue={Number(lesson.price).toFixed(2)}
-              className="
-                rounded-xl border border-ink-200 bg-white text-sm text-ink-900
-                px-3 py-2.5
-                focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
-              "
-            />
-          </label>
+          {/* Price — hidden entirely when a package covers the lesson (the
+              subscription pays for it). Keep the value submitting via a
+              hidden input so a Save doesn't wipe the stored price. */}
+          {coveredByPackage ? (
+            <input type="hidden" name="price" value={Number(lesson.price).toFixed(2)} />
+          ) : (
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Price · €</span>
+              <input
+                type="number"
+                name="price"
+                min="0"
+                step="0.01"
+                defaultValue={Number(lesson.price).toFixed(2)}
+                className="
+                  rounded-xl border border-ink-200 bg-white text-sm text-ink-900
+                  px-3 py-2.5
+                  focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+                "
+              />
+            </label>
+          )}
 
           {/* Group lesson participants — multi-rider picker. Always
               rendered: solo lessons show as 1/1, owner can raise capacity
