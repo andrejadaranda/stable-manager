@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { requirePageRole } from "@/lib/auth/redirects";
-import { getWelfareSnapshot, type WelfareState, type HorseWelfareCard } from "@/services/welfare";
+import { getWelfareSnapshot, type WelfareState, type HorseWelfareCard, type WelfareSnapshot } from "@/services/welfare";
 import { PageHeader, HelpHint } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +64,7 @@ export default async function WelfarePage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Welfare"
-        subtitle={`Workload status across every horse · week of ${snapshot.weekLabel}`}
+        subtitle={`Workload, rest & 8-week trends across every horse · week of ${snapshot.weekLabel}`}
         actions={
           <HelpHint
             title="Welfare board"
@@ -84,6 +84,9 @@ export default async function WelfarePage({
           />
         }
       />
+
+      {/* Barn welfare hero — headline insight + key stats + 8-week trend. */}
+      <BarnInsight snapshot={snapshot} />
 
       {/* Bucket counter strip — clickable filter chips */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
@@ -144,6 +147,97 @@ export default async function WelfarePage({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function fmtHrs(mins: number): string {
+  if (mins <= 0) return "0h";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+// Mini bar sparkline — reused for the barn trend and per-horse trend.
+function Sparkline({
+  data,
+  labels,
+  barClass = "bg-brand-500",
+  height = "h-10",
+}: {
+  data: number[];
+  labels?: string[];
+  barClass?: string;
+  height?: string;
+}) {
+  const max = Math.max(1, ...data);
+  return (
+    <div className={`flex items-end gap-1 ${height}`} aria-hidden>
+      {data.map((n, i) => (
+        <div key={i} className="flex-1 flex flex-col justify-end" title={labels?.[i] ? `${labels[i]}: ${n}` : `${n}`}>
+          <div
+            className={`rounded-sm ${barClass}`}
+            style={{ height: `${Math.max(6, (n / max) * 100)}%`, opacity: n === 0 ? 0.2 : i === data.length - 1 ? 1 : 0.7 }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// The hero: one-line health verdict + four key stats + barn trend.
+function BarnInsight({ snapshot: s }: { snapshot: WelfareSnapshot }) {
+  const atRisk = s.byState.over_cap + s.byState.near_cap;
+  const headline =
+    s.byState.over_cap > 0
+      ? { text: `${s.byState.over_cap} ${s.byState.over_cap === 1 ? "horse is" : "horses are"} over cap this week — ease their load.`, tone: "text-rose-800", dot: "bg-rose-500" }
+      : s.byState.near_cap > 0
+      ? { text: `${s.byState.near_cap} ${s.byState.near_cap === 1 ? "horse is" : "horses are"} nearing their limit — plan rest soon.`, tone: "text-amber-800", dot: "bg-amber-500" }
+      : { text: "Barn load looks healthy — every horse is within its weekly limit.", tone: "text-emerald-800", dot: "bg-emerald-500" };
+
+  return (
+    <section className="bg-white rounded-2xl shadow-soft p-5 md:p-6 flex flex-col gap-5">
+      <div className="flex items-start gap-2.5">
+        <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${headline.dot}`} />
+        <p className={`text-[15px] md:text-base font-semibold leading-snug ${headline.tone}`}>{headline.text}</p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCell label="At risk" value={String(atRisk)} sub={atRisk === 1 ? "horse" : "horses"} />
+        <StatCell label="Avg load" value={`${s.avgLoadPct}%`} sub="of weekly cap" />
+        <StatCell label="Saddle time · wk" value={fmtHrs(s.weeklyMinutesTotal)} sub="booked this week" />
+        <StatCell
+          label={s.longestRested ? "Longest rested" : "Resting"}
+          value={s.longestRested ? `${s.longestRested.days}d` : String(s.byState.resting)}
+          sub={s.longestRested ? s.longestRested.name : "horses idle 7d+"}
+        />
+      </div>
+
+      <div>
+        <div className="flex items-baseline justify-between mb-2">
+          <span className="text-[11px] uppercase tracking-[0.1em] text-ink-500 font-semibold">Barn workload · last 8 weeks</span>
+          {s.mostWorked && (
+            <span className="text-[11px] text-ink-500">Busiest: <span className="font-medium text-ink-700">{s.mostWorked.name}</span></span>
+          )}
+        </div>
+        <Sparkline data={s.barnBuckets} labels={s.weekBucketLabels} barClass="bg-saddle-500" height="h-14" />
+        <div className="flex justify-between mt-1">
+          <span className="text-[10px] text-ink-400">{s.weekBucketLabels[0]}</span>
+          <span className="text-[10px] text-ink-400">this week</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StatCell({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="rounded-xl bg-ink-50/60 px-3.5 py-3">
+      <div className="text-[10px] uppercase tracking-[0.08em] text-ink-500 font-semibold">{label}</div>
+      <div className="mt-1 font-display text-2xl text-navy-900 tabular-nums leading-none">{value}</div>
+      <div className="text-[11px] text-ink-500 mt-1 truncate" title={sub}>{sub}</div>
     </div>
   );
 }
@@ -232,6 +326,12 @@ function HorseWelfareTile({ horse }: { horse: HorseWelfareCard }) {
             {horse.weekly_count} {horse.weekly_count === 1 ? "lesson" : "lessons"} this week
           </span>
         </div>
+      </div>
+
+      {/* 8-week workload trend */}
+      <div className="px-4 pt-3">
+        <Sparkline data={horse.week_buckets} barClass={horse.state === "over_cap" ? "bg-rose-400" : horse.state === "near_cap" ? "bg-amber-400" : "bg-saddle-400"} height="h-8" />
+        <p className="text-[10px] text-ink-400 mt-1">Lessons / week · last 8 weeks</p>
       </div>
 
       <div className="px-4 py-3 border-t border-ink-100 mt-3 flex items-center justify-between">
