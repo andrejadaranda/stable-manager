@@ -35,41 +35,21 @@ export function HorseProfileHero({ horse }: { horse: HorseProfileSummary }) {
   const initial = horse.name[0]?.toUpperCase() ?? "?";
 
   return (
-    <header className="relative bg-white rounded-3xl shadow-soft overflow-hidden">
-      {/* Gradient banner */}
-      <div
-        className="h-32 md:h-36 w-full"
-        style={{
-          background:
-            "linear-gradient(135deg, #1E3A2A 0%, #2D5440 45%, #5C7C5F 80%, #C8B89A 100%)",
-        }}
-        aria-hidden
-      >
-        {/* Subtle pattern overlay */}
-        <div
-          className="w-full h-full opacity-[0.08]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 30%, white 1px, transparent 1px)",
-            backgroundSize: "32px 32px, 26px 26px",
-          }}
-        />
-      </div>
-
-      <div className="px-5 md:px-7 pb-5 md:pb-6">
-        <div className="flex flex-col md:flex-row md:items-end md:gap-6 -mt-12 md:-mt-14">
+    <header className="relative bg-white rounded-3xl shadow-soft overflow-hidden border border-ink-100">
+      <div className="px-5 md:px-7 pt-5 md:pt-6 pb-5 md:pb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:gap-6">
           {/* Photo */}
-          <div className="shrink-0 self-center md:self-end">
+          <div className="shrink-0 self-center md:self-start">
             {horse.photo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={horse.photo_url}
                 alt={horse.name}
-                className="w-28 h-28 md:w-32 md:h-32 rounded-3xl object-cover ring-4 ring-white shadow-soft"
+                className="w-24 h-24 md:w-28 md:h-28 rounded-3xl object-cover ring-1 ring-ink-100 shadow-soft"
               />
             ) : (
               <div
-                className="w-28 h-28 md:w-32 md:h-32 rounded-3xl flex items-center justify-center ring-4 ring-white shadow-soft"
+                className="w-24 h-24 md:w-28 md:h-28 rounded-3xl flex items-center justify-center ring-1 ring-ink-100 shadow-soft"
                 style={{ background: "#F5DDCB" }}
                 aria-hidden
               >
