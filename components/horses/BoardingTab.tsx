@@ -25,6 +25,7 @@ import {
   setLessonsAvailabilityAction,
   addNewOwnerAction,
   setBoardingStartAction,
+  setBoardingEndAction,
   generateBoardingMonthsAction,
   type BoardingActionState,
 } from "@/app/dashboard/horses/[id]/boarding-actions";
@@ -47,6 +48,7 @@ export function BoardingTab({
   ownerClient,
   monthlyFee,
   boardingStartDate = null,
+  boardingEndDate = null,
   availableForLessons,
   charges,
   miscCharges,
@@ -62,6 +64,8 @@ export function BoardingTab({
   monthlyFee: number | null;
   /** When boarding began — drives the monthly auto-generation. */
   boardingStartDate?: string | null;
+  /** When the horse left the stable — stops boarding charges after it. */
+  boardingEndDate?: string | null;
   /** True if this client-owned horse is opted into the lessons dropdown. */
   availableForLessons: boolean;
   charges: BoardingChargeRow[];
@@ -178,6 +182,7 @@ export function BoardingTab({
         <BoardingSchedulePanel
           horseId={horseId}
           initialStart={boardingStartDate}
+          initialEnd={boardingEndDate}
           hasFee={monthlyFee != null}
         />
       )}
@@ -626,16 +631,41 @@ function SaveFeeButton() {
 function BoardingSchedulePanel({
   horseId,
   initialStart,
+  initialEnd = null,
   hasFee,
 }: {
   horseId: string;
   initialStart: string | null;
+  initialEnd?: string | null;
   hasFee: boolean;
 }) {
   const router = useRouter();
   const [start, setStart] = useState(initialStart ?? "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [end, setEnd] = useState(initialEnd ?? "");
+  const [savingEnd, setSavingEnd] = useState(false);
+  const [endMsg, setEndMsg] = useState<string | null>(null);
+
+  async function saveEnd() {
+    if (!end) { setEndMsg("Pick the departure date."); return; }
+    setSavingEnd(true); setEndMsg(null);
+    const res = await setBoardingEndAction(horseId, end);
+    setSavingEnd(false);
+    if (res.error) { setEndMsg(res.error); return; }
+    router.refresh();
+    setEndMsg("Saved — boarding stops after this month.");
+  }
+
+  async function clearEnd() {
+    setSavingEnd(true); setEndMsg(null);
+    const res = await setBoardingEndAction(horseId, "");
+    setSavingEnd(false);
+    if (res.error) { setEndMsg(res.error); return; }
+    setEnd("");
+    router.refresh();
+    setEndMsg("Cleared — the horse is boarding again.");
+  }
 
   async function saveStart() {
     if (!start) { setMsg("Pick a start date."); return; }
@@ -704,6 +734,54 @@ function BoardingSchedulePanel({
         <p className="text-[11.5px] text-amber-700">Set the monthly fee above first.</p>
       )}
       {msg && <p className="text-[12px] text-ink-500">{msg}</p>}
+
+      {/* Departure — stop boarding when the horse leaves the stable. */}
+      <div className="border-t border-ink-100 pt-3 mt-1">
+        <p className="text-[12px] font-semibold tracking-[0.04em] uppercase text-ink-500">
+          Left the stable
+        </p>
+        <p className="text-[11.5px] text-ink-500 mt-0.5 leading-relaxed">
+          Set the date this horse left — boarding charges stop after that
+          month (the departure month is still billed). Clear it if the horse
+          comes back.
+        </p>
+        {initialEnd && (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-amber-50 text-amber-800 text-[11.5px] font-medium px-2.5 py-1">
+            Departed {new Date(initialEnd).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+          </p>
+        )}
+        <div className="flex flex-wrap items-end gap-3 mt-2">
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="text-[12px] font-medium text-ink-700">Departure date</span>
+            <input
+              type="date"
+              value={end}
+              min={start || undefined}
+              onChange={(e) => setEnd(e.target.value)}
+              className="rounded-xl border border-ink-200 bg-white text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={saveEnd}
+            disabled={savingEnd}
+            className="h-10 px-4 rounded-xl bg-navy-900 text-white text-sm font-medium hover:bg-navy-800 disabled:opacity-50"
+          >
+            {savingEnd ? "Saving…" : "Mark as left"}
+          </button>
+          {initialEnd && (
+            <button
+              type="button"
+              onClick={clearEnd}
+              disabled={savingEnd}
+              className="h-10 px-4 rounded-xl text-sm font-medium text-ink-700 ring-1 ring-ink-200 hover:bg-ink-100/60 disabled:opacity-50"
+            >
+              Clear (still boarding)
+            </button>
+          )}
+        </div>
+        {endMsg && <p className="text-[12px] text-ink-500 mt-1.5">{endMsg}</p>}
+      </div>
     </div>
   );
 }

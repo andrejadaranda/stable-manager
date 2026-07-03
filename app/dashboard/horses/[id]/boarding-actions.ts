@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import {
   setHorseMonthlyBoardingFee,
   setHorseBoardingStartDate,
+  setHorseBoardingEndDate,
   generateMissingBoardingMonths,
   createCharge,
   deleteCharge,
@@ -126,6 +127,24 @@ export async function setBoardingStartAction(
     if (msg === "NO_MONTHLY_FEE")    return { error: "Set the monthly fee first.", created: 0 };
     if (msg === "HORSE_HAS_NO_OWNER") return { error: "Set an owner client first.", created: 0 };
     return { error: toFriendlyError(err).message, created: 0 };
+  }
+}
+
+/** Mark (or clear) the date the horse left the stable. Once set, boarding
+ *  charges stop being generated for months after it. Pass an empty string
+ *  to clear (horse is back / mistake). Owner-only. */
+export async function setBoardingEndAction(
+  horseId: string,
+  endDate: string,
+): Promise<{ error: string | null }> {
+  if (!horseId) return { error: "Missing horse id." };
+  try {
+    await setHorseBoardingEndDate(horseId, endDate ? endDate : null);
+    revalidatePath(`/dashboard/horses/${horseId}`);
+    revalidatePath("/dashboard/settings/boarding");
+    return { error: null };
+  } catch (err) {
+    return { error: toFriendlyError(err).message };
   }
 }
 

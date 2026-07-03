@@ -90,6 +90,25 @@ export async function setHorseBoardingStartDate(
   if (error) throw error;
 }
 
+/** Mark WHEN a horse left the stable (or clear it, pass null). Once set,
+ *  boarding charges stop being generated for months AFTER this date — the
+ *  departure month is still billed, later months are not. The horse keeps
+ *  its profile + history (unlike setting active = false). Owner-only. */
+export async function setHorseBoardingEndDate(
+  horseId: string,
+  endDate: string | null,
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  void session;
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("horses")
+    .update({ boarding_end_date: endDate })
+    .eq("id", horseId);
+  if (error) throw error;
+}
+
 /** Auto-create one boarding charge per calendar month from the horse's
  *  boarding_start_date up to (and including) the current month — skipping
  *  any month that already has a charge. Each uses the horse's monthly fee.
@@ -104,7 +123,7 @@ export async function generateMissingBoardingMonths(
 
   const { data: horse, error: hErr } = await supabase
     .from("horses")
-    .select("id, owner_client_id, boarding_start_date, monthly_boarding_fee")
+    .select("id, owner_client_id, boarding_start_date, boarding_end_date, monthly_boarding_fee")
     .eq("id", horseId)
     .maybeSingle();
   if (hErr) throw hErr;
@@ -112,6 +131,7 @@ export async function generateMissingBoardingMonths(
   const h = horse as {
     owner_client_id: string | null;
     boarding_start_date: string | null;
+    boarding_end_date: string | null;
     monthly_boarding_fee: number | null;
   };
   if (!h.owner_client_id) throw new Error("HORSE_HAS_NO_OWNER");
@@ -128,12 +148,19 @@ export async function generateMissingBoardingMonths(
     ((existing ?? []) as { period_start: string }[]).map((r) => r.period_start.slice(0, 7)),
   );
 
-  // Walk months from start → current.
+  // Walk months from start → current, but never past the departure month
+  // (boarding_end_date). The month the horse left is still billed; later
+  // months are skipped entirely.
   const start = new Date(h.boarding_start_date);
   const now = new Date();
   const records: Array<Record<string, unknown>> = [];
   const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-  const last = new Date(now.getFullYear(), now.getMonth(), 1);
+  let last = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (h.boarding_end_date) {
+    const end = new Date(h.boarding_end_date);
+    const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+    if (endMonth < last) last = endMonth;
+  }
   while (cursor <= last) {
     const y = cursor.getFullYear();
     const m = cursor.getMonth(); // 0-based
@@ -460,16 +487,21 @@ export async function previewBoardingForMonth(
 
   const supabase = createSupabaseServerClient();
 
-  // All horses with a boarding fee set + an owner client.
+  // All horses with a boarding fee set + an owner client — excluding any
+  // that left the stable before this month starts. A horse that departed
+  // during (or after) the target month is still billed for it; one that
+  // left in an earlier month is dropped. `boarding_end_date >= periodStart`
+  // OR it's null (still boarding).
   const { data: horses, error: hErr } = await supabase
     .from("horses")
     .select(
-      `id, name, owner_client_id, monthly_boarding_fee,
+      `id, name, owner_client_id, monthly_boarding_fee, boarding_end_date,
        owner_client:clients!horses_owner_client_id_fkey(id, full_name)`,
     )
     .eq("active", true)
     .not("monthly_boarding_fee", "is", null)
-    .not("owner_client_id", "is", null);
+    .not("owner_client_id", "is", null)
+    .or(`boarding_end_date.is.null,boarding_end_date.gte.${periodStart}`);
   if (hErr) throw hErr;
 
   // Existing charges that overlap this month — used to flag duplicates.

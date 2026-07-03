@@ -129,6 +129,7 @@ export default async function HorseDetailPage({
         ownerClient={ownerClient ? { id: ownerClient.id, full_name: ownerClient.full_name } : null}
         monthlyFee={horse.monthly_boarding_fee != null ? Number(horse.monthly_boarding_fee) : null}
         boardingStartDate={(horse as { boarding_start_date?: string | null }).boarding_start_date ?? null}
+        boardingEndDate={(horse as { boarding_end_date?: string | null }).boarding_end_date ?? null}
         availableForLessons={horse.available_for_lessons}
         charges={charges}
         miscCharges={miscCharges}
