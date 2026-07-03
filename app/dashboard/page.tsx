@@ -105,13 +105,6 @@ export default async function DashboardHome({
 
   const firstName = (profile?.full_name ?? "").split(" ")[0] ?? "";
 
-  const fmtEUR = (n: number) =>
-    new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    }).format(n);
-
   const greetingName = firstName;
   // Render the greeting date in Europe/Vilnius so a server in UTC (Vercel runs
   // most edges in UTC) doesn't show "yesterday" between 21:00 UTC and 00:00
@@ -263,18 +256,10 @@ export default async function DashboardHome({
           {/* Reminders */}
           <RemindersBlock />
 
-          {/* Active horses + Revenue row.
-              Personal accounts: hide the Revenue card (no client billing). */}
-          <div className={`grid grid-cols-1 ${isPersonal ? "" : "md:grid-cols-2"} gap-5`}>
-            <ActiveHorsesCard count={s.activeHorses} />
-            {!isPersonal && (
-              <RevenueCard
-                monthlyRevenue={s.monthlyRevenue}
-                monthLabel={s.monthLabel}
-                fmtEUR={fmtEUR}
-              />
-            )}
-          </div>
+          {/* NB: active-horse count and monthly revenue are NOT repeated
+              here — they live once in the KPI rings panel ("Horses in
+              care" + "Payments · collected"). Kept single-home to avoid
+              the dashboard reading twice. */}
 
           {/* Combined inbox — Join + Lesson + Care requests grouped.
               Personal accounts: there's no inbox concept (no clients
@@ -290,50 +275,6 @@ export default async function DashboardHome({
           {/* Birthdays — emotional micro-widget, moved to the bottom.
               Auto-hides when no horse/client birthday in next 14 days. */}
           <BirthdaysWidget items={birthdays} />
-
-          {/* Quick actions — owner only, business stables. Personal
-              accounts get a single-card prompt at the top instead. */}
-          {s.isOwner && !isPersonal && (
-            <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <QuickAction
-                href="/dashboard/horses"
-                title="Horses"
-                body="Workload, daily limits, status."
-                icon={
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 19c0-3 2-5 5-5h4l3-3 2 1-1 3-2 1v3"/>
-                    <path d="M5 19h13"/>
-                    <path d="M9 8l-2-2 2-2 2 2"/>
-                  </svg>
-                }
-              />
-              <QuickAction
-                href="/dashboard/clients"
-                title="Clients"
-                body="Roster, balances, contacts."
-                icon={
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="9" cy="8" r="3"/>
-                    <path d="M3 20c0-3 3-5 6-5s6 2 6 5"/>
-                    <circle cx="17" cy="9" r="2.5"/>
-                    <path d="M21 19c0-2-1.5-4-4-4"/>
-                  </svg>
-                }
-              />
-              <QuickAction
-                href="/dashboard/payments"
-                title="Payments"
-                body="Log cash, card, or transfer payments."
-                icon={
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="6" width="18" height="12" rx="2"/>
-                    <circle cx="12" cy="12" r="2.5"/>
-                    <path d="M7 10v.01M17 14v.01"/>
-                  </svg>
-                }
-              />
-            </section>
-          )}
         </div>
 
         {/* RIGHT — KPI rings panel */}
@@ -356,65 +297,6 @@ export default async function DashboardHome({
 }
 
 // ---------- Components ----------------------------------------
-
-function ActiveHorsesCard({ count }: { count: number }) {
-  return (
-    <Link
-      href="/dashboard/horses"
-      className="card-elevated is-interactive p-5 md:p-6 group flex flex-col gap-3"
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] tracking-[0.04em] uppercase text-ink-500">Active horses</span>
-        <span className="w-7 h-7 rounded-lg bg-brand-50 inline-flex items-center justify-center text-brand-700">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 19c0-3 2-5 5-5h4l3-3 2 1-1 3-2 1v3"/>
-            <path d="M5 19h13"/>
-          </svg>
-        </span>
-      </div>
-      <div className="font-display text-3xl text-navy-900">{count}</div>
-      <p className="text-[12px] text-ink-500">Currently in rotation</p>
-      <span className="text-[12px] text-brand-700 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-        View →
-      </span>
-    </Link>
-  );
-}
-
-function RevenueCard({
-  monthlyRevenue,
-  monthLabel,
-  fmtEUR,
-}: {
-  monthlyRevenue: number;
-  monthLabel: string;
-  fmtEUR: (n: number) => string;
-}) {
-  // The whole card is now a link into the finance dashboard, where
-  // the owner gets a per-source / per-horse breakdown. Keep the
-  // visual identical so dashboards reading recognise the card.
-  return (
-    <Link
-      href="/dashboard/finance"
-      className="card-navy p-5 md:p-6 flex flex-col gap-3 group hover:shadow-lift transition-shadow"
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] tracking-[0.04em] uppercase text-white/80">
-          Monthly revenue
-        </span>
-        <span className="text-[11px] text-white/70 inline-flex items-center gap-1">
-          {monthLabel}
-          <span aria-hidden className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-        </span>
-      </div>
-      <div className="font-display text-3xl text-white">{fmtEUR(monthlyRevenue)}</div>
-      <p className="text-[12px] text-white/70">
-        Collected payments this month · tap for breakdown
-      </p>
-    </Link>
-  );
-}
-
 
 function TimelineRow({ lesson }: { lesson: DashboardLesson }) {
   const start = new Date(lesson.starts_at);
@@ -457,33 +339,3 @@ function TimelineRow({ lesson }: { lesson: DashboardLesson }) {
   );
 }
 
-function QuickAction({
-  href,
-  title,
-  body,
-  icon,
-}: {
-  href: string;
-  title: string;
-  body: string;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <Link href={href} className="card-elevated is-interactive p-4 group flex items-start gap-3">
-      {icon && (
-        <span className="w-9 h-9 shrink-0 rounded-xl bg-brand-50 text-brand-700 inline-flex items-center justify-center group-hover:bg-brand-100 transition-colors">
-          {icon}
-        </span>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-navy-900 group-hover:text-brand-700 transition-colors">
-          {title}
-        </p>
-        <p className="text-[12px] text-ink-500 mt-0.5 leading-relaxed">{body}</p>
-      </div>
-      <span className="shrink-0 text-ink-300 group-hover:text-brand-700 transition-colors mt-0.5" aria-hidden>
-        →
-      </span>
-    </Link>
-  );
-}
