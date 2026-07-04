@@ -139,6 +139,16 @@ export function FinanceShell({ data }: { data: MonthFinancials }) {
             </ul>
           </>
         )}
+
+        {data.packageCoveredLessons > 0 && (
+          <div className="mt-3 flex items-start gap-2 rounded-xl bg-emerald-50/60 px-3 py-2.5">
+            <span className="text-emerald-600 text-sm leading-none mt-0.5">✓</span>
+            <p className="text-[11.5px] text-emerald-800 leading-relaxed">
+              <strong>{data.packageCoveredLessons}</strong> {data.packageCoveredLessons === 1 ? "lesson this month was" : "lessons this month were"} covered by a subscription package.
+              {" "}They add <strong>€0</strong> here — that money was already counted in the month the package was paid, so it isn&apos;t double-counted.
+            </p>
+          </div>
+        )}
       </Panel>
 
       {/* Expenses breakdown ---------------------------------- */}

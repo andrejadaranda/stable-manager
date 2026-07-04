@@ -80,6 +80,12 @@ export type MonthFinancials = {
   perHorse: PerHorseFinancial[];
 
   net: number;
+
+  /** Lessons delivered this month that were covered by a subscription
+   *  package. Their revenue was recognised when the package was PAID
+   *  (an earlier month), so they add €0 here — surfaced so "2 lessons but
+   *  less money" doesn't look like missing revenue. */
+  packageCoveredLessons: number;
 };
 
 // ---------- public API --------------------------------------------
@@ -104,8 +110,8 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
 
   const supabase = createSupabaseServerClient();
 
-  // Fan out the two big queries in parallel.
-  const [paymentsRes, expensesRes] = await Promise.all([
+  // Fan out the queries in parallel.
+  const [paymentsRes, expensesRes, pkgLessonsRes] = await Promise.all([
     supabase
       .from("payments")
       .select(
@@ -133,10 +139,20 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
       )
       .gte("incurred_on", incurredFrom)
       .lt("incurred_on", incurredTo),
+    // Lessons this month that are covered by a package (revenue booked at
+    // package sale, so €0 here). Count only — for the explanatory note.
+    supabase
+      .from("lessons")
+      .select("id", { count: "exact", head: true })
+      .not("package_id", "is", null)
+      .neq("status", "cancelled")
+      .gte("starts_at", periodStart)
+      .lt("starts_at", periodEnd),
   ]);
 
   if (paymentsRes.error) throw paymentsRes.error;
   if (expensesRes.error) throw expensesRes.error;
+  const packageCoveredLessons = pkgLessonsRes.count ?? 0;
 
   // ---------- Revenue --------------------------------------
   type PaymentRow = {
@@ -350,6 +366,8 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
     perHorse,
 
     net: totalRevenue - totalExpenses,
+
+    packageCoveredLessons,
   };
 }
 
