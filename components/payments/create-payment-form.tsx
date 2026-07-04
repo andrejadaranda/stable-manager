@@ -43,7 +43,7 @@ export function CreatePaymentPanel({
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
+        className="rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
       >
         {open ? "Close" : "+ Record payment"}
       </button>
@@ -130,15 +130,16 @@ function CreatePaymentForm({
   return (
     <form
       action={formAction}
-      className="fixed inset-0 z-30 flex items-start justify-center pt-8 md:pt-16 bg-black/40 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-30 flex items-start justify-center pt-8 md:pt-16 bg-navy-900/40 backdrop-blur-sm overflow-y-auto px-4"
     >
-      <div className="bg-white rounded-xl shadow-xl border border-neutral-200 p-6 w-full max-w-md flex flex-col gap-3.5 max-h-[calc(100vh-4rem)] overflow-y-auto my-auto">
+      <div className="bg-white rounded-2xl shadow-lift border border-ink-100 p-5 w-full max-w-md flex flex-col gap-3.5 max-h-[calc(100vh-4rem)] overflow-y-auto my-auto">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Record payment</h2>
+          <h2 className="text-base font-semibold text-navy-900">Record payment</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-neutral-500 hover:text-neutral-900"
+            className="text-ink-400 hover:text-navy-900 p-1 -mr-1 rounded-lg"
+            aria-label="Close"
           >
             ✕
           </button>
@@ -146,12 +147,12 @@ function CreatePaymentForm({
 
         {/* Purpose */}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700">What for</span>
+          <span className="text-ink-700">What for</span>
           <select
             name="purpose"
             value={purpose}
             onChange={(e) => setPurpose(e.target.value as "general" | "boarding")}
-            className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+            className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white"
           >
             <option value="general">General payment</option>
             <option value="boarding">Boarding</option>
@@ -161,11 +162,11 @@ function CreatePaymentForm({
         {/* Boarding → which horse */}
         {purpose === "boarding" && (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-700">For which horse</span>
+            <span className="text-ink-700">For which horse</span>
             <select
               value={horseId}
               onChange={(e) => { setHorseId(e.target.value); setChargeId(""); }}
-              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+              className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white"
             >
               <option value="">Select horse…</option>
               {horses.map((h) => (
@@ -182,9 +183,9 @@ function CreatePaymentForm({
             the month flips to Paid automatically. */}
         {purpose === "boarding" && horseId && (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-700">Which month</span>
+            <span className="text-ink-700">Which month</span>
             {horseCharges.length === 0 ? (
-              <span className="text-[12px] text-neutral-500 rounded-md bg-neutral-50 border border-neutral-200 px-3 py-2">
+              <span className="text-[12px] text-ink-500 rounded-xl bg-ink-50/60 border border-ink-100 px-3 py-2">
                 No unpaid months for this horse. Record it as a general
                 boarding payment, or generate the months in the horse&apos;s
                 Boarding tab first.
@@ -193,7 +194,7 @@ function CreatePaymentForm({
               <select
                 value={chargeId}
                 onChange={(e) => pickCharge(e.target.value)}
-                className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+                className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white"
               >
                 <option value="">Don&apos;t link to a month</option>
                 {horseCharges.map((c) => {
@@ -215,7 +216,7 @@ function CreatePaymentForm({
         {/* Client — existing or brand-new */}
         <div className="flex flex-col gap-1 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-neutral-700">Client</span>
+            <span className="text-ink-700">Client</span>
             <button
               type="button"
               onClick={() => { setNewClient((v) => !v); setClientId(""); }}
@@ -231,13 +232,13 @@ function CreatePaymentForm({
                 name="new_client_name"
                 required
                 placeholder="Full name"
-                className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
+                className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
               <input
                 name="new_client_email"
                 type="email"
                 placeholder="Email (optional)"
-                className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
+                className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
             </div>
           ) : (
@@ -245,7 +246,7 @@ function CreatePaymentForm({
               name="client_id"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+              className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white"
             >
               <option value="">Select…</option>
               {clients.map((c) => (
@@ -256,7 +257,7 @@ function CreatePaymentForm({
         </div>
 
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-neutral-700 font-medium">Amount</span>
+          <span className="text-ink-700 font-medium">Amount</span>
           <input
             name="amount"
             type="number"
@@ -266,33 +267,33 @@ function CreatePaymentForm({
             required
             value={amountStr}
             onChange={(e) => setAmountStr(e.target.value)}
-            className="border border-neutral-300 rounded-md px-3 py-2 text-sm placeholder:text-neutral-400"
+            className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 placeholder:text-ink-400"
           />
           {selectedRemaining != null && (
-            <span className="text-[11.5px] text-neutral-500">
+            <span className="text-[11.5px] text-ink-500">
               €{selectedRemaining.toFixed(2)} left on this month — pay up to this to mark it paid.
             </span>
           )}
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700">Payment date</span>
+          <span className="text-ink-700">Payment date</span>
           <input
             type="date"
             value={dateLocal}
             onChange={(e) => setDateLocal(e.target.value)}
             required
-            className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
+            className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           />
         </label>
         <input type="hidden" name="paid_at" value={dateISO} />
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700">Method</span>
+          <span className="text-ink-700">Method</span>
           <select
             name="method"
             defaultValue="cash"
-            className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+            className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white"
           >
             <option value="cash">Cash</option>
             <option value="card">Card</option>
@@ -305,12 +306,12 @@ function CreatePaymentForm({
             of an existing client. */}
         {purpose === "general" && !newClient && (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-neutral-700 font-medium">Link to a lesson (optional)</span>
+            <span className="text-ink-700 font-medium">Link to a lesson (optional)</span>
             <select
               name="lesson_id"
               defaultValue=""
               disabled={!clientId}
-              className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white disabled:bg-neutral-100"
+              className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 bg-white disabled:bg-ink-50"
             >
               <option value="">— Not linked —</option>
               {eligibleLessons.map((l) => (
@@ -318,23 +319,23 @@ function CreatePaymentForm({
               ))}
             </select>
             {!clientId && (
-              <span className="text-[11.5px] text-neutral-500 mt-1">Pick a client to see their lessons.</span>
+              <span className="text-[11.5px] text-ink-500 mt-1">Pick a client to see their lessons.</span>
             )}
           </label>
         )}
 
         <label className="flex flex-col gap-1 text-sm">
-          <span className="text-neutral-700">Notes (optional)</span>
+          <span className="text-ink-700">Notes (optional)</span>
           <textarea
             name="notes"
             rows={2}
-            className="border border-neutral-300 rounded-md px-3 py-2 text-sm"
+            className="rounded-xl border border-ink-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
           />
         </label>
 
         <Submit label="Record payment" />
         {state.error && (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+          <p className="text-[13px] text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
             {state.error}
           </p>
         )}
@@ -350,7 +351,7 @@ function Submit({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="mt-2 rounded-md bg-brand-600 text-white py-2.5 text-sm font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="mt-2 rounded-xl bg-brand-600 text-white py-2.5 text-sm font-medium hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {pending ? "Saving…" : label}
     </button>

@@ -92,19 +92,20 @@ export function MetricsPanel(m: Metrics) {
             color="#E04E25"
           />
           <KpiRing
-            label={`Payments ${rangeWord}`}
-            value={`${collectionPct}%`}
-            sub={`${fmtEUR(revenue)} collected`}
+            label={`Collected ${rangeWord}`}
+            value={fmtEUR(revenue)}
+            sub={`${collectionPct}% of what's owed`}
             pct={collectionPct}
             color="#1E2A47"
           />
           <KpiRing
             label="Client balance"
             value={fmtEUR(m.outstandingBalance)}
-            sub={m.outstandingBalance > 0 ? "Outstanding" : "All paid up"}
-            pct={m.outstandingBalance > 0 ? Math.min(100, Math.round((m.outstandingBalance / Math.max(1, revenue + m.outstandingBalance)) * 100)) : 0}
-            color="#B23838"
-            inverted
+            sub={m.outstandingBalance > 0 ? `${collectionPct}% collected` : "All paid up"}
+            // Ring fills with the share ALREADY collected, so a fuller ring
+            // always means better (more paid up) — not "more debt".
+            pct={collectionPct}
+            color={m.outstandingBalance > 0 ? "#C2841A" : "#3F7A3A"}
           />
         </>
       ) : (
@@ -130,14 +131,13 @@ export function MetricsPanel(m: Metrics) {
 }
 
 function KpiRing({
-  label, value, sub, pct, color, inverted,
+  label, value, sub, pct, color,
 }: {
   label: string;
   value: string;
   sub: string;
   pct: number;
   color: string;
-  inverted?: boolean;
 }) {
   const r = 26;
   const c = 2 * Math.PI * r;

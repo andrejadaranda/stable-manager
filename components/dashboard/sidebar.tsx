@@ -16,6 +16,8 @@ type Item = {
   feature?: FeatureKey;
   /** Stable key for matching the live badge counts from layout props. */
   badgeKey?: "inbox";
+  /** When set, render a small section heading above this item. */
+  section?: string;
 };
 
 // Personal (B2C) owners get a trimmed nav — no clients, no inbox,
@@ -42,11 +44,13 @@ const NAV: Record<Role, Item[]> = {
     { href: "/dashboard/clients",         label: "Clients",         icon: <IconUsers /> },
     { href: "/dashboard/inbox",           label: "Inbox",           icon: <IconInbox />, badgeKey: "inbox" },
     { href: "/dashboard/chat",            label: "Chat",            icon: <IconChat />, feature: "chat" },
+    // Money hub + the money tools, kept together at the bottom of the nav.
+    { href: "/dashboard/finance",         label: "Finance",         icon: <IconChart />, section: "Money" },
     { href: "/dashboard/payments",        label: "Payments",        icon: <IconCash /> },
-    { href: "/dashboard/expenses",      label: "Expenses",      icon: <IconReceipt /> },
-    { href: "/dashboard/finance/invoices", label: "Invoices",   icon: <IconReceipt /> },
-    { href: "/dashboard/reports",       label: "Reports",       icon: <IconActivity /> },
-    { href: "/dashboard/team",          label: "Team",          icon: <IconShield /> },
+    { href: "/dashboard/expenses",        label: "Expenses",        icon: <IconReceipt /> },
+    { href: "/dashboard/finance/invoices", label: "Invoices",       icon: <IconReceipt /> },
+    { href: "/dashboard/reports",         label: "Reports",         icon: <IconActivity /> },
+    { href: "/dashboard/team",            label: "Team",            icon: <IconShield />, section: "Manage" },
   ],
   employee: [
     { href: "/dashboard",               label: "Overview",      icon: <IconHome /> },
@@ -216,8 +220,13 @@ export function Sidebar({
             // additional badgeKey values can plug into the same prop API later.
             const badge = item.badgeKey === "inbox" ? inboxCount : 0;
             return (
+              <div key={item.href} className="contents">
+              {item.section && (
+                <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-400">
+                  {item.section}
+                </p>
+              )}
               <Link
-                key={item.href}
                 href={item.href}
                 className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                   isActive
@@ -246,6 +255,7 @@ export function Sidebar({
                   </span>
                 )}
               </Link>
+              </div>
             );
           })}
         </nav>
@@ -345,6 +355,9 @@ function IconCash() {
 }
 function IconReceipt() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 3h14v18l-3-2-3 2-2-2-3 2-3-2z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>;
+}
+function IconChart() {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20V4"/><path d="M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="5" width="3" height="12"/></svg>;
 }
 function IconShield() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>;
