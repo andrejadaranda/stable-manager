@@ -492,13 +492,18 @@ export async function previewBoardingForMonth(
   // during (or after) the target month is still billed for it; one that
   // left in an earlier month is dropped. `boarding_end_date >= periodStart`
   // OR it's null (still boarding).
+  // NB: we deliberately do NOT filter on `active`. A horse can be retired
+  // from the lesson rotation (active = false) yet still board and owe the
+  // monthly fee — private boarders are the common case. Boarding stops only
+  // when a departure date (boarding_end_date) is set. So the boarding
+  // universe = any horse with a fee + owner that hasn't left before this
+  // month.
   const { data: horses, error: hErr } = await supabase
     .from("horses")
     .select(
       `id, name, owner_client_id, monthly_boarding_fee, boarding_end_date,
        owner_client:clients!horses_owner_client_id_fkey(id, full_name)`,
     )
-    .eq("active", true)
     .not("monthly_boarding_fee", "is", null)
     .not("owner_client_id", "is", null)
     .or(`boarding_end_date.is.null,boarding_end_date.gte.${periodStart}`);
