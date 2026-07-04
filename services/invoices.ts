@@ -80,13 +80,16 @@ async function collectInvoiceDrafts(periodStart: string, periodEnd: string): Pro
   const endDate = periodEnd.slice(0, 10);
   const drafts: LineDraft[] = [];
 
-  // 1. Lessons — completed, priced, not already invoiced.
+  // 1. Lessons — completed OR no-show, priced, not already invoiced.
+  //    No-shows are billable (the client still owes the fee) and the
+  //    balance/owed-items logic counts them, so invoices must too —
+  //    otherwise a no-show shows as outstanding but never lands on a bill.
   const { data: lessons } = await supabase
     .from("lessons")
-    .select("id, client_id, starts_at, price")
+    .select("id, client_id, starts_at, price, status")
     .gte("starts_at", periodStart).lte("starts_at", periodEnd)
-    .eq("status", "completed");
-  const lessonRows = (lessons ?? []) as Array<{ id: string; client_id: string; starts_at: string; price: number | null }>;
+    .in("status", ["completed", "no_show"]);
+  const lessonRows = (lessons ?? []) as Array<{ id: string; client_id: string; starts_at: string; price: number | null; status: string }>;
   const lessonIds = lessonRows.map((l) => l.id);
   const invoicedLessons = new Set<string>();
   if (lessonIds.length) {
@@ -97,7 +100,8 @@ async function collectInvoiceDrafts(periodStart: string, periodEnd: string): Pro
     if (!l.client_id || invoicedLessons.has(l.id)) continue;
     const p = Number(l.price ?? 0);
     if (p <= 0) continue; // package-covered
-    drafts.push({ clientId: l.client_id, description: `Lesson · ${new Date(l.starts_at).toLocaleDateString("en-GB")}`, amount: p, lesson_id: l.id });
+    const noShow = l.status === "no_show" ? " (no-show)" : "";
+    drafts.push({ clientId: l.client_id, description: `Lesson · ${new Date(l.starts_at).toLocaleDateString("en-GB")}${noShow}`, amount: p, lesson_id: l.id });
   }
 
   // 2. Boarding charges — unpaid, in period (billed to the horse's owner).

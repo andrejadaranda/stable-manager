@@ -44,7 +44,7 @@ export async function sendOwnerWeeklyNudgeEmail(args: SendOwnerNudgeArgs): Promi
   const text = `Hi ${greeting},
 
 Your Monday snapshot for ${args.stableName}:
-${money ? `\n• Boarding: ${fmtEUR(args.unpaidBoardingTotal)} outstanding across ${args.unpaidBoardingCount} ${args.unpaidBoardingCount === 1 ? "charge" : "charges"}. Chase it: ${boardingUrl}` : ""}${welfare ? `\n• Welfare: ${args.overCapHorses.length} ${args.overCapHorses.length === 1 ? "horse is" : "horses are"} at/over the weekly cap — ${overCapList}. Review: ${welfareUrl}` : ""}
+${money ? `\n• Boarding: ${fmtEUR(args.unpaidBoardingTotal)} outstanding across ${args.unpaidBoardingCount} ${args.unpaidBoardingCount === 1 ? "charge" : "charges"}. Chase it: ${boardingUrl}` : ""}${welfare ? `\n• Welfare: ${args.overCapHorses.length} ${args.overCapHorses.length === 1 ? "horse" : "horses"} hit or passed the weekly cap last week — ${overCapList}. Review: ${welfareUrl}` : ""}
 
 — Longrein
 longrein.eu`;
@@ -65,7 +65,7 @@ longrein.eu`;
         <tr><td style="padding:8px 32px 6px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FBF3F0;border:1px solid #F0D9D2;border-radius:12px;">
             <tr><td style="padding:18px 20px;">
-              <p style="margin:0 0 4px;font-size:11.5px;color:#9A5C4A;text-transform:uppercase;letter-spacing:.12em;font-weight:600;">At / over weekly cap</p>
+              <p style="margin:0 0 4px;font-size:11.5px;color:#9A5C4A;text-transform:uppercase;letter-spacing:.12em;font-weight:600;">Over cap last week</p>
               <p style="margin:0 0 8px;font-size:14.5px;color:#3F4A42;line-height:1.5;font-weight:600;">${escapeHtml(overCapList)}</p>
               <a href="${welfareUrl}" style="display:inline-block;padding:10px 18px;font-size:13.5px;font-weight:600;color:#F4ECDF;text-decoration:none;border-radius:8px;background:#8A3E2A;">Open welfare board →</a>
             </td></tr>

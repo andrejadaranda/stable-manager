@@ -285,9 +285,13 @@ async function runOwnerWeeklyNudge(
     boardingByStable.set(c.stable_id, cur);
   }
 
-  // 2) Over-cap horses this week per stable (Mon–Sun UTC bounds).
-  const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const weekEnd = new Date(weekStart.getTime() + 7 * 86_400_000);
+  // 2) Over-cap horses over the PREVIOUS completed week (Mon–Sun). We run
+  //    Monday morning, so "this week" has barely any lessons yet — the
+  //    meaningful signal is which horses were worked to/over their cap in
+  //    the week that just finished.
+  const thisMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const weekEnd = thisMonday;                                   // exclusive upper bound
+  const weekStart = new Date(thisMonday.getTime() - 7 * 86_400_000); // last Monday
   const [{ data: horses }, { data: weekLessons }] = await Promise.all([
     supabase.from("horses").select("id, name, stable_id, weekly_lesson_limit").eq("active", true).gt("weekly_lesson_limit", 0),
     supabase.from("lessons").select("horse_id").gte("starts_at", weekStart.toISOString()).lt("starts_at", weekEnd.toISOString()).neq("status", "cancelled"),
