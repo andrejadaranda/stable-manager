@@ -28,6 +28,7 @@ import { sendLessonReminderEmail } from "@/lib/email/lesson-reminder";
 import { sendHealthDueReminderEmail } from "@/lib/email/health-due-reminder";
 import { sendWeatherAlertEmail } from "@/lib/email/weather-alert";
 import { sendTrialEndingEmail } from "@/lib/email/trial-ending";
+import { sendOwnerWeeklyNudgeEmail } from "@/lib/email/owner-weekly-nudge";
 import { sendSMS, toE164Lithuania } from "@/lib/sms/send";
 import { sendPushToUser, pushConfigured } from "@/lib/push/send";
 
@@ -235,6 +236,11 @@ export async function GET(req: Request) {
   // daily cron it's a no-op. Dormant until VAPID keys are set.
   const pushResults = await runLessonPushReminders(supabase);
 
+  // ---- Monday owner "money + welfare" nudge -------------------
+  // One email per stable per ISO week (Mondays only): outstanding
+  // boarding + horses over the weekly cap. Only sent when non-empty.
+  const ownerNudgeResults = await runOwnerWeeklyNudge(supabase);
+
   return NextResponse.json({
     ok: true,
     ...results,
@@ -242,8 +248,122 @@ export async function GET(req: Request) {
     weather: weatherResults,
     trial: trialResults,
     push: pushResults,
+    ownerNudge: ownerNudgeResults,
     window: { from: winFrom.toISOString(), to: winTo.toISOString() },
   });
+}
+
+// ----------------------------------------------------------------
+// Monday owner nudge — outstanding boarding + over-cap horses.
+// Runs only on Mondays (UTC). Idempotent via owner_weekly_nudge_log
+// (stable_id, week_key). Sent to owner + employees with an email, and
+// only when there's actually something to act on.
+// ----------------------------------------------------------------
+type OwnerNudgeResult = { day: string; candidates: number; sent: number; skipped: number; failed: number };
+
+async function runOwnerWeeklyNudge(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+): Promise<OwnerNudgeResult> {
+  const tally: OwnerNudgeResult = { day: "", candidates: 0, sent: 0, skipped: 0, failed: 0 };
+  const now = new Date();
+  // Mondays only (UTC getDay(): 0=Sun, 1=Mon).
+  if (now.getUTCDay() !== 1) { tally.day = "not-monday"; return tally; }
+  tally.day = "monday";
+  const weekKey = isoWeekKey(now);
+
+  // 1) Outstanding boarding per stable (remaining = amount − paid).
+  const boardingByStable = new Map<string, { total: number; count: number }>();
+  const { data: charges } = await supabase
+    .from("horse_boarding_summary")
+    .select("stable_id, amount, paid_amount, payment_status")
+    .neq("payment_status", "paid");
+  for (const c of (charges ?? []) as Array<{ stable_id: string; amount: number; paid_amount: number }>) {
+    const remaining = Math.max(0, Number(c.amount) - Number(c.paid_amount));
+    if (remaining <= 0) continue;
+    const cur = boardingByStable.get(c.stable_id) ?? { total: 0, count: 0 };
+    cur.total += remaining; cur.count += 1;
+    boardingByStable.set(c.stable_id, cur);
+  }
+
+  // 2) Over-cap horses this week per stable (Mon–Sun UTC bounds).
+  const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const weekEnd = new Date(weekStart.getTime() + 7 * 86_400_000);
+  const [{ data: horses }, { data: weekLessons }] = await Promise.all([
+    supabase.from("horses").select("id, name, stable_id, weekly_lesson_limit").eq("active", true).gt("weekly_lesson_limit", 0),
+    supabase.from("lessons").select("horse_id").gte("starts_at", weekStart.toISOString()).lt("starts_at", weekEnd.toISOString()).neq("status", "cancelled"),
+  ]);
+  const countByHorse = new Map<string, number>();
+  for (const l of (weekLessons ?? []) as Array<{ horse_id: string }>) {
+    countByHorse.set(l.horse_id, (countByHorse.get(l.horse_id) ?? 0) + 1);
+  }
+  const overCapByStable = new Map<string, string[]>();
+  for (const h of (horses ?? []) as Array<{ id: string; name: string; stable_id: string; weekly_lesson_limit: number }>) {
+    if ((countByHorse.get(h.id) ?? 0) >= h.weekly_lesson_limit) {
+      const arr = overCapByStable.get(h.stable_id) ?? [];
+      arr.push(h.name);
+      overCapByStable.set(h.stable_id, arr);
+    }
+  }
+
+  const stableIds = Array.from(new Set<string>([...boardingByStable.keys(), ...overCapByStable.keys()]));
+  if (stableIds.length === 0) return tally;
+
+  const [{ data: stables }, { data: staff }] = await Promise.all([
+    supabase.from("stables").select("id, name").in("id", stableIds),
+    supabase.from("profiles").select("stable_id, full_name, email, role").in("stable_id", stableIds).in("role", ["owner", "employee"]),
+  ]);
+  const nameById = new Map(((stables ?? []) as Array<{ id: string; name: string }>).map((s) => [s.id, s.name]));
+  const staffByStable = new Map<string, Array<{ full_name: string | null; email: string | null }>>();
+  for (const s of (staff ?? []) as Array<{ stable_id: string; full_name: string | null; email: string | null }>) {
+    if (!s.email) continue;
+    const arr = staffByStable.get(s.stable_id) ?? [];
+    arr.push({ full_name: s.full_name, email: s.email });
+    staffByStable.set(s.stable_id, arr);
+  }
+
+  for (const sid of stableIds) {
+    tally.candidates += 1;
+    // Claim the (stable, week) row first — idempotency.
+    const { error: logErr } = await supabase.from("owner_weekly_nudge_log").insert({ stable_id: sid, week_key: weekKey });
+    if (logErr) {
+      if (!/duplicate key/i.test(logErr.message)) console.error("[cron/owner-nudge] log insert failed:", logErr);
+      tally.skipped += 1;
+      continue;
+    }
+    const recipients = staffByStable.get(sid) ?? [];
+    if (recipients.length === 0) { tally.skipped += 1; continue; }
+    const money = boardingByStable.get(sid) ?? { total: 0, count: 0 };
+    const overCap = overCapByStable.get(sid) ?? [];
+    let anySent = false;
+    for (const r of recipients) {
+      try {
+        await sendOwnerWeeklyNudgeEmail({
+          to:                  r.email!,
+          firstName:           (r.full_name ?? "").split(" ")[0] ?? "",
+          stableName:          nameById.get(sid) ?? "your stable",
+          unpaidBoardingTotal: money.total,
+          unpaidBoardingCount: money.count,
+          overCapHorses:       overCap,
+        });
+        anySent = true;
+      } catch (err: any) {
+        console.error("[cron/owner-nudge] send failed:", err?.message ?? err);
+      }
+    }
+    if (anySent) tally.sent += 1; else tally.failed += 1;
+  }
+
+  return tally;
+}
+
+/** ISO-8601 week key, e.g. "2026-W27". */
+function isoWeekKey(d: Date): string {
+  const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const day = date.getUTCDay() || 7;          // Mon=1..Sun=7
+  date.setUTCDate(date.getUTCDate() + 4 - day); // nearest Thursday
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((date.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
 // ----------------------------------------------------------------
