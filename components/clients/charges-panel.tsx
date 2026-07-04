@@ -407,7 +407,7 @@ function UnpaidSubmit() {
         disabled:opacity-50 transition-colors
       "
     >
-      {pending ? "…" : "Undo"}
+      {pending ? "…" : "Mark unpaid"}
     </button>
   );
 }

@@ -166,7 +166,7 @@ export function CalendarShell({
       m.set(k, arr);
     }
     return m;
-  }, [visibleLessons]);
+  }, [filteredByArena]);
 
   // Farrier/vet visits grouped by local day key — read-only chips, so no
   // optimistic overlay or arena filtering applies.

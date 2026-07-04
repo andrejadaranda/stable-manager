@@ -58,6 +58,12 @@ export function BulkBoardingPanel({
 
   return (
     <div className="flex flex-col gap-5">
+      <p className="text-[12px] text-ink-500 leading-relaxed -mb-1">
+        The current month&apos;s boarding charges are created automatically when you
+        open this page. Use this only to bill a different month (e.g. catch up a
+        past month, or bill ahead).
+      </p>
+
       {/* Period picker + summary -------------------------------- */}
       <div className="bg-white rounded-2xl shadow-soft p-5 flex flex-col sm:flex-row gap-4 sm:items-end">
         <label className="flex flex-col gap-1.5 text-sm flex-1 min-w-0">

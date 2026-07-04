@@ -200,7 +200,7 @@ export function EditLessonDialog({
                   href={`/dashboard/clients/${lesson.client.id}`}
                   onClick={onClose}
                   className="text-brand-700 font-medium hover:text-brand-800 hover:underline"
-                  title="Atidaryti kliento profilį"
+                  title="Open client profile"
                 >
                   {lesson.client.full_name ?? "—"} ↗
                 </Link>

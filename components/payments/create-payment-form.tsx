@@ -45,7 +45,7 @@ export function CreatePaymentPanel({
         onClick={() => setOpen((v) => !v)}
         className="rounded-md bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700"
       >
-        {open ? "Close" : "+ New payment"}
+        {open ? "Close" : "+ Record payment"}
       </button>
       {open && (
         <CreatePaymentForm

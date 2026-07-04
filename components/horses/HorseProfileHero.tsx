@@ -131,7 +131,7 @@ function StatusPill({ active }: { active: boolean }) {
         style={{ background: "#EDF1E5", color: "#3F5A1F" }}
       >
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#5A7A3A" }} />
-        Available
+        Active
       </span>
     );
   }
