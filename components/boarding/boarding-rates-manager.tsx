@@ -31,7 +31,8 @@ export function BoardingRatesManager({ rates }: { rates: BoardingRateRow[] }) {
         <h3 className="text-sm font-semibold text-navy-900">Boarding price options</h3>
         <p className="text-[11.5px] text-ink-500 mt-0.5">
           Define your standard monthly boarding tiers. Pick one per horse to fill
-          the fee in a tap — e.g. Full board €350, Pasture €150.
+          the fee in a tap — e.g. Full board €350, Pasture €150. Removing a tier
+          only affects future fills — it doesn&apos;t change fees or charges already set.
         </p>
       </div>
 

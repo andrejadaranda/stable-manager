@@ -37,7 +37,7 @@ const STATE_BLURB: Record<WelfareState, string> = {
   light:    "Capacity for more lessons this week.",
 };
 
-type Filter = "all" | "at_risk" | "resting" | "available";
+type Filter = "all" | "at_risk" | "resting" | "available" | "steady" | "light";
 
 export default async function WelfarePage({
   searchParams,
@@ -51,11 +51,15 @@ export default async function WelfarePage({
     searchParams.filter === "at_risk"   ? "at_risk"   :
     searchParams.filter === "resting"   ? "resting"   :
     searchParams.filter === "available" ? "available" :
+    searchParams.filter === "steady"    ? "steady"    :
+    searchParams.filter === "light"     ? "light"     :
     "all";
 
   const filtered = snapshot.horses.filter((h) => {
     if (filter === "at_risk")   return h.state === "over_cap" || h.state === "near_cap";
     if (filter === "resting")   return h.state === "resting";
+    if (filter === "steady")    return h.state === "steady";
+    if (filter === "light")     return h.state === "light";
     if (filter === "available") return h.state === "steady"   || h.state === "light";
     return true;
   });
@@ -108,15 +112,15 @@ export default async function WelfarePage({
           label="Steady"
           count={snapshot.byState.steady}
           tone="emerald"
-          href="/dashboard/welfare?filter=available"
-          active={filter === "available"}
+          href="/dashboard/welfare?filter=steady"
+          active={filter === "steady"}
         />
         <BucketTile
           label="Light"
           count={snapshot.byState.light}
           tone="emerald-light"
-          href="/dashboard/welfare?filter=available"
-          active={filter === "available"}
+          href="/dashboard/welfare?filter=light"
+          active={filter === "light"}
         />
         <BucketTile
           label="All horses"
