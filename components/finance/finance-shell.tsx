@@ -118,7 +118,7 @@ export function FinanceShell({ data }: { data: MonthFinancials }) {
             { key: "lessons",       label: "One-off lessons", amount: data.revenue.byCategory.lessons },
             { key: "packages",      label: "Packages",        amount: data.revenue.byCategory.packages },
             { key: "boarding",      label: "Boarding",        amount: data.revenue.byCategory.boarding },
-            { key: "uncategorized", label: "Other",           amount: data.revenue.byCategory.uncategorized },
+            { key: "uncategorized", label: "Uncategorised",   amount: data.revenue.byCategory.uncategorized },
           ].filter((r) => r.amount > 0)}
           total={data.revenue.total}
         />

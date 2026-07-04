@@ -81,6 +81,7 @@ export function Sidebar({
   role,
   accountType = "business",
   email,
+  fullName = null,
   features,
   photoUrl,
   inboxCount = 0,
@@ -89,6 +90,8 @@ export function Sidebar({
   /** Personal accounts get a trimmed nav (no clients, inbox, team). */
   accountType?: "business" | "personal";
   email: string;
+  /** Display name; falls back to email when absent. */
+  fullName?: string | null;
   features: StableFeatures;
   photoUrl?: string | null;
   /** Sum of pending lesson_requests + care_requests + join_requests.
@@ -113,7 +116,7 @@ export function Sidebar({
     }
   }, [open]);
 
-  const initial = (email?.[0] || "?").toUpperCase();
+  const initial = ((fullName || email)?.[0] || "?").toUpperCase();
 
   return (
     <>
@@ -164,7 +167,7 @@ export function Sidebar({
         >
           <Avatar initial={initial} photoUrl={photoUrl} />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-ink-900 truncate">{email}</p>
+            <p className="text-sm font-semibold text-ink-900 truncate">{fullName || email}</p>
             <p className="text-[10.5px] uppercase tracking-[0.14em] text-ink-500 mt-0.5">
               {ROLE_LABEL[role]}
             </p>

@@ -67,6 +67,7 @@ export default async function DashboardLayout({
         role={session.role}
         accountType={session.accountType}
         email={user?.email ?? ""}
+        fullName={ownProfile?.full_name ?? null}
         features={features}
         photoUrl={ownProfile?.photo_url ?? null}
         inboxCount={inboxCount}

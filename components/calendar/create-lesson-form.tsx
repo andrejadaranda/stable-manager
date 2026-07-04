@@ -405,6 +405,11 @@ export function CreateLessonForm({
               placeholder="Pick from price list…"
             />
           )}
+          {services.length > 0 && (
+            <p className="text-[11px] text-ink-500 -mt-1.5">
+              Picking a service fills in the price and length below.
+            </p>
+          )}
 
           {arenas.length > 0 && (
             <Select
@@ -413,7 +418,7 @@ export function CreateLessonForm({
               value={arenaId}
               onChange={setArenaId}
               options={arenas.map((a) => ({ id: a.id, label: a.name }))}
-              placeholder="TBD arena"
+              placeholder="No arena set"
             />
           )}
 
@@ -713,7 +718,7 @@ function RepeatPanel({
       {on && (
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-[11.5px] text-ink-600">Total occurrences</span>
+            <span className="text-[11.5px] text-ink-600">How many lessons</span>
             <input
               type="number"
               min={2}

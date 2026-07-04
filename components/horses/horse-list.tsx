@@ -20,8 +20,8 @@ export function HorseList({ horses }: { horses: HorseWithWeeklyWorkload[] }) {
         <div>Name</div>
         <div>Status</div>
         <div>This week</div>
-        <div>Daily</div>
-        <div>Weekly</div>
+        <div>Daily limit</div>
+        <div>Weekly limit</div>
       </div>
       <ul className="divide-y divide-ink-100/60 md:divide-y-0">
         {horses.map((h) => {

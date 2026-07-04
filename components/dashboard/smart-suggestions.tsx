@@ -33,7 +33,7 @@ export function SmartSuggestions({ items }: { items: Suggestion[] }) {
           Worth knowing today
         </h2>
         <span className="text-[11px] uppercase tracking-[0.14em] font-semibold text-ink-500">
-          {items.length} {items.length === 1 ? "signal" : "signals"}
+          {items.length} {items.length === 1 ? "thing to check" : "things to check"}
         </span>
       </div>
 

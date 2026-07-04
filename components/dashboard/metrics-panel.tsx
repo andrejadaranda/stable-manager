@@ -5,6 +5,7 @@
 // the data is the same shape, week is what matters for a solo rider).
 
 import { useState } from "react";
+import Link from "next/link";
 
 type Metrics = {
   weekLessonsCount: number;
@@ -164,10 +165,18 @@ function KpiRing({
 
 function EmptyMetrics({ isPersonal }: { isPersonal: boolean }) {
   return (
-    <div className="text-[13px] text-ink-500 leading-relaxed py-2">
-      {isPersonal
-        ? "Log your first ride and add a horse — your stats will start filling in here."
-        : "Add your first lesson and log a session — lessons, payments, and balances will start filling in."}
+    <div className="py-2 flex flex-col gap-2.5">
+      <p className="text-[13px] text-ink-500 leading-relaxed">
+        {isPersonal
+          ? "Log your first ride and add a horse — your stats will start filling in here."
+          : "Add your first lesson and log a session — lessons, payments, and balances will start filling in."}
+      </p>
+      <Link
+        href={isPersonal ? "/dashboard/horses?new=1" : "/dashboard/calendar"}
+        className="inline-flex w-fit items-center gap-1 text-[12px] font-medium text-brand-700 hover:text-brand-800"
+      >
+        {isPersonal ? "Add your first horse" : "Book a lesson"} →
+      </Link>
     </div>
   );
 }

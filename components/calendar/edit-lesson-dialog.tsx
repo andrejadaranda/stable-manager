@@ -387,7 +387,7 @@ export function EditLessonDialog({
                   focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
                 "
               >
-                <option value="">— TBD arena —</option>
+                <option value="">— No arena —</option>
                 {arenas.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
