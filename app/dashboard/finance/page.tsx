@@ -12,6 +12,7 @@
 
 import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { getMonthFinancials } from "@/services/finance";
+import { ensureBoardingForCurrentMonth } from "@/services/boarding";
 import { FinanceShell } from "@/components/finance/finance-shell";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,9 @@ export default async function FinancePage({
   searchParams: { period?: string };
 }) {
   await requireBusinessAccount("owner");
+
+  // Make sure this month's boarding charges exist before we tally finance.
+  await ensureBoardingForCurrentMonth();
 
   const period = /^\d{4}-\d{2}$/.test(searchParams.period ?? "")
     ? (searchParams.period as string)

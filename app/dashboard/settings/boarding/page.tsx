@@ -1,5 +1,5 @@
 import { requirePageRole } from "@/lib/auth/redirects";
-import { previewBoardingForMonth, listOutstandingBoardingCharges } from "@/services/boarding";
+import { previewBoardingForMonth, listOutstandingBoardingCharges, ensureBoardingForCurrentMonth } from "@/services/boarding";
 import { listBoardingRates } from "@/services/boardingRates";
 import { getStableFeatures } from "@/services/features";
 import { BulkBoardingPanel } from "@/components/boarding/bulk-boarding-panel";
@@ -23,6 +23,10 @@ export default async function BoardingSettingsPage({
   if (!features.boarding) {
     return <FeatureDisabled feature="Horse boarding" isOwner />;
   }
+
+  // Auto-create this month's boarding charges the moment the owner opens
+  // the page — no "Generate" tap needed for the debts to appear.
+  await ensureBoardingForCurrentMonth();
 
   const period = /^\d{4}-\d{2}$/.test(searchParams.period ?? "")
     ? (searchParams.period as string)

@@ -185,9 +185,29 @@ export async function generateMissingBoardingMonths(
   }
 
   if (records.length === 0) return { created: 0 };
-  const { error: insErr } = await supabase.from("horse_boarding_charges").insert(records);
+  const { error: insErr } = await supabase
+    .from("horse_boarding_charges")
+    .upsert(records, { onConflict: "horse_id,period_start", ignoreDuplicates: true });
   if (insErr) throw insErr;
   return { created: records.length };
+}
+
+/** Auto-generate the CURRENT month's boarding charges for every eligible
+ *  horse (fee + owner + not departed), idempotently. Safe to call on any
+ *  boarding/finance page load — it skips months already charged and the
+ *  unique index guards against duplicates. Best-effort: never throws into
+ *  the page (a boarding hiccup shouldn't blank the screen). Owner-only;
+ *  a no-op for employees/clients. */
+export async function ensureBoardingForCurrentMonth(): Promise<void> {
+  try {
+    const session = await getSession();
+    if (session.role !== "owner") return;
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    await generateBoardingForMonth(ym);
+  } catch {
+    // best-effort; the page still renders whatever already exists
+  }
 }
 
 /** Create one charge. The owner client is read off the horse so the
@@ -571,7 +591,11 @@ export async function generateBoardingForMonth(
     notes:           null,
   }));
 
-  const { error } = await supabase.from("horse_boarding_charges").insert(records);
+  // Ignore-duplicates upsert (unique index on horse_id+period_start,
+  // migration 93) so concurrent auto-generation never errors or dupes.
+  const { error } = await supabase
+    .from("horse_boarding_charges")
+    .upsert(records, { onConflict: "horse_id,period_start", ignoreDuplicates: true });
   if (error) throw error;
 
   const totalAmount = toInsert.reduce((acc, r) => acc + r.fee, 0);
