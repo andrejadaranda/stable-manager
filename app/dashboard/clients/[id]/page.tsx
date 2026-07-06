@@ -140,7 +140,12 @@ export default async function ClientDetailPage({
                   {client.active ? "Active" : "Inactive"}
                 </span>
                 {isHorseOwner && (
-                  <span className="text-[11.5px] font-medium text-amber-800 px-2 py-0.5 rounded-md bg-amber-50 ring-1 ring-amber-200">
+                  <span
+                    className="text-[11.5px] font-medium text-amber-800 px-2 py-0.5 rounded-md bg-amber-50 ring-1 ring-amber-200"
+                    title={isHorseOwnerOnly
+                      ? "Owns a horse boarded here — receives boarding charges and invoices."
+                      : "Takes lessons and owns a horse boarded here — billed for both."}
+                  >
                     {isHorseOwnerOnly ? "Horse owner" : "Rider + owner"}
                   </span>
                 )}
