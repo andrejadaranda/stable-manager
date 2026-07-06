@@ -398,9 +398,6 @@ export async function getClientSpendingBreakdown(clientId: string): Promise<Clie
   requireOwnerOrClientSelf(session, clientId);
   const supabase = createSupabaseServerClient();
 
-  const horsesRes = await supabase.from("horses").select("id").eq("owner_client_id", clientId);
-  const horseIds = ((horsesRes.data ?? []) as Array<{ id: string }>).map((h) => h.id);
-
   const [lessonsRes, chargesRes, boardingRes, acct] = await Promise.all([
     supabase
       .from("lessons")
@@ -412,9 +409,10 @@ export async function getClientSpendingBreakdown(clientId: string): Promise<Clie
       .from("client_charge_summary")
       .select("kind, amount")
       .eq("client_id", clientId),
-    horseIds.length
-      ? supabase.from("horse_boarding_summary").select("amount").in("horse_id", horseIds)
-      : Promise.resolve({ data: [] as Array<{ amount: number | string }> }),
+    // Attribute boarding by the OWNER stamped on each charge, not by
+    // whoever owns the horse now — otherwise a horse that changed hands
+    // misattributes history (matches the balance view + owed items).
+    supabase.from("horse_boarding_summary").select("amount").eq("owner_client_id", clientId),
     getClientAccountSummary(clientId).catch(() => null),
   ]);
 
