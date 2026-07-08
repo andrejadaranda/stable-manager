@@ -12,7 +12,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ChatMessageRow, ChatThreadRow } from "@/services/chat";
 import type { Role } from "@/lib/auth/session";
+import type { ThreadClientContext } from "@/services/conversationContext";
 import { MessagePanel } from "./MessagePanel";
+import { ThreadClientActions } from "./ThreadClientActions";
 import { NewDmButton } from "./NewDmDialog";
 import { markReadAction } from "@/app/dashboard/chat/actions";
 
@@ -22,12 +24,16 @@ export function ChatLayout({
   initialMessages,
   sessionUserId,
   sessionRole,
+  clientContext = null,
 }: {
   threads: ChatThreadRow[];
   activeThreadId: string | null;
   initialMessages: ChatMessageRow[];
   sessionUserId: string;
   sessionRole: Role;
+  /** Set when the active direct thread is with a client — powers the
+   *  per-person action bar (invoice / reminder / pending requests). */
+  clientContext?: ThreadClientContext | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -160,6 +166,7 @@ export function ChatLayout({
                 )}
               </div>
             </header>
+            {clientContext && <ThreadClientActions ctx={clientContext} />}
             <MessagePanel
               key={activeThread.id}
               threadId={activeThread.id}

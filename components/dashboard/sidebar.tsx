@@ -42,8 +42,7 @@ const NAV: Record<Role, Item[]> = {
     { href: "/dashboard/sessions",      label: "Sessions",      icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/horses",        label: "Horses",        icon: <IconHorse /> },
     { href: "/dashboard/clients",         label: "Clients",         icon: <IconUsers /> },
-    { href: "/dashboard/inbox",           label: "Inbox",           icon: <IconInbox />, badgeKey: "inbox" },
-    { href: "/dashboard/chat",            label: "Chat",            icon: <IconChat />, feature: "chat" },
+    { href: "/dashboard/chat",            label: "Messages",        icon: <IconChat />, feature: "chat", badgeKey: "inbox" },
     // Money hub + the money tools, kept together at the bottom of the nav.
     { href: "/dashboard/finance",         label: "Finance",         icon: <IconChart />, section: "Money" },
     { href: "/dashboard/payments",        label: "Payments",        icon: <IconCash /> },
@@ -59,15 +58,14 @@ const NAV: Record<Role, Item[]> = {
     { href: "/dashboard/sessions",      label: "Sessions",      icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/horses",        label: "Horses",        icon: <IconHorse /> },
     { href: "/dashboard/clients",         label: "Clients",         icon: <IconUsers /> },
-    { href: "/dashboard/inbox",           label: "Inbox",           icon: <IconInbox />, badgeKey: "inbox" },
-    { href: "/dashboard/chat",            label: "Chat",            icon: <IconChat />, feature: "chat" },
+    { href: "/dashboard/chat",            label: "Messages",        icon: <IconChat />, feature: "chat", badgeKey: "inbox" },
   ],
   client: [
     { href: "/dashboard/my-lessons",   label: "My Lessons",  icon: <IconCal />      },
     { href: "/dashboard/my-horses",    label: "My Horses",   icon: <IconHorse />    },
     { href: "/dashboard/my-sessions",  label: "My Rides",    icon: <IconActivity />, feature: "sessions" },
     { href: "/dashboard/my-payments",  label: "My Payments", icon: <IconCash />     },
-    { href: "/dashboard/chat",         label: "Chat",        icon: <IconChat />, feature: "chat" },
+    { href: "/dashboard/chat",         label: "Messages",    icon: <IconChat />, feature: "chat" },
   ],
 };
 

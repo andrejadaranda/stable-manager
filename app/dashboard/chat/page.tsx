@@ -6,6 +6,7 @@
 
 import { requirePageRole } from "@/lib/auth/redirects";
 import { listChatThreads, getChatMessages } from "@/services/chat";
+import { getThreadClientContext } from "@/services/conversationContext";
 import { getStableFeatures } from "@/services/features";
 import { PageHeader, FeatureDisabled } from "@/components/ui";
 import { ChatLayout } from "@/components/chat/ChatLayout";
@@ -25,7 +26,7 @@ export default async function ChatPage({
   if (!features.chat) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Chat" />
+        <PageHeader title="Messages" />
         <FeatureDisabled feature="Chat" isOwner={session.role === "owner"} />
       </div>
     );
@@ -46,11 +47,20 @@ export default async function ChatPage({
     ? await getChatMessages(activeThread.id, { limit: 100 })
     : [];
 
+  // For a direct thread, resolve the other participant → client context so
+  // the conversation doubles as the per-person hub (invoice / reminder /
+  // pending requests). Null for the stable channel or non-client threads.
+  const otherProfileId =
+    activeThread && activeThread.type === "direct"
+      ? activeThread.participants.find((p) => p.id !== session.userId)?.id ?? null
+      : null;
+  const clientContext = await getThreadClientContext(otherProfileId).catch(() => null);
+
   return (
     <div className="flex flex-col gap-6 h-[calc(100vh-7rem)] md:h-[calc(100vh-5rem)]">
       <PageHeader
-        title="Chat"
-        subtitle="Chat with your stable. Shared channel plus direct messages."
+        title="Messages"
+        subtitle="Chat, requests, invoices and reminders — all in one place per person."
       />
       <ChatLayout
         threads={threads}
@@ -58,6 +68,7 @@ export default async function ChatPage({
         initialMessages={initialMessages}
         sessionUserId={session.userId}
         sessionRole={session.role}
+        clientContext={clientContext}
       />
     </div>
   );
