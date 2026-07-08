@@ -10,6 +10,7 @@ import { getOwnProfile } from "@/services/account";
 import { WelcomeTour } from "@/components/onboarding/welcome-tour";
 import { CommandPalette } from "@/components/search/command-palette";
 import { ReportProblemButton } from "@/components/feedback/ReportProblemButton";
+import { NativePushRegister } from "@/components/push/native-push-register";
 
 export default async function DashboardLayout({
   children,
@@ -86,6 +87,10 @@ export default async function DashboardLayout({
 
       {/* Cmd+K global search palette. Hidden until shortcut/triggered. */}
       <CommandPalette />
+
+      {/* iOS app: register the APNs device token for lesson pushes.
+          No-op on web + on native builds without the push entitlement. */}
+      <NativePushRegister />
 
       {/* Founding 15 launch insurance — floating "Report a problem" button.
           Bottom-right pill, single click → modal → email lands in

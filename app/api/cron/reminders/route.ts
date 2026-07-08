@@ -30,7 +30,7 @@ import { sendWeatherAlertEmail } from "@/lib/email/weather-alert";
 import { sendTrialEndingEmail } from "@/lib/email/trial-ending";
 import { sendOwnerWeeklyNudgeEmail } from "@/lib/email/owner-weekly-nudge";
 import { sendSMS, toE164Lithuania } from "@/lib/sms/send";
-import { sendPushToUser, pushConfigured } from "@/lib/push/send";
+import { sendPushToUser, pushConfigured, type PushPayload } from "@/lib/push/send";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -241,6 +241,13 @@ export async function GET(req: Request) {
   // boarding + horses over the weekly cap. Only sent when non-empty.
   const ownerNudgeResults = await runOwnerWeeklyNudge(supabase);
 
+  // ---- Morning "today's lessons" push digest ------------------
+  // Once per day (~07:00 Europe/Vilnius): one push per person with lessons
+  // today — staff get the stable-wide count, clients get their own. Native
+  // APNs + web push. Idempotent via push_morning_digest_log (user, day).
+  // Dormant until push is configured.
+  const morningDigestResults = await runMorningLessonDigest(supabase);
+
   return NextResponse.json({
     ok: true,
     ...results,
@@ -249,8 +256,148 @@ export async function GET(req: Request) {
     trial: trialResults,
     push: pushResults,
     ownerNudge: ownerNudgeResults,
+    morningDigest: morningDigestResults,
     window: { from: winFrom.toISOString(), to: winTo.toISOString() },
   });
+}
+
+// ----------------------------------------------------------------
+// Morning lesson digest — one push per person with lessons remaining
+// today. Fires only in the 07:00 Europe/Vilnius hour (the hourly cron +
+// hour gate = exactly one fire per day). Idempotent per (user, day).
+// ----------------------------------------------------------------
+type MorningDigestResult = { fired: string; candidates: number; sent: number; skipped: number };
+
+/** ms to add to a UTC instant to get the wall-clock time in `tz`. */
+function tzOffsetMs(date: Date, tz: string): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, hour12: false,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  });
+  const map: Record<string, string> = {};
+  for (const p of dtf.formatToParts(date)) map[p.type] = p.value;
+  const asUTC = Date.UTC(
+    +map.year, +map.month - 1, +map.day,
+    +map.hour % 24, +map.minute, +map.second,
+  );
+  return asUTC - date.getTime();
+}
+
+async function runMorningLessonDigest(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+): Promise<MorningDigestResult> {
+  const tally: MorningDigestResult = { fired: "no", candidates: 0, sent: 0, skipped: 0 };
+  if (!pushConfigured()) { tally.fired = "push-not-configured"; return tally; }
+
+  const now = new Date();
+  const off = tzOffsetMs(now, "Europe/Vilnius");
+  const wall = new Date(now.getTime() + off);        // Vilnius wall clock as a UTC-shaped Date
+  if (wall.getUTCHours() !== 7) { tally.fired = `not-morning(${wall.getUTCHours()}h)`; return tally; }
+  tally.fired = "yes";
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dayKey = `${wall.getUTCFullYear()}-${pad(wall.getUTCMonth() + 1)}-${pad(wall.getUTCDate())}`;
+  const endUtc = new Date(
+    Date.UTC(wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate(), 23, 59, 59, 999) - off,
+  );
+
+  // Today's still-upcoming scheduled lessons (from now to end of Vilnius day).
+  const { data: rows } = await supabase
+    .from("lessons")
+    .select(`id, stable_id, starts_at, client:clients(id, full_name, profile_id), horse:horses(name)`)
+    .gte("starts_at", now.toISOString())
+    .lt("starts_at", endUtc.toISOString())
+    .eq("status", "scheduled")
+    .order("starts_at", { ascending: true });
+  const lessons = (rows ?? []) as Array<any>;
+  if (lessons.length === 0) return tally;
+
+  const stableIds = Array.from(new Set(lessons.map((l) => l.stable_id)));
+  const byStable = new Map<string, any[]>();
+  for (const l of lessons) {
+    const arr = byStable.get(l.stable_id) ?? [];
+    arr.push(l);
+    byStable.set(l.stable_id, arr);
+  }
+
+  type Msg = { uid: string; payload: PushPayload };
+  const messages: Msg[] = [];
+
+  // Staff — stable-wide count.
+  const { data: staff } = await supabase
+    .from("profiles")
+    .select("auth_user_id, stable_id")
+    .in("stable_id", stableIds)
+    .in("role", ["owner", "employee"]);
+  for (const s of (staff ?? []) as Array<{ auth_user_id: string | null; stable_id: string }>) {
+    if (!s.auth_user_id) continue;
+    const ls = byStable.get(s.stable_id) ?? [];
+    if (ls.length === 0) continue;
+    const first = formatTime(ls[0].starts_at);
+    messages.push({
+      uid: s.auth_user_id,
+      payload: {
+        title: "Today at the stable",
+        body: `${ls.length} lesson${ls.length === 1 ? "" : "s"} today — first at ${first}`,
+        url: "/dashboard/calendar",
+      },
+    });
+  }
+
+  // Clients — their own lessons.
+  const clientLessons = new Map<string, any[]>(); // profile_id -> lessons
+  for (const l of lessons) {
+    const pid = l.client?.profile_id;
+    if (!pid) continue;
+    const arr = clientLessons.get(pid) ?? [];
+    arr.push(l);
+    clientLessons.set(pid, arr);
+  }
+  if (clientLessons.size > 0) {
+    const { data: cprofs } = await supabase
+      .from("profiles")
+      .select("id, auth_user_id")
+      .in("id", Array.from(clientLessons.keys()));
+    const uidByProfile = new Map(
+      ((cprofs ?? []) as Array<{ id: string; auth_user_id: string | null }>).map((p) => [p.id, p.auth_user_id]),
+    );
+    for (const [pid, ls] of clientLessons) {
+      const uid = uidByProfile.get(pid);
+      if (!uid) continue;
+      const first = formatTime(ls[0].starts_at);
+      const horse = ls[0].horse?.name ? ` (${ls[0].horse.name})` : "";
+      messages.push({
+        uid,
+        payload: {
+          title: "Your lesson today",
+          body: ls.length === 1 ? `Lesson at ${first}${horse}` : `${ls.length} lessons today — first at ${first}`,
+          url: "/dashboard/calendar",
+        },
+      });
+    }
+  }
+
+  // One push per user per day — staff message wins if someone is both.
+  const seen = new Set<string>();
+  for (const m of messages) {
+    if (seen.has(m.uid)) continue;
+    seen.add(m.uid);
+    tally.candidates += 1;
+    const { error } = await supabase
+      .from("push_morning_digest_log")
+      .insert({ auth_user_id: m.uid, day_key: dayKey });
+    if (error) {
+      if (!/duplicate key/i.test(error.message)) console.error("[cron/morning-digest] log insert failed:", error);
+      tally.skipped += 1;
+      continue;
+    }
+    const n = await sendPushToUser(m.uid, m.payload);
+    if (n > 0) tally.sent += 1;
+    else tally.skipped += 1;
+  }
+
+  return tally;
 }
 
 // ----------------------------------------------------------------
