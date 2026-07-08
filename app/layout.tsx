@@ -55,7 +55,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width:        "device-width",
   initialScale: 1,
-  maximumScale: 5,
+  // Pin scale to 1 so iOS doesn't auto-zoom (and get stuck zoomed) when a
+  // <16px form field is focused inside the native WKWebView shell. Pinch-zoom
+  // isn't expected in the app; this keeps the layout stable while typing.
+  maximumScale: 1,
+  userScalable: false,
   // Safari's status bar tint when the app is launched from the home
   // screen. We use the warm-cream surface so the bar blends with the
   // app surface instead of jumping to white.
