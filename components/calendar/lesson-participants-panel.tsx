@@ -70,6 +70,40 @@ export function LessonParticipantsPanel({
   // Capacity isn't exposed anymore — a group just grows as riders are added.
   const hasRoom = true;
   const [addMode, setAddMode] = useState<"existing" | "new">("existing");
+  // Controlled add-form fields. NOTE: this panel is rendered INSIDE the
+  // edit-lesson <form>, so the add row must NOT be its own nested <form>
+  // (nested forms are invalid HTML — the submit button silently does
+  // nothing). We build FormData by hand and call the action on click.
+  const [addClientId,   setAddClientId]   = useState("");
+  const [addChildName,  setAddChildName]  = useState("");
+  const [addHorseId,    setAddHorseId]    = useState("");
+  const [addParentName, setAddParentName] = useState("");
+  const [addParentPhone,setAddParentPhone]= useState("");
+  const [addPrice,      setAddPrice]      = useState("");
+
+  function resetAddForm() {
+    setAddClientId(""); setAddChildName(""); setAddHorseId("");
+    setAddParentName(""); setAddParentPhone(""); setAddPrice("");
+  }
+
+  async function submitAdd() {
+    setError(null);
+    if (addMode === "existing" && !addClientId) { setError("Pick a rider."); return; }
+    if (addMode === "new" && !addChildName.trim()) { setError("Enter the child's name."); return; }
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    if (addMode === "existing") fd.set("client_id", addClientId);
+    else fd.set("new_child_name", addChildName.trim());
+    if (addHorseId) fd.set("horse_id", addHorseId);
+    if (addParentName.trim())  fd.set("parent_name", addParentName.trim());
+    if (addParentPhone.trim()) fd.set("parent_phone", addParentPhone.trim());
+    if (addPrice) fd.set("price", addPrice);
+    const result = await addParticipantAction({ error: null, success: false }, fd);
+    if (result.error) { setError(result.error); return; }
+    resetAddForm();
+    setPickerOpen(false);
+    await refresh();
+  }
 
   // Riders / horses not yet in this lesson — picker source.
   const usedClientIds = new Set(participants.map((p) => p.client_id));
@@ -283,15 +317,14 @@ export function LessonParticipantsPanel({
       )}
 
       {pickerOpen && (
-        <form
-          action={(fd) => startTransition(() => { handleAdd(fd); })}
-          className="flex flex-col gap-2 rounded-lg p-3 bg-ink-50/40"
-        >
-          {/* Existing rider vs. brand-new child */}
+        <div className="flex flex-col gap-2 rounded-lg p-3 bg-ink-50/40">
+          {/* Existing rider vs. brand-new child. NOT a <form> — this panel
+              already lives inside the edit-lesson form; a nested form's submit
+              silently no-ops. We call the action on click instead. */}
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setAddMode("existing")}
+              onClick={() => { setAddMode("existing"); setError(null); }}
               className={`h-7 px-2.5 rounded-md text-[11px] font-medium transition-colors ${
                 addMode === "existing" ? "bg-brand-600 text-white" : "bg-white text-ink-700 ring-1 ring-ink-200 hover:bg-ink-50"
               }`}
@@ -300,7 +333,7 @@ export function LessonParticipantsPanel({
             </button>
             <button
               type="button"
-              onClick={() => setAddMode("new")}
+              onClick={() => { setAddMode("new"); setError(null); }}
               className={`h-7 px-2.5 rounded-md text-[11px] font-medium transition-colors ${
                 addMode === "new" ? "bg-brand-600 text-white" : "bg-white text-ink-700 ring-1 ring-ink-200 hover:bg-ink-50"
               }`}
@@ -314,7 +347,8 @@ export function LessonParticipantsPanel({
               <label className="flex flex-col gap-1 text-[11px] text-ink-600">
                 Rider
                 <select
-                  name="client_id"
+                  value={addClientId}
+                  onChange={(e) => setAddClientId(e.target.value)}
                   className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
                 >
                   <option value="">Pick a rider…</option>
@@ -327,17 +361,19 @@ export function LessonParticipantsPanel({
               <label className="flex flex-col gap-1 text-[11px] text-ink-600">
                 Child name
                 <input
-                  name="new_child_name"
+                  value={addChildName}
+                  onChange={(e) => setAddChildName(e.target.value)}
                   placeholder="Full name"
                   maxLength={120}
-                  className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+                  className="h-8 rounded-md border border-ink-200 bg-white text-[16px] px-1.5"
                 />
               </label>
             )}
             <label className="flex flex-col gap-1 text-[11px] text-ink-600">
               Horse <span className="text-ink-400">(optional)</span>
               <select
-                name="horse_id"
+                value={addHorseId}
+                onChange={(e) => setAddHorseId(e.target.value)}
                 className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
               >
                 <option value="">No horse yet</option>
@@ -353,20 +389,22 @@ export function LessonParticipantsPanel({
               <label className="flex flex-col gap-1 text-[11px] text-ink-600">
                 Parent name <span className="text-ink-400">(optional)</span>
                 <input
-                  name="parent_name"
+                  value={addParentName}
+                  onChange={(e) => setAddParentName(e.target.value)}
                   placeholder="Parent full name"
                   maxLength={120}
-                  className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+                  className="h-8 rounded-md border border-ink-200 bg-white text-[16px] px-1.5"
                 />
               </label>
               <label className="flex flex-col gap-1 text-[11px] text-ink-600">
                 Parent phone <span className="text-ink-400">(optional)</span>
                 <input
-                  name="parent_phone"
+                  value={addParentPhone}
+                  onChange={(e) => setAddParentPhone(e.target.value)}
                   inputMode="tel"
                   placeholder="+370…"
                   maxLength={40}
-                  className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+                  className="h-8 rounded-md border border-ink-200 bg-white text-[16px] px-1.5"
                 />
               </label>
             </div>
@@ -375,30 +413,32 @@ export function LessonParticipantsPanel({
           <label className="flex flex-col gap-1 text-[11px] text-ink-600 max-w-[160px]">
             Price · €
             <input
-              name="price"
+              value={addPrice}
+              onChange={(e) => setAddPrice(e.target.value)}
               type="number" min="0" step="0.01"
               placeholder="€"
-              className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5 tabular-nums"
+              className="h-8 rounded-md border border-ink-200 bg-white text-[16px] px-1.5 tabular-nums"
             />
           </label>
 
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => { setPickerOpen(false); setError(null); }}
+              onClick={() => { setPickerOpen(false); setError(null); resetAddForm(); }}
               className="h-8 px-3 text-[12px] text-ink-600 hover:bg-ink-100 rounded-md"
             >
               Cancel
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={() => startTransition(() => { submitAdd(); })}
               disabled={pending}
               className="h-8 px-3 text-[12px] font-medium bg-brand-600 text-white hover:bg-brand-700 rounded-md disabled:opacity-50"
             >
               {pending ? "Adding…" : addMode === "new" ? "Add child" : "Add rider"}
             </button>
           </div>
-        </form>
+        </div>
       )}
     </section>
   );
