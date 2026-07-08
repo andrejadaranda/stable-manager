@@ -309,6 +309,30 @@ export function LessonParticipantsPanel({
             </label>
           </div>
 
+          {addMode === "new" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1 text-[11px] text-ink-600">
+                Parent name <span className="text-ink-400">(optional)</span>
+                <input
+                  name="parent_name"
+                  placeholder="Parent full name"
+                  maxLength={120}
+                  className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] text-ink-600">
+                Parent phone <span className="text-ink-400">(optional)</span>
+                <input
+                  name="parent_phone"
+                  inputMode="tel"
+                  placeholder="+370…"
+                  maxLength={40}
+                  className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+                />
+              </label>
+            </div>
+          )}
+
           <label className="flex flex-col gap-1 text-[11px] text-ink-600 max-w-[160px]">
             Price · €
             <input

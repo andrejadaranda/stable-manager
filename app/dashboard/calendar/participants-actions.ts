@@ -36,12 +36,24 @@ export async function addParticipantAction(
   if (!lessonId) return { ...initial, error: "Missing lesson." };
 
   // New child typed inline — create them (linked to the lesson's parent) and
-  // attach with a price. Horse is optional.
+  // attach with a price. Horse is optional. Parent name + phone optional.
   if (!clientId && newChildName) {
-    const r = await addNewChildToLesson(lessonId, newChildName, { horseId: horseId || null, price });
-    if (!r.ok) {
-      if (r.reason === "HORSE_DOUBLE_BOOKED") return { ...initial, error: "That horse already has a lesson at this time." };
-      return { ...initial, error: r.reason };
+    const parentName  = String(fd.get("parent_name")  ?? "").trim();
+    const parentPhone = String(fd.get("parent_phone") ?? "").trim();
+    try {
+      const r = await addNewChildToLesson(lessonId, newChildName, {
+        horseId: horseId || null,
+        price,
+        guardianName: parentName || null,
+        guardianPhone: parentPhone || null,
+      });
+      if (!r.ok) {
+        if (r.reason === "HORSE_DOUBLE_BOOKED") return { ...initial, error: "That horse is already booked at this time — pick another or leave it blank." };
+        if (r.reason === "MISSING_NAME") return { ...initial, error: "Enter the child's name." };
+        return { ...initial, error: `Couldn't add the child: ${r.reason}` };
+      }
+    } catch (err) {
+      return { ...initial, error: (err as Error)?.message ?? "Couldn't add the child." };
     }
     revalidatePath("/dashboard/calendar");
     return { error: null, success: true };

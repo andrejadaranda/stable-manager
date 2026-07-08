@@ -284,7 +284,12 @@ export async function addLessonParticipant(
 export async function addNewChildToLesson(
   lessonId: string,
   childName: string,
-  opts: { horseId?: string | null; price?: number } = {},
+  opts: {
+    horseId?: string | null;
+    price?: number;
+    guardianName?: string | null;
+    guardianPhone?: string | null;
+  } = {},
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
@@ -301,6 +306,8 @@ export async function addNewChildToLesson(
   if (!lesson) return { ok: false, reason: "LESSON_NOT_FOUND" };
 
   const price = Math.max(0, Number(opts.price) || 0);
+  const gName  = (opts.guardianName  ?? "").trim();
+  const gPhone = (opts.guardianPhone ?? "").trim();
 
   const { data: child, error: cErr } = await supabase
     .from("clients")
@@ -309,6 +316,8 @@ export async function addNewChildToLesson(
       full_name:            name,
       is_minor:             true,
       guardian_client_id:   (lesson as { client_id: string }).client_id,
+      guardian_name:        gName || null,
+      guardian_phone:       gPhone || null,
       default_lesson_price: price || null,
       active:               true,
     })
@@ -320,7 +329,11 @@ export async function addNewChildToLesson(
   if (!result.ok) return result;
 
   if (price > 0) {
-    await setLessonParticipantPrice(lessonId, (child as { id: string }).id, price);
+    try {
+      await setLessonParticipantPrice(lessonId, (child as { id: string }).id, price);
+    } catch {
+      /* price recompute is non-fatal — the child is already added */
+    }
   }
   return { ok: true };
 }
