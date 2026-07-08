@@ -11,11 +11,19 @@ import type { ThreadClientContext } from "@/services/conversationContext";
 import {
   sendInvoiceFromChatAction,
   sendReminderFromChatAction,
+  completeReminderFromChatAction,
+  deleteReminderFromChatAction,
   acknowledgeCareRequestAction,
   declineCareRequestAction,
   declineLessonRequestAction,
   type ChatActionState,
 } from "@/app/dashboard/chat/context-actions";
+
+const REMINDER_PRESETS: Array<{ label: string; text: string }> = [
+  { label: "Debt", text: "Reminder: you have an outstanding balance to settle." },
+  { label: "Lesson", text: "Reminder about your upcoming lesson." },
+  { label: "Documents", text: "Reminder: please send the missing documents." },
+];
 
 export function ThreadClientActions({ ctx }: { ctx: ThreadClientContext }) {
   const router = useRouter();
@@ -73,23 +81,37 @@ export function ThreadClientActions({ ctx }: { ctx: ThreadClientContext }) {
       </div>
 
       {reminderOpen && (
-        <div className="flex items-end gap-2">
-          <textarea
-            value={reminderText}
-            onChange={(e) => setReminderText(e.target.value)}
-            rows={1}
-            maxLength={500}
-            placeholder={`Remind ${ctx.clientName.split(" ")[0]}…`}
-            className="flex-1 resize-none rounded-lg border border-ink-200 bg-white text-[13px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600/30 focus:border-brand-600"
-          />
-          <button
-            type="button"
-            onClick={sendReminder}
-            disabled={pending || !reminderText.trim()}
-            className="h-9 px-3 rounded-lg text-[13px] font-medium bg-ink-900 text-white hover:bg-ink-800 disabled:opacity-50"
-          >
-            Send
-          </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            {REMINDER_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => setReminderText(p.text)}
+                className="h-7 px-2.5 rounded-md text-[11px] font-medium text-ink-700 ring-1 ring-ink-200 bg-white hover:bg-ink-50 transition-colors"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-end gap-2">
+            <textarea
+              value={reminderText}
+              onChange={(e) => setReminderText(e.target.value)}
+              rows={1}
+              maxLength={500}
+              placeholder={`Remind ${ctx.clientName.split(" ")[0]}… (or pick a preset)`}
+              className="flex-1 resize-none rounded-lg border border-ink-200 bg-white text-[16px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600/30 focus:border-brand-600"
+            />
+            <button
+              type="button"
+              onClick={sendReminder}
+              disabled={pending || !reminderText.trim()}
+              className="h-9 px-3 rounded-lg text-[13px] font-medium bg-ink-900 text-white hover:bg-ink-800 disabled:opacity-50"
+            >
+              Add
+            </button>
+          </div>
         </div>
       )}
 
@@ -138,6 +160,37 @@ export function ThreadClientActions({ ctx }: { ctx: ThreadClientContext }) {
                 danger
               />
             </RequestCard>
+          ))}
+        </div>
+      )}
+
+      {/* Interactive reminders — mark complete or remove, right here */}
+      {ctx.reminders.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {ctx.reminders.map((r) => (
+            <div key={r.id} className="rounded-lg bg-white ring-1 ring-ink-200 px-3 py-2 flex items-center gap-2.5">
+              <span className="shrink-0 text-[13px]" aria-hidden>🔔</span>
+              <p className="min-w-0 flex-1 text-[13px] text-ink-900 truncate">{r.body}</p>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => run(() => completeReminderFromChatAction(r.id))}
+                  disabled={pending}
+                  className="h-7 px-2.5 rounded-md text-[12px] font-medium text-emerald-800 ring-1 ring-emerald-200 bg-white hover:bg-emerald-50 disabled:opacity-50"
+                >
+                  Complete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => run(() => deleteReminderFromChatAction(r.id))}
+                  disabled={pending}
+                  className="text-ink-400 hover:text-rose-600 px-1"
+                  aria-label="Remove reminder"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}

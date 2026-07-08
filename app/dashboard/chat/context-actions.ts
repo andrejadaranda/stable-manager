@@ -5,10 +5,9 @@
 // reminder, without leaving Messages.
 
 import { generateInvoiceForClient, sendInvoiceToClient } from "@/services/invoices";
-import { createReminder } from "@/services/reminders";
+import { createReminder, setReminderCompleted, deleteReminder } from "@/services/reminders";
 import { respondToCareRequest } from "@/services/careRequests";
 import { declineLessonRequest } from "@/services/lessonRequests";
-import { startDirectChat, sendChatMessage } from "@/services/chat";
 import { toFriendlyError } from "@/lib/errors/friendly";
 
 export type ChatActionState = { ok: boolean; message: string };
@@ -37,12 +36,30 @@ export async function sendReminderFromChatAction(
   if (!text) return { ok: false, message: "Write the reminder first." };
   if (text.length > 500) return { ok: false, message: "Keep the reminder under 500 characters." };
   try {
-    // Record it as a reminder assigned to the person…
+    // Create an interactive reminder assigned to the person. It renders as a
+    // card in the conversation (with a Complete action) — not a plain message.
     await createReminder({ body: text, assignedTo: profileId });
-    // …and post it into the conversation so both sides see it in the thread.
-    const threadId = await startDirectChat(profileId);
-    await sendChatMessage(threadId, `🔔 Reminder: ${text}`);
-    return { ok: true, message: "Reminder sent." };
+    return { ok: true, message: "Reminder added." };
+  } catch (err) {
+    return { ok: false, message: toFriendlyError(err).message };
+  }
+}
+
+/** Mark a reminder complete from the conversation. */
+export async function completeReminderFromChatAction(reminderId: string): Promise<ChatActionState> {
+  try {
+    await setReminderCompleted(reminderId, new Date().toISOString());
+    return { ok: true, message: "Reminder completed." };
+  } catch (err) {
+    return { ok: false, message: toFriendlyError(err).message };
+  }
+}
+
+/** Delete a reminder from the conversation. */
+export async function deleteReminderFromChatAction(reminderId: string): Promise<ChatActionState> {
+  try {
+    await deleteReminder(reminderId);
+    return { ok: true, message: "Reminder removed." };
   } catch (err) {
     return { ok: false, message: toFriendlyError(err).message };
   }

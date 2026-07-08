@@ -26,12 +26,15 @@ export type PendingCareReq = {
   note: string | null;
 };
 
+export type OpenReminder = { id: string; body: string };
+
 export type ThreadClientContext = {
   clientId: string;
   clientName: string;
   clientProfileId: string;
   lessonRequests: PendingLessonReq[];
   careRequests: PendingCareReq[];
+  reminders: OpenReminder[];
 };
 
 /** PostgREST returns an embedded relation as object | array | null. */
@@ -68,7 +71,7 @@ export async function getThreadClientContext(
     .maybeSingle();
   if (!client) return null;
 
-  const [lessonRes, careRes] = await Promise.all([
+  const [lessonRes, careRes, reminderRes] = await Promise.all([
     supabase
       .from("lesson_requests")
       .select("id, requested_start, proposed_start, notes, horse:horses(name)")
@@ -80,6 +83,13 @@ export async function getThreadClientContext(
       .select("id, type, urgency, notes, horse:horses(name)")
       .eq("requester_client_id", client.id)
       .eq("status", "pending")
+      .order("created_at", { ascending: true }),
+    // Open reminders the staff created for this person (RLS: creator sees them).
+    supabase
+      .from("reminders")
+      .select("id, body")
+      .eq("assigned_to", otherProfileId)
+      .is("completed_at", null)
       .order("created_at", { ascending: true }),
   ]);
 
@@ -98,11 +108,15 @@ export async function getThreadClientContext(
     note: (r.notes as string | null) ?? null,
   }));
 
+  const reminders: OpenReminder[] = ((reminderRes.data ?? []) as Array<{ id: string; body: string }>)
+    .map((r) => ({ id: String(r.id), body: r.body }));
+
   return {
     clientId: client.id,
     clientName: (client as { full_name?: string | null }).full_name ?? "Client",
     clientProfileId: otherProfileId,
     lessonRequests,
     careRequests,
+    reminders,
   };
 }
