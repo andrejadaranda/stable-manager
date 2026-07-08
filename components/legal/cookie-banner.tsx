@@ -24,6 +24,14 @@ export function CookieBanner() {
   const [closing, setClose] = useState(false);
 
   useEffect(() => {
+    // Never show the cookie prompt inside the native iOS/Android app.
+    // Longrein uses only essential first-party (login) cookies and runs
+    // no advertising/analytics trackers, so no consent prompt is needed —
+    // and Apple App Review (5.1.2) rejects cookie prompts in apps that
+    // don't use App Tracking Transparency. The web keeps the banner.
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+    if (cap?.isNativePlatform?.()) return;
+
     // Wait one tick so the slide-in animation can play after hydration.
     const t = setTimeout(() => {
       try {

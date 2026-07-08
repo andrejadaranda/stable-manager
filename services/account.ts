@@ -1,8 +1,38 @@
 // Account service — caller's own profile.
 // Used by /dashboard/settings/profile.
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth/session";
+
+/**
+ * Permanently delete the signed-in user's account (App Store guideline
+ * 5.1.1(v) — in-app account deletion).
+ *
+ * - Owner: the account IS the stable, so this deletes the stable and
+ *   everything in it (horses, clients, lessons, payments, …) via ON DELETE
+ *   CASCADE, then removes the Auth login.
+ * - Employee / client: removes only that person's profile (their access to
+ *   the stable) and their Auth login. The stable's operational data stays.
+ *
+ * Runs with the service role (admin) so it can reach auth.users. There is
+ * no undo — the caller MUST confirm first.
+ */
+export async function deleteMyAccount(): Promise<void> {
+  const session = await getSession();
+  const admin = createSupabaseAdminClient();
+
+  if (session.role === "owner") {
+    const { error } = await admin.from("stables").delete().eq("id", session.stableId);
+    if (error) throw error;
+  } else {
+    const { error } = await admin.from("profiles").delete().eq("id", session.userId);
+    if (error) throw error;
+  }
+
+  // Remove the Supabase Auth user last so the login is permanently gone.
+  const { error: authErr } = await admin.auth.admin.deleteUser(session.authUserId);
+  if (authErr) throw authErr;
+}
 
 export type OwnProfileRow = {
   id: string;

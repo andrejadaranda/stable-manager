@@ -10,6 +10,7 @@ import { getOwnProfile, getOwnActivityStats, type ActivitySummary } from "@/serv
 import { Card, CardHeader, Field, Input, Button, Badge } from "@/components/ui";
 import { AvatarUploader } from "@/components/account/avatar-uploader";
 import { EnableNotificationsButton } from "@/components/push/enable-notifications";
+import { DeleteAccountSection } from "@/components/account/delete-account-section";
 import { updateProfileNameAction } from "../actions";
 
 const ROLE_LABEL: Record<"owner" | "employee" | "client", string> = {
@@ -179,6 +180,9 @@ export default async function ProfileSettingsPage() {
           </div>
         </form>
       </Card>
+
+      {/* Danger zone — in-app account deletion (App Store 5.1.1(v)). */}
+      <DeleteAccountSection isOwner={profile.role === "owner"} />
     </div>
   );
 }
