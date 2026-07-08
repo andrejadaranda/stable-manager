@@ -38,6 +38,7 @@ import {
   computeSlotFromOffset,
   STATUS_STYLE,
   STATUS_LABEL,
+  lessonTitle,
 } from "./grid-utils";
 import { fmtTime } from "@/lib/utils/dates";
 
@@ -485,7 +486,7 @@ export function DayColumn({
               </div>
               {p.height >= 30 && (
                 <div className={`mt-0.5 truncate font-medium ${s.ink}`}>
-                  {p.lesson.client?.full_name ?? "—"}
+                  {lessonTitle(p.lesson)}
                 </div>
               )}
               {p.height >= 56 && (
@@ -531,7 +532,7 @@ export function DayColumn({
 function ariaLabelForLesson(l: CalendarLesson): string {
   const start  = fmtTime(l.starts_at);
   const end    = fmtTime(l.ends_at);
-  const client = l.client?.full_name ?? "no client";
+  const client = lessonTitle(l);
   const horse  = l.horse?.name ?? "no horse";
   const status = l.status.replace("_", " ");
   const payment =

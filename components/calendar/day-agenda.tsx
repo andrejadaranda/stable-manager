@@ -22,7 +22,7 @@ import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
 import { VISIT_KIND_COLOR, VISIT_KIND_LABEL } from "@/services/farrierVisits.pure";
 import type { AvailabilityBlock } from "@/services/availability.pure";
 import { fmtTime } from "@/lib/utils/dates";
-import { STATUS_LABEL, STATUS_STYLE, HOUR_START, HOUR_END } from "./grid-utils";
+import { STATUS_LABEL, STATUS_STYLE, HOUR_START, HOUR_END, lessonTitle } from "./grid-utils";
 import { PaymentDot, VISIT_CHIP_STYLE } from "./week-grid";
 
 /** Local "YYYY-MM-DDTHH:mm" from a Date — matches the create form input. */
@@ -375,7 +375,7 @@ function AgendaCard({
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium truncate ${s.ink}`}>
-            {lesson.client?.full_name ?? "—"}
+            {lessonTitle(lesson)}
           </p>
           <p className={`text-xs truncate ${s.meta}`}>
             {lesson.horse?.name ?? "—"} · {lesson.trainer?.full_name ?? "—"}

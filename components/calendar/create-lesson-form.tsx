@@ -567,7 +567,9 @@ export function CreateLessonForm({
             </p>
           )}
 
-          {arenas.length > 0 && (
+          {/* Arena picker only when the stable actually has more than one.
+              Single-arena stables just submit that arena silently. */}
+          {arenas.length > 1 ? (
             <Select
               label="Arena"
               name="arena_id"
@@ -576,6 +578,8 @@ export function CreateLessonForm({
               options={arenas.map((a) => ({ id: a.id, label: a.name }))}
               placeholder="No arena set"
             />
+          ) : (
+            <input type="hidden" name="arena_id" value={arenaId} />
           )}
 
           {/* Use-package toggle — only renders when the picked client

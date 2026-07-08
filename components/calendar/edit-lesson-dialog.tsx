@@ -395,24 +395,6 @@ export function EditLessonDialog({
             </label>
           )}
 
-          <label className="flex flex-col gap-1.5 text-sm">
-            <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Status</span>
-            <select
-              name="status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as Status)}
-              className="
-                rounded-xl border border-ink-200 bg-white text-sm text-ink-900
-                px-3 py-2.5
-                focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
-              "
-            >
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </label>
-
           {/* Starts + Ends — side by side to save vertical space. */}
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5 text-sm min-w-0">
@@ -494,6 +476,21 @@ export function EditLessonDialog({
                 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
               "
             />
+          </label>
+
+          {/* Status — kept at the bottom, next to the actions. */}
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Status</span>
+            <select
+              name="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as Status)}
+              className="rounded-xl border border-ink-200 bg-white text-sm text-ink-900 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            >
+              {STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </label>
 
           <p

@@ -250,3 +250,12 @@ export const STATUS_LABEL: Record<CalendarLesson["status"], string> = {
   cancelled: "Cancelled",
   no_show:   "No-show",
 };
+
+/** Card title for a lesson. A group lesson has many riders, not one client —
+ *  so show the service ("Group · Vaulting") or just "Group lesson" instead of
+ *  a single (often arbitrary) participant's name. */
+export function lessonTitle(l: CalendarLesson): string {
+  const isGroup = l.lesson_type === "group" || (l.max_participants ?? 1) > 1;
+  if (isGroup) return l.service?.name ? `Group · ${l.service.name}` : "Group lesson";
+  return l.client?.full_name ?? l.horse?.name ?? "Lesson";
+}

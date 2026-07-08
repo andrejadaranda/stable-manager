@@ -16,6 +16,7 @@ import type { AvailabilityBlock } from "@/services/availability.pure";
 import type { ServiceRow } from "@/services/services";
 import type { PackageSummaryRow } from "@/services/packages";
 import { EditLessonDialog } from "./edit-lesson-dialog";
+import { lessonTitle } from "./grid-utils";
 
 const STATUS_COLOR: Record<CalendarLesson["status"], string> = {
   scheduled: "#2F406A",
@@ -156,12 +157,12 @@ export function MonthView({
                       style={{ background: `${STATUS_COLOR[l.status]}1A`, color: STATUS_COLOR[l.status] }}
                       title="Edit lesson"
                     >
-                      {time(l.starts_at)} {l.client?.full_name ?? l.horse?.name ?? "Lesson"}
+                      {time(l.starts_at)} {lessonTitle(l)}
                     </button>
                   ) : (
                     <span key={l.id} className="text-[10.5px] leading-tight truncate px-1 py-0.5 rounded"
                       style={{ background: `${STATUS_COLOR[l.status]}1A`, color: STATUS_COLOR[l.status] }}>
-                      {time(l.starts_at)} {l.client?.full_name ?? l.horse?.name ?? "Lesson"}
+                      {time(l.starts_at)} {lessonTitle(l)}
                     </span>
                   ),
                 )}
