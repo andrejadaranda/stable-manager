@@ -82,15 +82,22 @@ async function startGeoWatch(
   }
 
   if (isNative) {
-    // Native iOS: use @capacitor-community/background-geolocation so the ride
-    // keeps recording with the app backgrounded AND the phone locked — a real
-    // CLLocationManager with allowsBackgroundLocationUpdates. Supplying
-    // backgroundMessage/backgroundTitle is what flips iOS into persistent
-    // background-location mode; requestPermissions:true drives the "Always"
-    // authorization prompt. (Stock @capacitor/geolocation only fires in the
-    // foreground — it can't power a locked-screen ride tracker.)
+    // Native iOS: background ride tracking that keeps recording with the app
+    // backgrounded AND the phone locked — a real CLLocationManager with
+    // allowsBackgroundLocationUpdates. Supplying backgroundMessage/backgroundTitle
+    // flips iOS into persistent background-location mode; requestPermissions:true
+    // drives the "Always" authorization prompt. (Stock @capacitor/geolocation only
+    // fires in the foreground — it can't power a locked-screen ride tracker.)
+    //
+    // We bind to the native plugin via Capacitor's registerPlugin (from
+    // @capacitor/core, always installed) instead of importing the plugin's JS
+    // package. That keeps the web/Vercel build from trying to bundle a native-
+    // only module (which fails to resolve at build time). The compiled iOS pod
+    // provides the real implementation via the bridge.
     // @ts-ignore optional native dependency (resolved on device/Vercel)
-    const { BackgroundGeolocation } = await import("@capacitor-community/background-geolocation");
+    const { registerPlugin } = await import("@capacitor/core");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const BackgroundGeolocation = registerPlugin("BackgroundGeolocation") as any;
     let watcherId: string | null = null;
     try {
       watcherId = await BackgroundGeolocation.addWatcher(
