@@ -61,7 +61,9 @@ export function LessonParticipantsPanel({
   }, [lessonId]);
 
   const filled = participants.filter((p) => p.status === "confirmed").length;
-  const hasRoom = filled < capacity;
+  // Capacity isn't exposed anymore — a group just grows as riders are added.
+  const hasRoom = true;
+  const [addMode, setAddMode] = useState<"existing" | "new">("existing");
 
   // Riders / horses not yet in this lesson — picker source.
   const usedClientIds = new Set(participants.map((p) => p.client_id));
@@ -135,22 +137,10 @@ export function LessonParticipantsPanel({
         <div>
           <h4 className="text-[13px] font-semibold text-navy-900">Riders &amp; horses</h4>
           <p className="text-[11px] text-ink-500 mt-0.5">
-            {filled}/{capacity} confirmed
-            {capacity > 1 && <span className="text-brand-700 font-medium ml-1">· Group lesson</span>}
+            {filled} {filled === 1 ? "rider" : "riders"}
+            {filled > 1 && <span className="text-brand-700 font-medium ml-1">· Group lesson</span>}
           </p>
         </div>
-        <label className="flex items-center gap-1.5 text-[11px] text-ink-600">
-          Capacity
-          <select
-            value={capacity}
-            onChange={(e) => startTransition(() => handleCapacity(Number(e.target.value)))}
-            className="h-7 rounded-md border border-ink-200 bg-white text-[12px] px-1.5 tabular-nums"
-          >
-            {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-        </label>
       </header>
 
       {error && (
@@ -256,44 +246,79 @@ export function LessonParticipantsPanel({
       {pickerOpen && (
         <form
           action={(fd) => startTransition(() => { handleAdd(fd); })}
-          className={`flex flex-col gap-2 rounded-lg p-3 ${
-            hasRoom ? "bg-ink-50/40" : "bg-amber-50/40 border border-amber-200"
-          }`}
+          className="flex flex-col gap-2 rounded-lg p-3 bg-ink-50/40"
         >
-          {!hasRoom && <input type="hidden" name="waitlist" value="1" />}
-          {!hasRoom && (
-            <p className="text-[11px] text-amber-800">
-              Lesson is full. This rider will join the waitlist.
-            </p>
-          )}
+          {/* Existing rider vs. brand-new child */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setAddMode("existing")}
+              className={`h-7 px-2.5 rounded-md text-[11px] font-medium transition-colors ${
+                addMode === "existing" ? "bg-brand-600 text-white" : "bg-white text-ink-700 ring-1 ring-ink-200 hover:bg-ink-50"
+              }`}
+            >
+              Existing
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddMode("new")}
+              className={`h-7 px-2.5 rounded-md text-[11px] font-medium transition-colors ${
+                addMode === "new" ? "bg-brand-600 text-white" : "bg-white text-ink-700 ring-1 ring-ink-200 hover:bg-ink-50"
+              }`}
+            >
+              New child
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {addMode === "existing" ? (
+              <label className="flex flex-col gap-1 text-[11px] text-ink-600">
+                Rider
+                <select
+                  name="client_id"
+                  className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+                >
+                  <option value="">Pick a rider…</option>
+                  {availableClients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.full_name}</option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <label className="flex flex-col gap-1 text-[11px] text-ink-600">
+                Child name
+                <input
+                  name="new_child_name"
+                  placeholder="Full name"
+                  maxLength={120}
+                  className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+                />
+              </label>
+            )}
             <label className="flex flex-col gap-1 text-[11px] text-ink-600">
-              Rider
-              <select
-                name="client_id"
-                required
-                className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
-              >
-                <option value="">Pick a rider…</option>
-                {availableClients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.full_name}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-[11px] text-ink-600">
-              Horse
+              Horse <span className="text-ink-400">(optional)</span>
               <select
                 name="horse_id"
-                required
                 className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
               >
-                <option value="">Pick a horse…</option>
+                <option value="">No horse yet</option>
                 {horseOptions.map((h) => (
                   <option key={h.id} value={h.id}>{h.name}</option>
                 ))}
               </select>
             </label>
           </div>
+
+          <label className="flex flex-col gap-1 text-[11px] text-ink-600 max-w-[160px]">
+            Price · €
+            <input
+              name="price"
+              type="number" min="0" step="0.01"
+              placeholder="€"
+              className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5 tabular-nums"
+            />
+          </label>
+
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -307,7 +332,7 @@ export function LessonParticipantsPanel({
               disabled={pending}
               className="h-8 px-3 text-[12px] font-medium bg-brand-600 text-white hover:bg-brand-700 rounded-md disabled:opacity-50"
             >
-              {pending ? "Adding…" : "Add rider"}
+              {pending ? "Adding…" : addMode === "new" ? "Add child" : "Add rider"}
             </button>
           </div>
         </form>

@@ -6,6 +6,7 @@
 import { revalidatePath } from "next/cache";
 import {
   addLessonParticipant,
+  addNewChildToLesson,
   removeLessonParticipant,
   setLessonCapacity,
   setLessonParticipantPrice,
@@ -26,19 +27,38 @@ export async function addParticipantAction(
 ): Promise<ParticipantsActionState> {
   const lessonId = String(fd.get("lesson_id") ?? "");
   const clientId = String(fd.get("client_id") ?? "");
+  const newChildName = String(fd.get("new_child_name") ?? "").trim();
   const horseId  = String(fd.get("horse_id")  ?? "");
+  const priceRaw = String(fd.get("price") ?? "").trim();
+  const price = priceRaw ? Number(priceRaw) : undefined;
   const waitlist = String(fd.get("waitlist")  ?? "") === "1";
 
-  if (!lessonId || !clientId || !horseId) {
-    return { ...initial, error: "Pick a rider and horse." };
+  if (!lessonId) return { ...initial, error: "Missing lesson." };
+
+  // New child typed inline — create them (linked to the lesson's parent) and
+  // attach with a price. Horse is optional.
+  if (!clientId && newChildName) {
+    const r = await addNewChildToLesson(lessonId, newChildName, { horseId: horseId || null, price });
+    if (!r.ok) {
+      if (r.reason === "HORSE_DOUBLE_BOOKED") return { ...initial, error: "That horse already has a lesson at this time." };
+      return { ...initial, error: r.reason };
+    }
+    revalidatePath("/dashboard/calendar");
+    return { error: null, success: true };
   }
 
-  const result = await addLessonParticipant(lessonId, clientId, horseId, { forceWaitlist: waitlist });
+  if (!clientId) return { ...initial, error: "Pick a rider or add a new child." };
+
+  const result = await addLessonParticipant(lessonId, clientId, horseId || null, { forceWaitlist: waitlist });
   if (!result.ok) {
-    if (result.reason === "LESSON_FULL")              return { ...initial, error: "Lesson is full — raise capacity or join the waitlist." };
+    if (result.reason === "LESSON_FULL")              return { ...initial, error: "Lesson is full." };
     if (result.reason === "HORSE_DOUBLE_BOOKED")      return { ...initial, error: "That horse already has a lesson at this time." };
     if (result.reason === "CLIENT_ALREADY_IN_LESSON") return { ...initial, error: "Rider is already in this lesson." };
     return { ...initial, error: result.reason };
+  }
+
+  if (price !== undefined && Number.isFinite(price) && price >= 0) {
+    try { await setLessonParticipantPrice(lessonId, clientId, price); } catch { /* price is non-fatal */ }
   }
 
   revalidatePath("/dashboard/calendar");

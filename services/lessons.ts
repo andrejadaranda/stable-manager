@@ -223,7 +223,7 @@ export async function createLesson(input: CreateLessonInput) {
 export async function addLessonParticipant(
   lessonId: string,
   clientId: string,
-  horseId:  string,
+  horseId:  string | null,
   opts: { forceWaitlist?: boolean } = {},
 ): Promise<{ ok: true; status: "confirmed" | "waitlist" } | { ok: false; reason: string }> {
   const session = await getSession();
@@ -247,17 +247,23 @@ export async function addLessonParticipant(
     .eq("lesson_id", lessonId)
     .eq("status", "confirmed");
 
+  // Capacity isn't exposed in the UI anymore — a group just grows as riders
+  // are added. If we'd exceed the stored max, bump it so the add always
+  // succeeds (waitlist only when a caller explicitly forces it).
   const isFull = (count ?? 0) >= (lesson.max_participants ?? 1);
   if (isFull && !opts.forceWaitlist) {
-    return { ok: false, reason: "LESSON_FULL" };
+    await supabase
+      .from("lessons")
+      .update({ max_participants: (count ?? 0) + 1 })
+      .eq("id", lessonId);
   }
 
-  const status = isFull || opts.forceWaitlist ? "waitlist" : "confirmed";
+  const status = opts.forceWaitlist ? "waitlist" : "confirmed";
 
   const { error } = await supabase.from("lesson_participants").insert({
     lesson_id: lessonId,
     client_id: clientId,
-    horse_id:  horseId,
+    horse_id:  horseId || null,
     status,
   });
 
@@ -268,6 +274,55 @@ export async function addLessonParticipant(
   }
 
   return { ok: true, status };
+}
+
+/** Add a brand-new child to an existing group lesson: creates the child
+ *  client (linked to the lesson's paying parent = lessons.client_id via
+ *  guardian_client_id), attaches them as a participant with a price, and
+ *  re-sums the group total so the parent's bill stays correct. Horse is
+ *  optional (assign the mount later). */
+export async function addNewChildToLesson(
+  lessonId: string,
+  childName: string,
+  opts: { horseId?: string | null; price?: number } = {},
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+
+  const name = childName.trim();
+  if (!name) return { ok: false, reason: "MISSING_NAME" };
+
+  const supabase = createSupabaseServerClient();
+  const { data: lesson } = await supabase
+    .from("lessons")
+    .select("client_id, max_participants")
+    .eq("id", lessonId)
+    .single();
+  if (!lesson) return { ok: false, reason: "LESSON_NOT_FOUND" };
+
+  const price = Math.max(0, Number(opts.price) || 0);
+
+  const { data: child, error: cErr } = await supabase
+    .from("clients")
+    .insert({
+      stable_id:            session.stableId,
+      full_name:            name,
+      is_minor:             true,
+      guardian_client_id:   (lesson as { client_id: string }).client_id,
+      default_lesson_price: price || null,
+      active:               true,
+    })
+    .select("id")
+    .single();
+  if (cErr || !child) return { ok: false, reason: cErr?.message ?? "CHILD_CREATE_FAILED" };
+
+  const result = await addLessonParticipant(lessonId, (child as { id: string }).id, opts.horseId ?? null);
+  if (!result.ok) return result;
+
+  if (price > 0) {
+    await setLessonParticipantPrice(lessonId, (child as { id: string }).id, price);
+  }
+  return { ok: true };
 }
 
 /** Promote a waitlisted rider to confirmed. Capacity is re-checked; if
