@@ -28,7 +28,13 @@ type Participant = {
   no_show:   boolean;
   joined_at: string;
   price:     number | null;
-  clients:   { id: string; full_name: string } | null;
+  clients:   {
+    id: string;
+    full_name: string;
+    guardian_client_id: string | null;
+    guardian_name: string | null;
+    guardian_phone: string | null;
+  } | null;
   horses:    { id: string; name: string }      | null;
 };
 
@@ -131,6 +137,27 @@ export function LessonParticipantsPanel({
   const confirmed = participants.filter((p) => p.status === "confirmed");
   const waitlist  = participants.filter((p) => p.status === "waitlist");
 
+  // Group confirmed riders by their parent (guardian) so the same parent's
+  // children sit together. Solo riders (no guardian) fall into their own
+  // unlabelled group and render flat.
+  type Grp = { key: string; label: string | null; members: Participant[] };
+  const groups: Grp[] = [];
+  const byKey = new Map<string, Grp>();
+  for (const p of confirmed) {
+    const g = p.clients;
+    const linked = g?.guardian_client_id ?? null;
+    const nameKey = (g?.guardian_name || g?.guardian_phone)
+      ? `n:${(g?.guardian_name ?? "").trim().toLowerCase()}|${(g?.guardian_phone ?? "").replace(/\s+/g, "")}`
+      : null;
+    const key = linked ? `c:${linked}` : nameKey ?? `solo:${p.client_id}`;
+    const label = linked || nameKey
+      ? (g?.guardian_name?.trim() || g?.guardian_phone?.trim() || "Parent")
+      : null;
+    let grp = byKey.get(key);
+    if (!grp) { grp = { key, label, members: [] }; byKey.set(key, grp); groups.push(grp); }
+    grp.members.push(p);
+  }
+
   return (
     <section className="rounded-xl border border-ink-200 bg-white p-4 flex flex-col gap-3">
       <header className="flex items-center justify-between gap-2">
@@ -149,46 +176,58 @@ export function LessonParticipantsPanel({
         </p>
       )}
 
-      <ul className="flex flex-col divide-y divide-ink-100/80">
+      <div className="flex flex-col gap-1">
         {confirmed.length === 0 && (
-          <li className="py-2 text-[12px] text-ink-500">No riders yet.</li>
+          <p className="py-2 text-[12px] text-ink-500">No riders yet.</p>
         )}
-        {confirmed.map((p) => (
-          <li key={p.client_id} className="py-2 flex items-center justify-between gap-2">
-            <div className="text-[13px] text-ink-900 min-w-0">
-              <span className="font-medium">{p.clients?.full_name ?? "Unknown rider"}</span>
-              <span className="text-ink-500"> on </span>
-              <span className="font-medium">{p.horses?.name ?? "no horse yet"}</span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="flex items-center gap-0.5 text-[12px] text-ink-500">
-                €
-                <input
-                  type="number" min="0" step="0.01"
-                  defaultValue={p.price ?? ""}
-                  onBlur={(e) => {
-                    if (e.target.value !== String(p.price ?? "")) {
-                      startTransition(() => handleSetPrice(p.client_id, e.target.value));
-                    }
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
-                  placeholder="—"
-                  aria-label={`Price for ${p.clients?.full_name ?? "rider"}`}
-                  className="w-16 h-7 rounded-md border border-ink-200 bg-white text-[12px] px-1.5 tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => startTransition(() => handleRemove(p.client_id))}
-                disabled={pending}
-                className="h-7 px-2 text-[11px] text-ink-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors disabled:opacity-50"
-              >
-                Remove
-              </button>
-            </div>
-          </li>
+        {groups.map((grp) => (
+          <div key={grp.key} className={grp.label ? "rounded-lg bg-brand-50/30 px-2 py-0.5" : ""}>
+            {grp.label && (
+              <p className="text-[11px] font-semibold text-brand-800 px-1 pt-1 pb-0.5">
+                👪 {grp.label}
+                {grp.members.length > 1 && <span className="font-normal text-brand-700"> · {grp.members.length} children</span>}
+              </p>
+            )}
+            <ul className="flex flex-col divide-y divide-ink-100/70">
+              {grp.members.map((p) => (
+                <li key={p.client_id} className="py-2 flex items-center justify-between gap-2">
+                  <div className="text-[13px] text-ink-900 min-w-0">
+                    <span className="font-medium">{p.clients?.full_name ?? "Unknown rider"}</span>
+                    <span className="text-ink-500"> on </span>
+                    <span className="font-medium">{p.horses?.name ?? "no horse yet"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-0.5 text-[12px] text-ink-500">
+                      €
+                      <input
+                        type="number" min="0" step="0.01"
+                        defaultValue={p.price ?? ""}
+                        onBlur={(e) => {
+                          if (e.target.value !== String(p.price ?? "")) {
+                            startTransition(() => handleSetPrice(p.client_id, e.target.value));
+                          }
+                        }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+                        placeholder="—"
+                        aria-label={`Price for ${p.clients?.full_name ?? "rider"}`}
+                        className="w-16 h-7 rounded-md border border-ink-200 bg-white text-[12px] px-1.5 tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => startTransition(() => handleRemove(p.client_id))}
+                      disabled={pending}
+                      className="h-7 px-2 text-[11px] text-ink-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
 
       {/* Waitlist section — only visible when at least one waitlisted */}
       {waitlist.length > 0 && (

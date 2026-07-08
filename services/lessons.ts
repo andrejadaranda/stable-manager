@@ -448,7 +448,7 @@ export async function listLessonParticipants(lessonId: string) {
       no_show,
       joined_at,
       price,
-      clients:client_id ( id, full_name ),
+      clients:client_id ( id, full_name, guardian_client_id, guardian_name, guardian_phone ),
       horses:horse_id   ( id, name )
     `)
     .eq("lesson_id", lessonId)
