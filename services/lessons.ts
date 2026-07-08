@@ -379,6 +379,7 @@ export async function listLessonParticipants(lessonId: string) {
       status,
       no_show,
       joined_at,
+      price,
       clients:client_id ( id, full_name ),
       horses:horse_id   ( id, name )
     `)
@@ -387,6 +388,44 @@ export async function listLessonParticipants(lessonId: string) {
 
   if (error) throw error;
   return data ?? [];
+}
+
+/** Set one participant's price (per-child pricing in a group lesson) and,
+ *  for a group lesson, re-sum the lesson total so the parent's single bill
+ *  (lessons.client_id + lessons.price) stays correct. Single/private lessons
+ *  keep their own price untouched. */
+export async function setLessonParticipantPrice(
+  lessonId: string,
+  clientId: string,
+  price: number,
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  void session;
+  if (!Number.isFinite(price) || price < 0) throw new Error("INVALID_PRICE");
+
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("lesson_participants")
+    .update({ price })
+    .eq("lesson_id", lessonId)
+    .eq("client_id", clientId);
+  if (error) throw error;
+
+  const { data: lesson } = await supabase
+    .from("lessons")
+    .select("max_participants")
+    .eq("id", lessonId)
+    .single();
+  if ((lesson?.max_participants ?? 1) > 1) {
+    const { data: parts } = await supabase
+      .from("lesson_participants")
+      .select("price")
+      .eq("lesson_id", lessonId);
+    const total = ((parts ?? []) as Array<{ price: number | null }>)
+      .reduce((s, p) => s + (Number(p.price) || 0), 0);
+    await supabase.from("lessons").update({ price: total }).eq("id", lessonId);
+  }
 }
 
 // Owner + employee.

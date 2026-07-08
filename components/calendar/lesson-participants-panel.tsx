@@ -16,16 +16,18 @@ import {
   addParticipantAction,
   removeParticipantAction,
   setCapacityAction,
+  setParticipantPriceAction,
   loadParticipants,
   promoteWaitlistAction,
 } from "@/app/dashboard/calendar/participants-actions";
 
 type Participant = {
   client_id: string;
-  horse_id:  string;
+  horse_id:  string | null;
   status:    string;
   no_show:   boolean;
   joined_at: string;
+  price:     number | null;
   clients:   { id: string; full_name: string } | null;
   horses:    { id: string; name: string }      | null;
 };
@@ -101,6 +103,19 @@ export function LessonParticipantsPanel({
     if (result.error) setError(result.error);
   }
 
+  async function handleSetPrice(clientId: string, value: string) {
+    const price = Number(value);
+    if (!Number.isFinite(price) || price < 0) return;
+    setError(null);
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    fd.set("client_id", clientId);
+    fd.set("price", String(price));
+    const result = await setParticipantPriceAction({ error: null, success: false }, fd);
+    if (result.error) setError(result.error);
+    else              await refresh();
+  }
+
   async function handlePromote(clientId: string) {
     setError(null);
     const fd = new FormData();
@@ -150,19 +165,37 @@ export function LessonParticipantsPanel({
         )}
         {confirmed.map((p) => (
           <li key={p.client_id} className="py-2 flex items-center justify-between gap-2">
-            <div className="text-[13px] text-ink-900">
+            <div className="text-[13px] text-ink-900 min-w-0">
               <span className="font-medium">{p.clients?.full_name ?? "Unknown rider"}</span>
               <span className="text-ink-500"> on </span>
-              <span className="font-medium">{p.horses?.name ?? "Unknown horse"}</span>
+              <span className="font-medium">{p.horses?.name ?? "no horse yet"}</span>
             </div>
-            <button
-              type="button"
-              onClick={() => startTransition(() => handleRemove(p.client_id))}
-              disabled={pending}
-              className="h-7 px-2 text-[11px] text-ink-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors disabled:opacity-50"
-            >
-              Remove
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-0.5 text-[12px] text-ink-500">
+                €
+                <input
+                  type="number" min="0" step="0.01"
+                  defaultValue={p.price ?? ""}
+                  onBlur={(e) => {
+                    if (e.target.value !== String(p.price ?? "")) {
+                      startTransition(() => handleSetPrice(p.client_id, e.target.value));
+                    }
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+                  placeholder="—"
+                  aria-label={`Price for ${p.clients?.full_name ?? "rider"}`}
+                  className="w-16 h-7 rounded-md border border-ink-200 bg-white text-[12px] px-1.5 tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => startTransition(() => handleRemove(p.client_id))}
+                disabled={pending}
+                className="h-7 px-2 text-[11px] text-ink-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors disabled:opacity-50"
+              >
+                Remove
+              </button>
+            </div>
           </li>
         ))}
       </ul>

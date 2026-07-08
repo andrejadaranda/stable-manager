@@ -8,6 +8,7 @@ import {
   addLessonParticipant,
   removeLessonParticipant,
   setLessonCapacity,
+  setLessonParticipantPrice,
   listLessonParticipants,
   promoteFromWaitlist,
 } from "@/services/lessons";
@@ -103,6 +104,26 @@ export async function setCapacityAction(
     await setLessonCapacity(lessonId, cap);
   } catch (err) {
     return { ...initial, error: (err as Error)?.message ?? "Failed to set capacity." };
+  }
+
+  revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
+
+export async function setParticipantPriceAction(
+  _prev: ParticipantsActionState,
+  fd: FormData,
+): Promise<ParticipantsActionState> {
+  const lessonId = String(fd.get("lesson_id") ?? "");
+  const clientId = String(fd.get("client_id") ?? "");
+  const price    = Number(fd.get("price") ?? "0");
+  if (!lessonId || !clientId) return { ...initial, error: "Missing rider." };
+  if (!Number.isFinite(price) || price < 0) return { ...initial, error: "Price must be 0 or more." };
+
+  try {
+    await setLessonParticipantPrice(lessonId, clientId, price);
+  } catch (err) {
+    return { ...initial, error: (err as Error)?.message ?? "Failed to set price." };
   }
 
   revalidatePath("/dashboard/calendar");
