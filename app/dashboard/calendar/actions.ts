@@ -47,6 +47,117 @@ async function ensureClientForQuickAdd(name: string, phone: string): Promise<str
   return (created as { id: string }).id;
 }
 
+// Group lesson: a paying parent + several children, each with their own
+// price. Billed to the parent (lessons.client_id = parent, price = sum) so
+// the existing invoicing charges one combined amount; each child becomes a
+// participant carrying its own recorded price. New children are created on
+// the fly and linked to the parent via guardian_client_id.
+async function handleGroupCreate(formData: FormData): Promise<CreateLessonState> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+
+  const trainerId = String(formData.get("trainer_id") ?? "").trim();
+  const arenaId   = String(formData.get("arena_id") ?? "").trim();
+  const startsAt  = String(formData.get("starts_at") ?? "");
+  const endsAt    = String(formData.get("ends_at") ?? "");
+  const notes     = String(formData.get("notes") ?? "").trim();
+
+  const payerClientId0 = String(formData.get("payer_client_id") ?? "").trim();
+  const payerName      = String(formData.get("payer_name") ?? "").trim();
+  const payerPhone     = String(formData.get("payer_phone") ?? "").trim();
+
+  type ChildInput = { name?: string; price?: number | string; existingClientId?: string };
+  let raw: ChildInput[] = [];
+  try {
+    const parsed = JSON.parse(String(formData.get("group_children") ?? "[]"));
+    if (Array.isArray(parsed)) raw = parsed as ChildInput[];
+  } catch { raw = []; }
+
+  if (!startsAt || !endsAt) return { error: "Start and end times are required.", success: false };
+  const startMs = Date.parse(startsAt);
+  const endMs   = Date.parse(endsAt);
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return { error: "Invalid date format.", success: false };
+  if (endMs <= startMs) return { error: "End time must be after start time.", success: false };
+
+  const children = raw
+    .map((c) => ({
+      name:             (c.name ?? "").trim(),
+      existingClientId: (c.existingClientId ?? "").trim(),
+      price:            Math.max(0, Number(c.price) || 0),
+    }))
+    .filter((c) => c.existingClientId || c.name);
+  if (children.length === 0) return { error: "Add at least one child to the group.", success: false };
+
+  // Resolve the paying parent — existing client or a new one by name/phone.
+  let payerClientId = payerClientId0;
+  if (!payerClientId) {
+    if (!payerName) return { error: "Add the paying parent's name.", success: false };
+    try {
+      payerClientId = await ensureClientForQuickAdd(payerName, payerPhone);
+    } catch (err: any) {
+      return { error: `Couldn't create the parent: ${err?.message ?? "unknown error"}.`, success: false };
+    }
+  }
+
+  const total = children.reduce((s, c) => s + c.price, 0);
+
+  const { data: lesson, error: lErr } = await supabase
+    .from("lessons")
+    .insert({
+      stable_id:        session.stableId,
+      client_id:        payerClientId,
+      horse_id:         null,
+      trainer_id:       trainerId || null,
+      arena_id:         arenaId || null,
+      starts_at:        new Date(startMs).toISOString(),
+      ends_at:          new Date(endMs).toISOString(),
+      price:            total,
+      status:           "scheduled",
+      notes:            notes || null,
+      lesson_type:      "group",
+      max_participants: Math.max(children.length, 1),
+    })
+    .select("id")
+    .single();
+  if (lErr || !lesson) {
+    return { error: `Could not create the group lesson: ${lErr?.message ?? "unknown error"}.`, success: false };
+  }
+  const lessonId = (lesson as { id: string }).id;
+
+  for (const c of children) {
+    let childId = c.existingClientId;
+    if (!childId) {
+      const { data: cc, error: ccErr } = await supabase
+        .from("clients")
+        .insert({
+          stable_id:            session.stableId,
+          full_name:            c.name,
+          is_minor:             true,
+          guardian_client_id:   payerClientId,
+          guardian_name:        payerName || null,
+          guardian_phone:       payerPhone || null,
+          default_lesson_price: c.price || null,
+          active:               true,
+        })
+        .select("id")
+        .single();
+      if (ccErr || !cc) continue;
+      childId = (cc as { id: string }).id;
+    }
+    await supabase.from("lesson_participants").insert({
+      lesson_id: lessonId,
+      client_id: childId,
+      horse_id:  null,
+      price:     c.price || null,
+      status:    "confirmed",
+    });
+  }
+
+  revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
+
 export type CreateLessonState = {
   error: string | null;
   success: boolean;
@@ -76,6 +187,15 @@ export async function createLessonAction(
   const overLimitReason = String(formData.get("over_limit_reason") ?? "").trim();
   const repeatRaw = String(formData.get("repeat_count") ?? "").trim();
   const repeatIntervalRaw = String(formData.get("repeat_interval_weeks") ?? "1").trim();
+
+  // Group-lesson path — a paying parent + several children, each with their
+  // own price (some discounted). Billed to the parent (client_id = parent,
+  // price = sum) so the existing invoicing bills one combined amount; each
+  // child is a participant with its own recorded price. Handled separately
+  // from the single-lesson flow below.
+  if (String(formData.get("lesson_type") ?? "") === "group") {
+    return handleGroupCreate(formData);
+  }
 
   // Quick-add path — trainer typed a new client right in the lesson
   // form. Look them up by phone or create. The returned id replaces

@@ -173,6 +173,33 @@ export function CreateLessonForm({
   const [repeatCount, setRepeatCount] = useState(8);
   const [repeatInterval, setRepeatInterval] = useState(1);
 
+  // ----- Group-lesson state (parent pays; children each with a price) -----
+  const [lessonType, setLessonType] = useState<"private" | "group">("private");
+  const [payerMode, setPayerMode]   = useState<"existing" | "new">("new");
+  const [payerClientId, setPayerClientId] = useState("");
+  const [payerName, setPayerName]   = useState("");
+  const [payerPhone, setPayerPhone] = useState("");
+  type ChildRow = { key: string; mode: "new" | "existing"; existingClientId: string; name: string; price: string };
+  const newChildRow = (): ChildRow => ({
+    key: Math.random().toString(36).slice(2),
+    mode: "new", existingClientId: "", name: "", price: "",
+  });
+  const [groupChildren, setGroupChildren] = useState<ChildRow[]>([newChildRow()]);
+  const groupTotal = groupChildren.reduce((s, c) => s + (Math.max(0, Number(c.price) || 0)), 0);
+  const groupChildrenJSON = JSON.stringify(
+    groupChildren
+      .map((c) => c.mode === "existing"
+        ? { existingClientId: c.existingClientId, price: Number(c.price) || 0 }
+        : { name: c.name.trim(), price: Number(c.price) || 0 })
+      .filter((c) => ("existingClientId" in c ? c.existingClientId : c.name)),
+  );
+  function updateChild(key: string, patch: Partial<ChildRow>) {
+    setGroupChildren((prev) => prev.map((c) => (c.key === key ? { ...c, ...patch } : c)));
+  }
+  function removeChild(key: string) {
+    setGroupChildren((prev) => prev.filter((c) => c.key !== key));
+  }
+
   const activePackage = clientId ? activePackagesByClient[clientId] ?? null : null;
   const selectedService = serviceId ? services.find((s) => s.id === serviceId) ?? null : null;
 
@@ -304,9 +331,136 @@ export function CreateLessonForm({
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3.5 min-h-0">
+          {/* Private vs Group toggle */}
+          <div className="flex gap-2">
+            {(["private", "group"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setLessonType(t)}
+                className={`flex-1 h-9 rounded-xl text-[13px] font-medium transition-colors ${
+                  lessonType === t
+                    ? "bg-brand-600 text-white shadow-sm"
+                    : "bg-white text-ink-700 ring-1 ring-ink-200 hover:bg-ink-50"
+                }`}
+              >
+                {t === "private" ? "Private lesson" : "Group lesson"}
+              </button>
+            ))}
+          </div>
+          <input type="hidden" name="lesson_type" value={lessonType} />
+
+          {/* GROUP: paying parent + children each with a price */}
+          {lessonType === "group" && (
+            <>
+              <div className="rounded-xl border border-brand-200 bg-brand-50/40 px-3 py-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[12.5px] font-medium text-navy-900">Paying parent</p>
+                  <button
+                    type="button"
+                    onClick={() => setPayerMode(payerMode === "new" ? "existing" : "new")}
+                    className="text-[11px] text-ink-500 hover:text-navy-900"
+                  >
+                    {payerMode === "new" ? "Pick existing" : "New parent"}
+                  </button>
+                </div>
+                {payerMode === "existing" ? (
+                  <>
+                    <select
+                      value={payerClientId}
+                      onChange={(e) => setPayerClientId(e.target.value)}
+                      className="rounded-lg border border-ink-200 bg-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                    >
+                      <option value="" disabled>Select parent…</option>
+                      {clients.map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+                    </select>
+                    <input type="hidden" name="payer_client_id" value={payerClientId} />
+                  </>
+                ) : (
+                  <>
+                    <input
+                      value={payerName}
+                      onChange={(e) => setPayerName(e.target.value)}
+                      placeholder="Parent full name"
+                      maxLength={120}
+                      className="rounded-lg border border-ink-200 bg-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                    />
+                    <input
+                      value={payerPhone}
+                      onChange={(e) => setPayerPhone(e.target.value)}
+                      placeholder="Parent phone (optional)"
+                      inputMode="tel"
+                      maxLength={40}
+                      className="rounded-lg border border-ink-200 bg-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                    />
+                    <input type="hidden" name="payer_name" value={payerName} />
+                    <input type="hidden" name="payer_phone" value={payerPhone} />
+                  </>
+                )}
+                <p className="text-[11px] text-ink-600">The parent gets one bill covering all their children below.</p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Children</p>
+                {groupChildren.map((c) => (
+                  <div key={c.key} className="rounded-xl border border-ink-200 bg-white px-3 py-2.5 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      {c.mode === "existing" ? (
+                        <select
+                          value={c.existingClientId}
+                          onChange={(e) => updateChild(c.key, { existingClientId: e.target.value })}
+                          className="flex-1 min-w-0 rounded-lg border border-ink-200 bg-white text-sm px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                        >
+                          <option value="" disabled>Select child…</option>
+                          {clients.map((x) => <option key={x.id} value={x.id}>{x.full_name}</option>)}
+                        </select>
+                      ) : (
+                        <input
+                          value={c.name}
+                          onChange={(e) => updateChild(c.key, { name: e.target.value })}
+                          placeholder="Child name"
+                          maxLength={120}
+                          className="flex-1 min-w-0 rounded-lg border border-ink-200 bg-white text-sm px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                        />
+                      )}
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={c.price}
+                        onChange={(e) => updateChild(c.key, { price: e.target.value })}
+                        placeholder="€"
+                        className="w-20 shrink-0 rounded-lg border border-ink-200 bg-white text-sm px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                      />
+                      {groupChildren.length > 1 && (
+                        <button type="button" onClick={() => removeChild(c.key)} className="shrink-0 text-ink-400 hover:text-rose-600 px-1" aria-label="Remove child">✕</button>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateChild(c.key, { mode: c.mode === "new" ? "existing" : "new" })}
+                      className="self-start text-[11px] text-brand-700 hover:text-brand-800"
+                    >
+                      {c.mode === "new" ? "Pick existing child" : "New child"}
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setGroupChildren((p) => [...p, newChildRow()])}
+                  className="self-start text-[12px] font-medium text-brand-700 hover:text-brand-800"
+                >
+                  + Add child
+                </button>
+                <p className="text-[12px] text-ink-600">
+                  Total (parent pays): <span className="font-semibold text-navy-900">€{groupTotal.toFixed(2)}</span>
+                </p>
+                <input type="hidden" name="group_children" value={groupChildrenJSON} />
+              </div>
+            </>
+          )}
+
           {/* Existing-client picker. Required UNLESS the quick-add form
               below is open — server handles either path. */}
-          {!addingClient && (
+          {lessonType === "private" && !addingClient && (
             <Select
               label="Client"
               name="client_id"
@@ -321,7 +475,7 @@ export function CreateLessonForm({
           {/* Quick-add: walked-in rider, phone call, no time to switch
               pages. Type name + phone, server creates the client (or
               finds existing by phone) and uses that id for the lesson. */}
-          {addingClient && (
+          {lessonType === "private" && addingClient && (
             <div className="rounded-xl border border-brand-200 bg-brand-50/40 px-3 py-3 flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <p className="text-[12.5px] font-medium text-navy-900">New client</p>
@@ -371,7 +525,7 @@ export function CreateLessonForm({
             </div>
           )}
 
-          {!addingClient && (
+          {lessonType === "private" && !addingClient && (
             <button
               type="button"
               onClick={() => setAddingClient(true)}
@@ -380,7 +534,9 @@ export function CreateLessonForm({
               + Add new client
             </button>
           )}
-          <Select label="Horse (optional)" name="horse_id" value={horseId} onChange={setHorseId} options={horses.map((h) => ({ id: h.id, label: h.name }))} placeholder="No horse yet — assign later" />
+          {lessonType === "private" && (
+            <Select label="Horse (optional)" name="horse_id" value={horseId} onChange={setHorseId} options={horses.map((h) => ({ id: h.id, label: h.name }))} placeholder="No horse yet — assign later" />
+          )}
           {soleTrainer ? (
             // Only one trainer in the stable — no choice to make. Assign them
             // silently and skip the picker entirely.
@@ -389,7 +545,7 @@ export function CreateLessonForm({
             <Select label="Trainer" name="trainer_id" value={trainerId} onChange={setTrainerId} options={trainers.map((t) => ({ id: t.id, label: `${t.full_name ?? "(no name)"} (${t.role})` }))} placeholder="No trainer yet — assign later" />
           )}
 
-          {services.length > 0 && (
+          {lessonType === "private" && services.length > 0 && (
             <Select
               label="Service (optional)"
               name="service_id"
@@ -405,7 +561,7 @@ export function CreateLessonForm({
               placeholder="Pick from price list…"
             />
           )}
-          {services.length > 0 && (
+          {lessonType === "private" && services.length > 0 && (
             <p className="text-[11px] text-ink-500 -mt-1.5">
               Picking a service fills in the price and length below.
             </p>
@@ -424,7 +580,7 @@ export function CreateLessonForm({
 
           {/* Use-package toggle — only renders when the picked client
               has an active (non-expired, remaining > 0) package. */}
-          {activePackage && (
+          {lessonType === "private" && activePackage && (
             <div className="rounded-xl border border-brand-200 bg-brand-50/50 px-3 py-2.5">
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input
@@ -470,37 +626,43 @@ export function CreateLessonForm({
           />
           <input type="hidden" name="ends_at" value={endsISO} />
 
-          <Field
-            label="Price · €"
-            name="price"
-            type="number"
-            min="0"
-            step="0.01"
-            value={price}
-            onChange={(e) => { setPrice(e.target.value); setPriceManuallyEdited(true); }}
-            hint={
-              activePackage && usePackage
-                ? "Covered by package — €0 by default. Override if you're billing extra."
-                : !priceManuallyEdited && clientId && clients.find((c) => c.id === clientId)?.default_lesson_price != null
-                ? "Pulled from client default"
-                : !clientId ? "Pick a client — price will fill in automatically" : undefined
-            }
-          />
+          {lessonType === "private" && (
+            <Field
+              label="Price · €"
+              name="price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={price}
+              onChange={(e) => { setPrice(e.target.value); setPriceManuallyEdited(true); }}
+              hint={
+                activePackage && usePackage
+                  ? "Covered by package — €0 by default. Override if you're billing extra."
+                  : !priceManuallyEdited && clientId && clients.find((c) => c.id === clientId)?.default_lesson_price != null
+                  ? "Pulled from client default"
+                  : !clientId ? "Pick a client — price will fill in automatically" : undefined
+              }
+            />
+          )}
 
-          {/* Repeat panel — expands into a weekly series. */}
-          <RepeatPanel
-            on={repeat}
-            onToggle={setRepeat}
-            count={repeatCount}
-            setCount={setRepeatCount}
-            interval={repeatInterval}
-            setInterval={setRepeatInterval}
-            startsLocal={startsLocal}
-          />
-          {repeat && (
+          {/* Repeat panel — expands into a weekly series. Private lessons only. */}
+          {lessonType === "private" && (
             <>
-              <input type="hidden" name="repeat_count" value={String(repeatCount)} />
-              <input type="hidden" name="repeat_interval_weeks" value={String(repeatInterval)} />
+              <RepeatPanel
+                on={repeat}
+                onToggle={setRepeat}
+                count={repeatCount}
+                setCount={setRepeatCount}
+                interval={repeatInterval}
+                setInterval={setRepeatInterval}
+                startsLocal={startsLocal}
+              />
+              {repeat && (
+                <>
+                  <input type="hidden" name="repeat_count" value={String(repeatCount)} />
+                  <input type="hidden" name="repeat_interval_weeks" value={String(repeatInterval)} />
+                </>
+              )}
             </>
           )}
 
