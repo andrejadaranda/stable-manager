@@ -206,6 +206,56 @@ export async function generateInvoiceForClient(clientId: string): Promise<{ id: 
   return { id: invoiceId };
 }
 
+/** Create a one-line custom invoice for a client (free-text service + amount)
+ *  — for a charge that isn't one of the tracked outstanding items. Same
+ *  numbering / branding path as the generated invoices. */
+export async function createCustomInvoiceForClient(
+  clientId: string,
+  description: string,
+  amount: number,
+): Promise<{ id: string }> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const issuer = await getStableIssuer();
+  if (!isIssuerReady(issuer)) throw new Error("ISSUER_NOT_READY");
+  const supabase = createSupabaseServerClient();
+
+  const desc = description.trim() || "Service";
+  const amt = Math.round((Number(amount) || 0) * 100) / 100;
+  if (!(amt > 0)) throw new Error("INVALID_AMOUNT");
+
+  const { data: numberRpc, error: rpcErr } = await supabase
+    .rpc("next_invoice_number", { p_stable_id: session.stableId });
+  if (rpcErr || !numberRpc) throw new Error("NUMBERING_FAILED");
+
+  const { data: inv, error: invErr } = await supabase
+    .from("invoices")
+    .insert({
+      stable_id: session.stableId,
+      client_id: clientId,
+      number: numberRpc as string,
+      subtotal: amt,
+      vat_rate: 0,
+      vat_amount: 0,
+      total: amt,
+      status: "issued",
+    })
+    .select("id")
+    .single();
+  if (invErr || !inv) throw invErr ?? new Error("INSERT_FAILED");
+
+  const invoiceId = (inv as { id: string }).id;
+  await supabase.from("invoice_items").insert({
+    invoice_id: invoiceId,
+    description: desc,
+    quantity: 1,
+    unit_price: amt,
+    line_total: amt,
+    position: 0,
+  });
+  return { id: invoiceId };
+}
+
 /** Read-only preview across all billable sources. */
 export async function previewMonthlyInvoices(periodStart: string, periodEnd: string): Promise<GeneratePreview> {
   await getSession();

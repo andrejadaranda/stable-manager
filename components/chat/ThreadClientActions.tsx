@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import type { ThreadClientContext } from "@/services/conversationContext";
 import {
   sendInvoiceFromChatAction,
+  sendCustomInvoiceFromChatAction,
   sendReminderFromChatAction,
   completeReminderFromChatAction,
   deleteReminderFromChatAction,
@@ -31,6 +32,9 @@ export function ThreadClientActions({ ctx }: { ctx: ThreadClientContext }) {
   const [flash, setFlash] = useState<ChatActionState | null>(null);
   const [reminderOpen, setReminderOpen] = useState(false);
   const [reminderText, setReminderText] = useState("");
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [customDesc, setCustomDesc] = useState("");
+  const [customAmount, setCustomAmount] = useState("");
 
   const requestCount = ctx.lessonRequests.length + ctx.careRequests.length;
 
@@ -53,13 +57,23 @@ export function ThreadClientActions({ ctx }: { ctx: ThreadClientContext }) {
     });
   }
 
+  function sendCustomInvoice() {
+    const amt = Number(customAmount);
+    if (!customDesc.trim() || !Number.isFinite(amt) || amt <= 0) return;
+    run(async () => {
+      const res = await sendCustomInvoiceFromChatAction(ctx.clientId, customDesc.trim(), amt);
+      if (res.ok) { setCustomDesc(""); setCustomAmount(""); setInvoiceOpen(false); }
+      return res;
+    });
+  }
+
   return (
     <div className="px-4 md:px-6 py-2.5 border-b border-ink-100 bg-ink-50/40 flex flex-col gap-2.5">
       {/* Action bar */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => run(() => sendInvoiceFromChatAction(ctx.clientId))}
+          onClick={() => { setInvoiceOpen((v) => !v); setReminderOpen(false); setFlash(null); }}
           disabled={pending}
           className="h-8 px-3 rounded-lg text-[13px] font-medium bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
         >
@@ -79,6 +93,46 @@ export function ThreadClientActions({ ctx }: { ctx: ThreadClientContext }) {
           </span>
         )}
       </div>
+
+      {invoiceOpen && (
+        <div className="flex flex-col gap-2 rounded-lg bg-ink-50/40 p-2.5">
+          <button
+            type="button"
+            onClick={() => run(() => sendInvoiceFromChatAction(ctx.clientId))}
+            disabled={pending}
+            className="h-8 self-start px-3 rounded-lg text-[13px] font-medium bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            From unpaid items
+          </button>
+          <div className="flex items-end gap-2">
+            <input
+              value={customDesc}
+              onChange={(e) => setCustomDesc(e.target.value)}
+              placeholder="Custom service (e.g. Extra lesson)"
+              maxLength={120}
+              className="flex-1 min-w-0 rounded-lg border border-ink-200 bg-white text-[16px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-600/30 focus:border-brand-600"
+            />
+            <input
+              value={customAmount}
+              onChange={(e) => setCustomAmount(e.target.value)}
+              type="number" min="0" step="0.01"
+              placeholder="€"
+              className="w-20 shrink-0 rounded-lg border border-ink-200 bg-white text-[16px] px-2 py-2 tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-600/30 focus:border-brand-600"
+            />
+            <button
+              type="button"
+              onClick={sendCustomInvoice}
+              disabled={pending || !customDesc.trim() || !customAmount}
+              className="h-9 px-3 rounded-lg text-[13px] font-medium bg-ink-900 text-white hover:bg-ink-800 disabled:opacity-50"
+            >
+              Send
+            </button>
+          </div>
+          <p className="text-[11px] text-ink-500">
+            "From unpaid items" bills everything outstanding. Or type a one-off service + price.
+          </p>
+        </div>
+      )}
 
       {reminderOpen && (
         <div className="flex flex-col gap-2">

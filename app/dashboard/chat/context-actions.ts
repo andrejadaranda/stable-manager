@@ -4,7 +4,7 @@
 // the hub: send an invoice into the conversation, or send the person a
 // reminder, without leaving Messages.
 
-import { generateInvoiceForClient, sendInvoiceToClient } from "@/services/invoices";
+import { generateInvoiceForClient, createCustomInvoiceForClient, sendInvoiceToClient } from "@/services/invoices";
 import { createReminder, setReminderCompleted, deleteReminder } from "@/services/reminders";
 import { respondToCareRequest } from "@/services/careRequests";
 import { declineLessonRequest } from "@/services/lessonRequests";
@@ -20,6 +20,25 @@ export async function sendInvoiceFromChatAction(clientId: string): Promise<ChatA
     if (!id) {
       return { ok: false, message: "Nothing outstanding to invoice right now." };
     }
+    await sendInvoiceToClient(id, { email: false, chat: true });
+    return { ok: true, message: "Invoice sent to this conversation." };
+  } catch (err) {
+    return { ok: false, message: toFriendlyError(err).message };
+  }
+}
+
+/** Create a one-line custom invoice (service + amount) and post it into the
+ *  conversation. */
+export async function sendCustomInvoiceFromChatAction(
+  clientId: string,
+  description: string,
+  amount: number,
+): Promise<ChatActionState> {
+  if (!description.trim()) return { ok: false, message: "Add a short description." };
+  const amt = Number(amount);
+  if (!Number.isFinite(amt) || amt <= 0) return { ok: false, message: "Enter an amount over €0." };
+  try {
+    const { id } = await createCustomInvoiceForClient(clientId, description, amt);
     await sendInvoiceToClient(id, { email: false, chat: true });
     return { ok: true, message: "Invoice sent to this conversation." };
   } catch (err) {
