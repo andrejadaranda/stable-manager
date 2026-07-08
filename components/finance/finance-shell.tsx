@@ -50,14 +50,14 @@ export function FinanceShell({ data }: { data: MonthFinancials }) {
     <div className="flex flex-col gap-6">
       {/* Hero ------------------------------------------------- */}
       <div className="flex items-end justify-between flex-wrap gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 flex flex-col items-start">
           <Link
             href="/dashboard"
             className="text-[12px] text-ink-500 hover:text-ink-900 inline-flex items-center gap-1"
           >
             ← Dashboard
           </Link>
-          <h1 className="font-display text-3xl md:text-4xl text-navy-900 leading-none mt-2 inline-flex items-center gap-2">
+          <h1 className="font-display text-3xl md:text-4xl text-navy-900 leading-none mt-2 flex items-center gap-2">
             Finance
             <HelpHint
               title="How Finance is calculated"
