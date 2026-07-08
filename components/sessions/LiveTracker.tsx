@@ -82,35 +82,53 @@ async function startGeoWatch(
   }
 
   if (isNative) {
+    // Native iOS: use @capacitor-community/background-geolocation so the ride
+    // keeps recording with the app backgrounded AND the phone locked — a real
+    // CLLocationManager with allowsBackgroundLocationUpdates. Supplying
+    // backgroundMessage/backgroundTitle is what flips iOS into persistent
+    // background-location mode; requestPermissions:true drives the "Always"
+    // authorization prompt. (Stock @capacitor/geolocation only fires in the
+    // foreground — it can't power a locked-screen ride tracker.)
     // @ts-ignore optional native dependency (resolved on device/Vercel)
-    const { Geolocation } = await import("@capacitor/geolocation");
+    const { BackgroundGeolocation } = await import("@capacitor-community/background-geolocation");
+    let watcherId: string | null = null;
     try {
-      const perm = await Geolocation.requestPermissions();
-      if (perm?.location === "denied") { onErr("denied"); return { clear: () => {} }; }
-    } catch { /* proceed — watchPosition will surface a real error */ }
-    let watchId: string | null = null;
-    try {
-      watchId = await Geolocation.watchPosition(
-        { enableHighAccuracy: true, timeout: 15_000, maximumAge: 1_000 },
-        (position: any, err: any) => {
-          if (err) { onErr("unavailable"); return; }
-          if (!position) return;
-          const c = position.coords ?? {};
+      watcherId = await BackgroundGeolocation.addWatcher(
+        {
+          backgroundTitle: "Longrein is recording your ride",
+          backgroundMessage: "Distance and route keep tracking while your screen is off.",
+          requestPermissions: true,
+          stale: false,
+          distanceFilter: MIN_DELTA_M,
+        },
+        (location: any, error: any) => {
+          if (error) {
+            // NOT_AUTHORIZED → location denied/restricted; open Settings.
+            if (error.code === "NOT_AUTHORIZED") onErr("denied");
+            else onErr("unavailable");
+            return;
+          }
+          if (!location) return;
           onFix({
-            latitude:  c.latitude,
-            longitude: c.longitude,
-            altitude:  c.altitude ?? null,
-            accuracy:  c.accuracy ?? null,
-            speed:     c.speed ?? null,
-            heading:   c.heading ?? null,
-            timestamp: position.timestamp ?? Date.now(),
+            latitude:  location.latitude,
+            longitude: location.longitude,
+            altitude:  location.altitude ?? null,
+            accuracy:  location.accuracy ?? null,
+            speed:     location.speed ?? null,      // m/s
+            heading:   location.bearing ?? null,    // plugin field is "bearing"
+            timestamp: location.time ?? Date.now(),
           });
         },
       );
     } catch {
       onErr("unavailable");
     }
-    return { clear: () => { try { if (watchId) Geolocation.clearWatch({ id: watchId }); } catch { /* noop */ } } };
+    return {
+      clear: () => {
+        try { if (watcherId) BackgroundGeolocation.removeWatcher({ id: watcherId }); }
+        catch { /* noop */ }
+      },
+    };
   }
 
   // ---- Web fallback ----
