@@ -39,6 +39,16 @@ import {
 
 type HorseOpt = { id: string; name: string };
 
+// Short descriptor per session type for the setup tiles.
+const TYPE_DESC: Record<string, string> = {
+  hack:       "Outdoor · GPS",
+  flat:       "Arena · flatwork",
+  jumping:    "Arena · jumping",
+  lunging:    "Groundwork",
+  groundwork: "In-hand",
+  other:      "Anything",
+};
+
 type Phase = "idle" | "starting" | "tracking" | "paused" | "stopping";
 
 type LocalPoint = TrackPointInput & { t: number };
@@ -430,68 +440,110 @@ export function LiveTracker({
   // ============================== RENDER ==============================
 
   if (phase === "idle") {
+    const HORSE_TONE = [
+      "bg-brand-100 text-brand-700",
+      "bg-saddle-100 text-saddle-700",
+      "bg-sky-100 text-sky-700",
+    ];
     return (
-      <div className="max-w-md mx-auto">
-        <div className="bg-white rounded-2xl border border-ink-100 shadow-soft p-6 space-y-5">
-          <div>
-            <h2 className="font-display text-2xl text-navy-700 leading-tight">
-              Start a live ride
-            </h2>
-            <p className="text-sm text-ink-500 mt-1.5 leading-relaxed">
-              Track distance, route and speed in real time. Keep your phone awake — true background tracking ships with the iOS app.
-            </p>
+      <div className="max-w-md mx-auto flex flex-col gap-5">
+        {/* Route hero */}
+        <div className="relative h-[180px] rounded-3xl overflow-hidden">
+          <svg viewBox="0 0 390 190" preserveAspectRatio="xMidYMid slice" className="w-full h-full block">
+            <defs>
+              <radialGradient id="srg" cx="40%" cy="20%" r="90%">
+                <stop offset="0%" stopColor="#22402f" />
+                <stop offset="100%" stopColor="#0e1a13" />
+              </radialGradient>
+            </defs>
+            <rect width="390" height="190" fill="url(#srg)" />
+            <path d="M-10 120 Q120 90 220 130 T410 120" stroke="#1f3b2c" strokeWidth="16" fill="none" opacity=".6" />
+            <path d="M40 170 C90 120 80 90 140 80 C210 68 190 40 260 34 L320 26" fill="none" stroke="#e4c7a1" strokeWidth="5" strokeLinecap="round" strokeDasharray="1 12" opacity=".85" />
+            <circle cx="40" cy="170" r="7" fill="#fff" stroke="#43825f" strokeWidth="4" />
+          </svg>
+          <div className="absolute left-5 bottom-4 text-brand-50">
+            <h1 className="font-serif font-semibold text-[28px] leading-none">Start a live ride</h1>
+            <p className="text-[13px] mt-1.5 text-brand-50/85">Track route, distance &amp; speed in real time.</p>
           </div>
-
-          <label className="block">
-            <span className="block text-xs font-medium text-ink-700 mb-1.5">Horse <span className="text-ink-400 font-normal">(optional)</span></span>
-            <select
-              value={horseId}
-              onChange={(e) => setHorseId(e.target.value)}
-              className="w-full h-11 px-3 rounded-xl border border-ink-200 bg-white text-sm text-ink-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-            >
-              <option value="">— pick later —</option>
-              {horses.map((h) => (
-                <option key={h.id} value={h.id}>{h.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className="block text-xs font-medium text-ink-700 mb-1.5">Type</span>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as SessionType)}
-              className="w-full h-11 px-3 rounded-xl border border-ink-200 bg-white text-sm text-ink-900 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-            >
-              {SESSION_TYPES.map((t) => (
-                <option key={t} value={t}>{SESSION_TYPE_LABEL[t]}</option>
-              ))}
-            </select>
-          </label>
-
-          {error && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={onStart}
-            className="
-              w-full h-14 rounded-2xl text-base font-semibold text-white
-              bg-brand-600 hover:bg-brand-700 active:bg-brand-800
-              shadow-md transition-colors
-              focus:outline-none focus:ring-4 focus:ring-brand-500/30
-            "
-          >
-            ▶  Start ride
-          </button>
-
-          <p className="text-[11.5px] text-ink-400 text-center leading-relaxed">
-            Allow location access when prompted. Works best outside.
-          </p>
         </div>
+
+        {/* Horse picker */}
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-400 mb-2">
+            Horse <span className="text-ink-300 normal-case font-medium">· optional</span>
+          </div>
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            {horses.map((h, i) => {
+              const on = horseId === h.id;
+              return (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => setHorseId(on ? "" : h.id)}
+                  className="shrink-0 w-[76px] flex flex-col items-center gap-1.5"
+                >
+                  <span className={`w-[60px] h-[60px] rounded-[20px] inline-flex items-center justify-center text-[22px] font-bold border-2 transition-all ${
+                    on ? "border-brand-600 bg-brand-50 text-brand-700 shadow-[0_0_0_3px_rgba(45,84,64,0.14)]" : `border-transparent shadow-soft ${HORSE_TONE[i % HORSE_TONE.length]}`
+                  }`}>
+                    {(h.name[0] ?? "?").toUpperCase()}
+                  </span>
+                  <span className={`text-[12.5px] font-semibold whitespace-nowrap ${on ? "text-brand-700" : "text-ink-600"}`}>{h.name}</span>
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setHorseId("")}
+              className="shrink-0 w-[76px] flex flex-col items-center gap-1.5"
+            >
+              <span className={`w-[60px] h-[60px] rounded-[20px] inline-flex items-center justify-center border-2 border-dashed ${horseId === "" ? "border-brand-500 text-brand-600 bg-brand-50" : "border-ink-200 text-ink-400 bg-surface-sunken"}`}>+</span>
+              <span className="text-[12.5px] font-semibold text-ink-500 whitespace-nowrap">Later</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Type grid */}
+        <div>
+          <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-400 mb-2">Session type</div>
+          <div className="grid grid-cols-2 gap-2.5">
+            {SESSION_TYPES.map((t) => {
+              const on = type === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setType(t)}
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl border-[1.5px] text-left transition-all ${
+                    on ? "border-brand-600 bg-brand-50 shadow-[0_0_0_3px_rgba(45,84,64,0.12)]" : "border-ink-200 bg-white hover:bg-ink-50"
+                  }`}
+                >
+                  <span className={`w-10 h-10 rounded-xl shrink-0 inline-flex items-center justify-center font-bold ${on ? "bg-brand-100 text-brand-700" : "bg-surface-sunken text-ink-500"}`}>
+                    {SESSION_TYPE_LABEL[t][0]}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[14.5px] font-bold text-ink-900 truncate">{SESSION_TYPE_LABEL[t]}</span>
+                    <span className="block text-[11.5px] text-ink-500">{TYPE_DESC[t] ?? "Session"}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {error && (
+          <div className="text-sm text-alert-700 bg-alert-100 rounded-xl px-3 py-2.5">{error}</div>
+        )}
+
+        <button
+          type="button"
+          onClick={onStart}
+          className="w-full h-[60px] rounded-[18px] text-white font-bold text-[17px] inline-flex items-center justify-center gap-2.5 bg-gradient-to-br from-brand-600 to-brand-800 shadow-lift active:scale-[0.99] transition-transform"
+        >
+          ▶ Start ride
+        </button>
+        <p className="text-[12.5px] text-ink-400 text-center -mt-1">
+          Allow location when asked · works best outside.
+        </p>
       </div>
     );
   }
