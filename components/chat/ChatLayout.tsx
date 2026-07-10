@@ -60,6 +60,12 @@ export function ChatLayout({
   }, [activeThreadId]);
 
   function selectThread(id: string) {
+    // Open the message panel immediately. We must NOT rely only on the
+    // activeThreadId effect: when the tapped thread is ALREADY the active
+    // one (the page defaults to threads[0]), the URL/id doesn't change, the
+    // effect never re-fires, and on mobile the panel would stay hidden —
+    // so tapping a conversation appeared to do nothing.
+    setMobilePanel("thread");
     const params = new URLSearchParams(searchParams.toString());
     params.set("thread", id);
     router.push(`/dashboard/chat?${params.toString()}`, { scroll: false });
