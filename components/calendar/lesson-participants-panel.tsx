@@ -80,11 +80,12 @@ export function LessonParticipantsPanel({
   const [addHorseId,    setAddHorseId]    = useState("");
   const [addParentName, setAddParentName] = useState("");
   const [addParentPhone,setAddParentPhone]= useState("");
+  const [addParentRelation, setAddParentRelation] = useState("mother");
   const [addPrice,      setAddPrice]      = useState("");
 
   function resetAddForm() {
     setAddClientId(""); setAddChildName(""); setAddHorseId("");
-    setAddParentName(""); setAddParentPhone(""); setAddPrice("");
+    setAddParentName(""); setAddParentPhone(""); setAddParentRelation("mother"); setAddPrice("");
   }
 
   // Enter inside an add-rider field must NOT bubble up to submit the outer
@@ -108,6 +109,7 @@ export function LessonParticipantsPanel({
     if (addHorseId) fd.set("horse_id", addHorseId);
     if (addParentName.trim())  fd.set("parent_name", addParentName.trim());
     if (addParentPhone.trim()) fd.set("parent_phone", addParentPhone.trim());
+    if (addMode === "new" && addParentName.trim()) fd.set("parent_relation", addParentRelation);
     if (addPrice) fd.set("price", addPrice);
     const result = await addParticipantAction({ error: null, success: false }, fd);
     if (result.error) { setError(result.error); return; }
@@ -431,6 +433,18 @@ export function LessonParticipantsPanel({
                   maxLength={40}
                   className="h-8 rounded-md border border-ink-200 bg-white text-[16px] px-1.5"
                 />
+              </label>
+              <label className="flex flex-col gap-1 text-[11px] text-ink-600">
+                This contact is the child&apos;s
+                <select
+                  value={addParentRelation}
+                  onChange={(e) => setAddParentRelation(e.target.value)}
+                  className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
+                >
+                  <option value="mother">Mother</option>
+                  <option value="father">Father</option>
+                  <option value="guardian">Guardian</option>
+                </select>
               </label>
             </div>
           )}

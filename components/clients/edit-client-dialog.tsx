@@ -120,6 +120,41 @@ function EditClientDialog({
           />
         </label>
 
+        {/* Parent / guardian — contact stored ON the child (the parent is
+            NOT a separate client). Used for minor riders in group lessons. */}
+        {(() => {
+          const g = client as typeof client & {
+            guardian_name?: string | null;
+            guardian_phone?: string | null;
+            guardian_relation?: string | null;
+          };
+          return (
+            <fieldset className="border-t border-neutral-200 pt-3.5 mt-1 flex flex-col gap-2.5">
+              <legend className="text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-500 px-1">
+                Parent / guardian (for a child)
+              </legend>
+              <p className="text-[11px] text-neutral-500 -mt-1">
+                The parent&apos;s contact, stored on this child. We don&apos;t create the parent as a separate client.
+              </p>
+              <Field label="Parent name" name="guardian_name" type="text" defaultValue={g.guardian_name ?? ""} placeholder="e.g. Margarita Čekanauskaitė" />
+              <Field label="Parent phone" name="guardian_phone" type="tel" defaultValue={g.guardian_phone ?? ""} placeholder="+370 6…" />
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="text-neutral-700 font-medium">This contact is the child&apos;s</span>
+                <select
+                  name="guardian_relation"
+                  defaultValue={g.guardian_relation ?? ""}
+                  className="border border-neutral-300 rounded-md px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">—</option>
+                  <option value="mother">Mother</option>
+                  <option value="father">Father</option>
+                  <option value="guardian">Guardian</option>
+                </select>
+              </label>
+            </fieldset>
+          );
+        })()}
+
         {/* Emergency contact — for accidents during a lesson */}
         <fieldset className="border-t border-neutral-200 pt-3.5 mt-1 flex flex-col gap-2.5">
           <legend className="text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-500 px-1">

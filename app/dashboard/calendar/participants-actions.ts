@@ -40,12 +40,14 @@ export async function addParticipantAction(
   if (!clientId && newChildName) {
     const parentName  = String(fd.get("parent_name")  ?? "").trim();
     const parentPhone = String(fd.get("parent_phone") ?? "").trim();
+    const parentRelation = String(fd.get("parent_relation") ?? "").trim();
     try {
       const r = await addNewChildToLesson(lessonId, newChildName, {
         horseId: horseId || null,
         price,
         guardianName: parentName || null,
         guardianPhone: parentPhone || null,
+        guardianRelation: parentRelation || null,
       });
       if (!r.ok) {
         if (r.reason === "HORSE_DOUBLE_BOOKED") return { ...initial, error: "That horse is already booked at this time — pick another or leave it blank." };

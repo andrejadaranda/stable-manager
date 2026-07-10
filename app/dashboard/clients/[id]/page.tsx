@@ -123,7 +123,7 @@ export default async function ClientDetailPage({
             </div>
             <div className="flex-1 min-w-0 mt-3 md:mt-0 md:pb-1 text-center md:text-left">
               <h1
-                className="text-2xl md:text-[28px] leading-none text-white truncate"
+                className="text-2xl md:text-[28px] leading-none text-ink-900 truncate"
                 style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: 500, letterSpacing: "-0.01em" }}
               >
                 {client.full_name}
@@ -213,14 +213,18 @@ export default async function ClientDetailPage({
         const g = client as typeof client & {
           guardian_name?: string | null;
           guardian_phone?: string | null;
-          guardian_client_id?: string | null;
+          guardian_relation?: string | null;
           is_minor?: boolean | null;
         };
-        if (!g.guardian_name && !g.guardian_phone && !g.guardian_client_id) return null;
+        if (!g.guardian_name && !g.guardian_phone) return null;
+        const relLabel = g.guardian_relation === "mother" ? "Mother"
+          : g.guardian_relation === "father" ? "Father"
+          : g.guardian_relation === "guardian" ? "Guardian"
+          : "Parent / guardian";
         return (
           <section className="bg-brand-50/40 border border-brand-200 rounded-2xl p-5">
             <h2 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-brand-700">
-              Parent / guardian
+              {relLabel} · contact
             </h2>
             <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
               {g.guardian_name && (
@@ -234,15 +238,10 @@ export default async function ClientDetailPage({
                   {g.guardian_phone}
                 </a>
               )}
-              {g.guardian_client_id && (
-                <a
-                  href={`/dashboard/clients/${g.guardian_client_id}`}
-                  className="text-[12px] text-brand-700 underline underline-offset-2"
-                >
-                  Open parent profile →
-                </a>
-              )}
             </div>
+            <p className="mt-1.5 text-[11px] text-ink-500">
+              This is the child&apos;s contact — the parent is not a separate client.
+            </p>
           </section>
         );
       })()}

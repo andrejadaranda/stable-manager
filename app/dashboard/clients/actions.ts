@@ -153,6 +153,10 @@ export async function updateClientAction(
   const ecName     = String(formData.get("emergency_contact_name") ?? "").trim();
   const ecPhone    = String(formData.get("emergency_contact_phone") ?? "").trim();
   const ecRelation = String(formData.get("emergency_contact_relation") ?? "").trim();
+  const gName      = String(formData.get("guardian_name") ?? "").trim();
+  const gPhone     = String(formData.get("guardian_phone") ?? "").trim();
+  const gRelRaw    = String(formData.get("guardian_relation") ?? "").trim();
+  const gRelation  = ["mother", "father", "guardian"].includes(gRelRaw) ? gRelRaw : "";
   const horseOwnerOnly = formData.get("is_horse_owner_only") === "true";
   // Reminder preference is optional on update — only included when the
   // edit form actually submits it, so legacy forms still work.
@@ -204,6 +208,9 @@ export async function updateClientAction(
       emergencyContactName:     ecName     === "" ? null : ecName,
       emergencyContactPhone:    ecPhone    === "" ? null : ecPhone,
       emergencyContactRelation: ecRelation === "" ? null : ecRelation,
+      guardianName:     gName     === "" ? null : gName,
+      guardianPhone:    gPhone    === "" ? null : gPhone,
+      guardianRelation: gRelation === "" ? null : gRelation,
       isHorseOwnerOnly:         horseOwnerOnly,
       reminderPref,
     });

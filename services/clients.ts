@@ -412,6 +412,9 @@ export type UpdateClientInput = {
   emergencyContactName?:     string | null;
   emergencyContactPhone?:    string | null;
   emergencyContactRelation?: string | null;
+  guardianName?:             string | null;
+  guardianPhone?:            string | null;
+  guardianRelation?:         string | null;
   isHorseOwnerOnly?:         boolean;
   reminderPref?:             ReminderPref;
 };
@@ -431,6 +434,9 @@ export async function updateClient(id: string, input: UpdateClientInput) {
   if (input.emergencyContactName     !== undefined) update.emergency_contact_name     = input.emergencyContactName;
   if (input.emergencyContactPhone    !== undefined) update.emergency_contact_phone    = input.emergencyContactPhone;
   if (input.emergencyContactRelation !== undefined) update.emergency_contact_relation = input.emergencyContactRelation;
+  if (input.guardianName     !== undefined) update.guardian_name     = input.guardianName;
+  if (input.guardianPhone    !== undefined) update.guardian_phone    = input.guardianPhone;
+  if (input.guardianRelation !== undefined) update.guardian_relation = input.guardianRelation;
   // is_horse_owner_only is now derived from horses.owner_client_id and not
   // stored on clients — accept the flag for API compatibility but drop it.
   if (input.reminderPref             !== undefined) update.reminder_pref              = input.reminderPref;

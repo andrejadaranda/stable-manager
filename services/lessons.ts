@@ -289,6 +289,7 @@ export async function addNewChildToLesson(
     price?: number;
     guardianName?: string | null;
     guardianPhone?: string | null;
+    guardianRelation?: string | null;
   } = {},
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const session = await getSession();
@@ -308,51 +309,24 @@ export async function addNewChildToLesson(
   const price = Math.max(0, Number(opts.price) || 0);
   const gName  = (opts.guardianName  ?? "").trim();
   const gPhone = (opts.guardianPhone ?? "").trim();
+  const gRel   = (opts.guardianRelation ?? "").trim();
+  const relation = gRel === "mother" || gRel === "father" || gRel === "guardian" ? gRel : null;
 
-  // Resolve the guardian PARENT as a real client. If a parent name was
-  // given, dedupe-by-phone or create a distinct parent client and link the
-  // child to THAT parent — so children of DIFFERENT parents in one group
-  // don't all collapse under the lesson's payer, and each parent is an
-  // openable client with their own contacts. With no parent name we fall
-  // back to the lesson's paying client (the single-family case).
-  let guardianId: string = (lesson as { client_id: string }).client_id;
-  if (gName) {
-    const phoneNorm = gPhone.replace(/\s+/g, "");
-    let parentId: string | null = null;
-    if (phoneNorm) {
-      const { data: existingParent } = await supabase
-        .from("clients")
-        .select("id")
-        .eq("phone", phoneNorm)
-        .maybeSingle();
-      if (existingParent) parentId = (existingParent as { id: string }).id;
-    }
-    if (!parentId) {
-      const { data: parent, error: pErr } = await supabase
-        .from("clients")
-        .insert({
-          stable_id: session.stableId,
-          full_name: gName,
-          phone:     phoneNorm || null,
-          active:    true,
-        })
-        .select("id")
-        .single();
-      if (pErr || !parent) return { ok: false, reason: pErr?.message ?? "PARENT_CREATE_FAILED" };
-      parentId = (parent as { id: string }).id;
-    }
-    guardianId = parentId;
-  }
-
+  // The PARENT is NOT a client — parents are stored as contact data on the
+  // child (guardian_name/phone/relation), like an emergency contact. We do
+  // NOT create a separate parent client (that cluttered the roster and
+  // collapsed families). guardian_client_id stays null; the lesson panel
+  // groups children by the entered parent name/phone.
   const { data: child, error: cErr } = await supabase
     .from("clients")
     .insert({
       stable_id:            session.stableId,
       full_name:            name,
       is_minor:             true,
-      guardian_client_id:   guardianId,
+      guardian_client_id:   null,
       guardian_name:        gName || null,
       guardian_phone:       gPhone || null,
+      guardian_relation:    relation,
       default_lesson_price: price || null,
       active:               true,
     })
@@ -360,12 +334,18 @@ export async function addNewChildToLesson(
     .single();
   if (cErr || !child) return { ok: false, reason: cErr?.message ?? "CHILD_CREATE_FAILED" };
 
-  const result = await addLessonParticipant(lessonId, (child as { id: string }).id, opts.horseId ?? null);
-  if (!result.ok) return result;
+  const childId = (child as { id: string }).id;
+  const result = await addLessonParticipant(lessonId, childId, opts.horseId ?? null);
+  if (!result.ok) {
+    // Roll back the just-created child so a failed attach (e.g. horse
+    // conflict) doesn't leave an orphan duplicate in the roster.
+    await supabase.from("clients").delete().eq("id", childId);
+    return result;
+  }
 
   if (price > 0) {
     try {
-      await setLessonParticipantPrice(lessonId, (child as { id: string }).id, price);
+      await setLessonParticipantPrice(lessonId, childId, price);
     } catch {
       /* price recompute is non-fatal — the child is already added */
     }
@@ -1035,6 +1015,16 @@ export async function getClientLessons(
   const supabase = createSupabaseServerClient();
   const now = new Date().toISOString();
 
+  // A client can appear on a lesson two ways: as the booking client
+  // (lessons.client_id) OR as a group-lesson participant (a child rider).
+  // Include both so a child's profile shows the group lessons they're in.
+  const { data: partRows } = await supabase
+    .from("lesson_participants")
+    .select("lesson_id")
+    .eq("client_id", clientId)
+    .eq("status", "confirmed");
+  const partIds = Array.from(new Set((partRows ?? []).map((r) => (r as { lesson_id: string }).lesson_id)));
+
   let q = supabase
     .from("lessons")
     .select(
@@ -1043,8 +1033,11 @@ export async function getClientLessons(
       horse:horses!lessons_horse_id_fkey(id, name),
       trainer:profiles(id, full_name)
       `,
-    )
-    .eq("client_id", clientId);
+    );
+
+  q = partIds.length > 0
+    ? q.or(`client_id.eq.${clientId},id.in.(${partIds.join(",")})`)
+    : q.eq("client_id", clientId);
 
   if (opts.direction === "upcoming") {
     q = q.gte("starts_at", now).order("starts_at", { ascending: true });
