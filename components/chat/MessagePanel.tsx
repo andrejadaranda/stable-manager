@@ -144,7 +144,7 @@ export function MessagePanel({
 
   return (
     <>
-      <div ref={scrollerRef} className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-4">
+      <div ref={scrollerRef} className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-4 bg-gradient-to-b from-surface to-ink-50/40">
         {messages.length === 0 && (
           <div className="h-full flex items-center justify-center text-sm text-ink-500">
             No messages yet. Send the first one.
@@ -160,10 +160,10 @@ export function MessagePanel({
               >
                 <div
                   className={`
-                    px-3.5 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words
+                    px-4 py-2.5 rounded-[20px] text-[15px] leading-snug whitespace-pre-wrap break-words
                     ${mine
-                      ? "bg-brand-600 text-white rounded-br-md"
-                      : "bg-ink-100/80 text-ink-900 rounded-bl-md"
+                      ? "bg-brand-700 text-brand-50 rounded-br-md"
+                      : "bg-white text-ink-800 border border-ink-100 shadow-soft rounded-bl-md"
                     }
                   `}
                 >

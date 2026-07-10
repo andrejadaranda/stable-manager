@@ -212,10 +212,16 @@ function threadSubtitle(t: ChatThreadRow): string | null {
   return roles || null;
 }
 
+const ROLE_AVATAR: Record<string, string> = {
+  client:   "bg-brand-100 text-brand-700",
+  employee: "bg-navy-100 text-navy-700",
+  owner:    "bg-saddle-100 text-saddle-700",
+};
+
 function ThreadAvatar({ thread, sessionUserId }: { thread: ChatThreadRow; sessionUserId?: string }) {
   if (thread.type === "stable_general") {
     return (
-      <span className="w-9 h-9 shrink-0 rounded-full bg-brand-600 text-white inline-flex items-center justify-center text-xs font-semibold">
+      <span className="w-11 h-11 shrink-0 rounded-[14px] bg-brand-600 text-white inline-flex items-center justify-center text-base font-bold">
         #
       </span>
     );
@@ -224,8 +230,9 @@ function ThreadAvatar({ thread, sessionUserId }: { thread: ChatThreadRow; sessio
     (sessionUserId && thread.participants.find((p) => p.id !== sessionUserId)) ||
     thread.participants[0];
   const initial = (other?.full_name ?? "?")[0]?.toUpperCase() ?? "?";
+  const tone = ROLE_AVATAR[other?.role ?? ""] ?? "bg-ink-100 text-ink-700";
   return (
-    <span className="w-9 h-9 shrink-0 rounded-full bg-ink-900 text-white inline-flex items-center justify-center text-xs font-semibold">
+    <span className={`w-11 h-11 shrink-0 rounded-[14px] inline-flex items-center justify-center text-base font-bold ${tone}`}>
       {initial}
     </span>
   );
