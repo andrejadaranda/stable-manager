@@ -398,9 +398,16 @@ function LessonList({
         const d = new Date(l.starts_at);
         const day = d.toLocaleDateString("en-GB", { day: "numeric", timeZone: "Europe/Vilnius" });
         const mon = d.toLocaleDateString("en-GB", { month: "short", timeZone: "Europe/Vilnius" });
+        // en-CA gives YYYY-MM-DD — the calendar's ?date= param opens that day.
+        const dayKey = d.toLocaleDateString("en-CA", { timeZone: "Europe/Vilnius" });
         const tag = STATUS_TAG[l.status] ?? STATUS_TAG.scheduled;
         return (
-          <div key={l.id} className="bg-white border border-ink-100 rounded-2xl shadow-soft px-4 py-3.5 flex items-center gap-3.5">
+          <Link
+            key={l.id}
+            href={`/dashboard/calendar?date=${dayKey}`}
+            className="bg-white border border-ink-100 rounded-2xl shadow-soft px-4 py-3.5 flex items-center gap-3.5 hover:border-brand-200 active:scale-[0.99] transition-all"
+            title="Open this day in the calendar"
+          >
             <div className="w-[52px] text-center shrink-0">
               <div className="font-mono font-semibold text-[22px] text-brand-700 leading-none">{day}</div>
               <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-400 mt-1">{mon}</div>
@@ -416,7 +423,7 @@ function LessonList({
             <span className={`shrink-0 text-[11px] font-bold uppercase tracking-[0.06em] px-2.5 py-1.5 rounded-full ${tag.cls}`}>
               {tag.label}
             </span>
-          </div>
+          </Link>
         );
       })}
     </div>
