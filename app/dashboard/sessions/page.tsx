@@ -53,6 +53,7 @@ export default async function SessionsPage() {
       topHorse:            null,
       currentStreakWeeks:  0,
       typeBreakdown:       [],
+      weekDaily:           [0, 0, 0, 0, 0, 0, 0],
     })),
   ]);
 

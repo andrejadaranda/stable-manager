@@ -11,7 +11,7 @@
 // which fans out two parallel queries.
 
 import { requireBusinessAccount } from "@/lib/auth/redirects";
-import { getMonthFinancials } from "@/services/finance";
+import { getMonthFinancials, getRevenueTrend } from "@/services/finance";
 import { ensureBoardingForCurrentMonth } from "@/services/boarding";
 import { FinanceShell } from "@/components/finance/finance-shell";
 
@@ -36,7 +36,10 @@ export default async function FinancePage({
     ? (searchParams.period as string)
     : currentYearMonth();
 
-  const data = await getMonthFinancials(period);
+  const [data, trend] = await Promise.all([
+    getMonthFinancials(period),
+    getRevenueTrend(period, 6),
+  ]);
 
-  return <FinanceShell data={data} />;
+  return <FinanceShell data={data} trend={trend} />;
 }

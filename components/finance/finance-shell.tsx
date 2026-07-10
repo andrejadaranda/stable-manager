@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { MonthFinancials } from "@/services/finance";
+import type { MonthFinancials, RevenueTrendPoint } from "@/services/finance";
 import { HelpHint } from "@/components/ui";
 
 // Pin the locale so server + client render the same string (an undefined
@@ -68,9 +68,13 @@ const CATEGORY_FILL: Record<string, string> = {
   other:         "bg-ink-400",
 };
 
-export function FinanceShell({ data }: { data: MonthFinancials }) {
+export function FinanceShell({ data, trend = [] }: { data: MonthFinancials; trend?: RevenueTrendPoint[] }) {
   const router = useRouter();
   const sp = useSearchParams();
+  const trendMax = Math.max(1, ...trend.map((t) => t.revenue));
+  const trendPrev = trend.length >= 2 ? trend[trend.length - 2].revenue : 0;
+  const trendNow = trend.length >= 1 ? trend[trend.length - 1].revenue : 0;
+  const trendPct = trendPrev > 0 ? Math.round(((trendNow - trendPrev) / trendPrev) * 100) : null;
 
   function changePeriod(p: string) {
     const params = new URLSearchParams(sp);
@@ -147,6 +151,41 @@ export function FinanceShell({ data }: { data: MonthFinancials }) {
           </div>
         </div>
       </div>
+
+      {/* Revenue trend --------------------------------------- */}
+      {trend.length > 0 && (
+        <section className="bg-white rounded-2xl shadow-soft p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-[17px] font-bold text-ink-900">Revenue trend</h2>
+              <p className="text-[13px] text-ink-500 mt-0.5">Last {trend.length} months</p>
+            </div>
+            {trendPct != null && (
+              <span className={`text-[12.5px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${trendPct >= 0 ? "text-brand-700 bg-brand-50" : "text-alert-700 bg-alert-100"}`}>
+                {trendPct >= 0 ? "▲" : "▼"} {Math.abs(trendPct)}%
+              </span>
+            )}
+          </div>
+          <div className="flex items-end gap-2.5 h-[150px] mt-5">
+            {trend.map((t, i) => {
+              const h = Math.round((t.revenue / trendMax) * 100);
+              const isNow = i === trend.length - 1;
+              return (
+                <div key={t.yearMonth} className="flex-1 flex flex-col items-center justify-end gap-2 h-full">
+                  <span className="font-mono text-[10px] text-ink-400 tabular-nums">
+                    {t.revenue >= 1000 ? `${(t.revenue / 1000).toFixed(1)}k` : Math.round(t.revenue)}
+                  </span>
+                  <div
+                    className={`w-full max-w-[34px] rounded-t-md ${isNow ? "bg-brand-700" : "bg-brand-300"}`}
+                    style={{ height: `${Math.max(h, 3)}%` }}
+                  />
+                  <span className="text-[11px] font-semibold text-ink-400">{t.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Revenue breakdown ----------------------------------- */}
       <Panel

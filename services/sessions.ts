@@ -203,6 +203,8 @@ export type SessionStats = {
   typeBreakdown: Array<{ type: SessionType; count: number; minutes: number }>;
   /** Number of consecutive ISO weeks with at least 1 session, ending now. */
   currentStreakWeeks: number;
+  /** Minutes ridden per day of the CURRENT calendar week, Mon..Sun (7 values). */
+  weekDaily: number[];
 };
 
 /** Aggregated stats for the staff sessions page (whole stable).
@@ -253,6 +255,13 @@ async function computeStats(
   const weekAgo  = now - 7  * 86_400_000;
   const monthAgo = now - 30 * 86_400_000;
 
+  // Monday 00:00 of the current calendar week → per-day minute buckets (Mon..Sun).
+  const monday = new Date();
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const mondayMs = monday.getTime();
+  const weekDaily = [0, 0, 0, 0, 0, 0, 0];
+
   let weekCount = 0,  weekMinutes  = 0;
   let monthCount = 0, monthMinutes = 0;
 
@@ -265,6 +274,9 @@ async function computeStats(
 
     if (t >= weekAgo)  { weekCount  += 1; weekMinutes  += d; }
     if (t >= monthAgo) { monthCount += 1; monthMinutes += d; }
+    if (t >= mondayMs) {
+      weekDaily[Math.min(6, Math.floor((t - mondayMs) / 86_400_000))] += d;
+    }
 
     if (r.horse) {
       const cur = horseCounts.get(r.horse.id);
@@ -321,11 +333,13 @@ async function computeStats(
     topHorse,
     typeBreakdown,
     currentStreakWeeks,
+    weekDaily,
   };
 }
 
 function emptyStats(): SessionStats {
   return {
+    weekDaily: [0, 0, 0, 0, 0, 0, 0],
     totalCount: 0,
     totalMinutes: 0,
     weekCount: 0,

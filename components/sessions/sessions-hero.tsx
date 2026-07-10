@@ -27,31 +27,18 @@ export function SessionsHero({
   title,
   subtitle,
   stats,
-  scope,
   action,
 }: {
   title: string;
   subtitle: string;
   stats: SessionStats;
-  scope: "stable" | "client";
+  /** Retained for call-site compatibility (stable vs client surfaces). */
+  scope?: "stable" | "client";
   action?: React.ReactNode;
 }) {
-  const isClient = scope === "client";
-
-  // Pick four KPIs that tell a story per scope.
-  const kpis = isClient
-    ? [
-        { label: "Rides",        value: String(stats.totalCount),                 sub: "All time" },
-        { label: "Hours saddled", value: fmtHours(stats.totalMinutes),            sub: "All time" },
-        { label: "Top horse",    value: stats.topHorse?.name ?? "—",              sub: stats.topHorse ? `${stats.topHorse.sessions} rides · last 90d` : "Pick one and ride" },
-        { label: "Streak",       value: stats.currentStreakWeeks > 0 ? `${stats.currentStreakWeeks} wk` : "—", sub: "Consecutive ride weeks" },
-      ]
-    : [
-        { label: "This week",    value: String(stats.weekCount),                  sub: `${fmtMin(stats.weekMinutes)}` },
-        { label: "This month",   value: String(stats.monthCount),                 sub: `${fmtMin(stats.monthMinutes)}` },
-        { label: "Top horse",    value: stats.topHorse?.name ?? "—",              sub: stats.topHorse ? `${stats.topHorse.sessions} sessions · last 90d` : "No rides yet" },
-        { label: "Total minutes", value: fmtHours(stats.totalMinutes),            sub: "Last 90 days" },
-      ];
+  const weekMax = Math.max(1, ...stats.weekDaily);
+  const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
+  const weekHours = (stats.weekMinutes / 60).toFixed(1);
 
   return (
     <div className="flex flex-col gap-5">
@@ -65,18 +52,44 @@ export function SessionsHero({
         {action}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {kpis.map((k) => (
-          <div key={k.label} className="bg-white rounded-2xl shadow-soft p-4">
-            <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-ink-500">
-              {k.label}
-            </p>
-            <p className="font-display text-2xl text-navy-900 tabular-nums mt-1 truncate">
-              {k.value}
-            </p>
-            <p className="text-[11.5px] text-ink-500 mt-0.5 truncate">{k.sub}</p>
-          </div>
-        ))}
+      {/* Weekly hero — saddle time + per-day bars */}
+      <div className="rounded-3xl p-5 text-brand-50 bg-gradient-to-br from-brand-700 to-brand-900 shadow-lift">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-saddle-200">This week</span>
+          <span className="text-[13px] font-semibold text-brand-100">
+            {stats.weekCount} {stats.weekCount === 1 ? "ride" : "rides"} · {fmtMin(stats.weekMinutes)}
+          </span>
+        </div>
+        <div className="font-mono font-semibold text-[40px] leading-none mt-3 tabular-nums">
+          {weekHours}
+          <span className="text-[15px] font-sans text-brand-200 ml-1.5">h in the saddle</span>
+        </div>
+        <div className="flex items-end gap-2 h-[64px] mt-4">
+          {stats.weekDaily.map((mins, i) => {
+            const h = Math.round((mins / weekMax) * 100);
+            const on = mins > 0;
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                <div
+                  className={`w-full max-w-[26px] rounded-md ${on ? "bg-brand-200" : "bg-white/15"}`}
+                  style={{ height: `${on ? Math.max(h, 12) : 12}%` }}
+                />
+                <span className="text-[10.5px] font-semibold text-brand-50/50">{DAY_LETTERS[i]}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mini stats */}
+      <div className="grid grid-cols-3 gap-3">
+        <MiniCell label="This month" value={String(stats.monthCount)} sub="rides logged" />
+        <MiniCell
+          label="Top horse"
+          value={stats.topHorse?.name ?? "—"}
+          sub={stats.topHorse ? `${stats.topHorse.sessions} rides · 90d` : "no rides yet"}
+        />
+        <MiniCell label="Total · 90d" value={fmtHours(stats.totalMinutes)} sub="saddle time" />
       </div>
 
       {/* Type breakdown chip row. Decorative — gives the rider/owner a
@@ -97,6 +110,16 @@ export function SessionsHero({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function MiniCell({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="bg-white rounded-2xl shadow-soft p-3.5 min-w-0">
+      <p className="text-[10px] uppercase tracking-[0.1em] font-bold text-ink-400 truncate">{label}</p>
+      <p className="font-display text-[22px] text-navy-900 tabular-nums mt-1 truncate">{value}</p>
+      <p className="text-[11px] text-ink-500 mt-0.5 truncate">{sub}</p>
     </div>
   );
 }

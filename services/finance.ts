@@ -374,3 +374,34 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
 function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
+
+export type RevenueTrendPoint = { yearMonth: string; label: string; revenue: number };
+
+/** Revenue total for the last `months` months up to and including
+ *  `anchorYearMonth`. Reuses getMonthFinancials so the trend matches the
+ *  hero's revenue figure exactly. Runs the months in parallel. */
+export async function getRevenueTrend(
+  anchorYearMonth: string,
+  months = 6,
+): Promise<RevenueTrendPoint[]> {
+  const [y, m] = anchorYearMonth.split("-").map(Number);
+  const targets = Array.from({ length: months }, (_, i) => {
+    const d = new Date(y, m - 1 - (months - 1 - i), 1);
+    return {
+      d,
+      ym: `${d.getFullYear()}-${pad(d.getMonth() + 1)}`,
+      label: d.toLocaleDateString("en-GB", { month: "short" }),
+    };
+  });
+  const results = await Promise.all(
+    targets.map(async (t) => {
+      try {
+        const fin = await getMonthFinancials(t.ym);
+        return { yearMonth: t.ym, label: t.label, revenue: fin.revenue.total };
+      } catch {
+        return { yearMonth: t.ym, label: t.label, revenue: 0 };
+      }
+    }),
+  );
+  return results;
+}
