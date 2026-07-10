@@ -9,7 +9,7 @@ import { listClientPackages } from "@/services/packages";
 import { listChargesForClient } from "@/services/boarding";
 import { listClientAgreements } from "@/services/agreements";
 import { listClientCharges } from "@/services/clientCharges";
-import { fmtDayLabel, fmtTime } from "@/lib/utils/dates";
+import { fmtTime } from "@/lib/utils/dates";
 import { EditClientButton } from "@/components/clients/edit-client-dialog";
 import { DeleteClientButton } from "@/components/clients/delete-client-button";
 import { PackagePanel } from "@/components/clients/package-panel";
@@ -104,83 +104,85 @@ export default async function ClientDetailPage({
 
       {/* Magazine hero */}
       <header className="relative bg-white rounded-3xl shadow-soft overflow-hidden">
-        <div
-          className="h-24 md:h-28 w-full"
-          style={{
-            background:
-              "linear-gradient(135deg, #1E2A47 0%, #2F406A 50%, #5C6B92 100%)",
-          }}
-          aria-hidden
-        />
-        <div className="px-5 md:px-7 pb-5 -mt-10 md:-mt-12">
-          <div className="flex flex-col md:flex-row md:items-end md:gap-5">
-            <div
-              className="self-center md:self-end shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl ring-4 ring-white shadow-soft inline-flex items-center justify-center"
-              style={{ background: "#F4663D" }}
-              aria-hidden
-            >
-              <span className="text-white text-3xl font-semibold">{initial}</span>
-            </div>
-            <div className="flex-1 min-w-0 mt-3 md:mt-0 md:pb-1 text-center md:text-left">
-              <h1
-                className="text-2xl md:text-[28px] leading-none text-ink-900 truncate"
-                style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: 500, letterSpacing: "-0.01em" }}
-              >
-                {client.full_name}
-              </h1>
-              <div className="flex flex-wrap items-center gap-2 mt-2 justify-center md:justify-start">
-                <span
-                  className={`inline-flex items-center gap-1.5 text-[11.5px] font-medium px-2.5 py-1 rounded-full ${
-                    client.active
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-ink-100 text-ink-700"
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${client.active ? "bg-emerald-500" : "bg-ink-400"}`} />
-                  {client.active ? "Active" : "Inactive"}
-                </span>
-                {isHorseOwner && (
-                  <span
-                    className="text-[11.5px] font-medium text-amber-800 px-2 py-0.5 rounded-md bg-amber-50 ring-1 ring-amber-200"
-                    title={isHorseOwnerOnly
-                      ? "Owns a horse boarded here — receives boarding charges and invoices."
-                      : "Takes lessons and owns a horse boarded here — billed for both."}
-                  >
-                    {isHorseOwnerOnly ? "Horse owner" : "Rider + owner"}
-                  </span>
-                )}
-                {client.skill_level && hasLessons && (
-                  <span className="text-[11.5px] text-ink-700 px-2 py-0.5 rounded-md bg-ink-100">
-                    {SKILL_LABEL[client.skill_level]}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 self-center md:self-end mt-3 md:mt-0 md:pb-1 flex-wrap">
-              {onboarding && (
-                <OnboardingInviteButton
-                  clientId={client.id}
-                  status={onboarding.status}
-                  sentAt={onboarding.sent_at}
-                  sentTo={onboarding.sent_to}
-                />
-              )}
-              {session.role === "owner" && (
-                <InviteToAppButton
-                  clientId={client.id}
-                  hasPortalAccount={Boolean(client.profile_id)}
-                  hasPendingInvite={hasPendingInvite}
-                  hasEmail={Boolean(client.email)}
-                />
-              )}
-              <EditClientButton client={client} />
-              {session.role === "owner" && <DeleteClientButton clientId={client.id} />}
+        {/* Green banner */}
+        <div className="h-32 w-full bg-gradient-to-br from-brand-700 to-brand-900" aria-hidden />
+
+        <div className="px-5 md:px-7 pb-6">
+          {/* Tan avatar, centered, overlapping the banner */}
+          <div className="-mt-16 flex justify-center">
+            <div className="w-[104px] h-[104px] rounded-[28px] ring-[5px] ring-surface shadow-lift inline-flex items-center justify-center bg-gradient-to-br from-saddle-400 to-saddle-600">
+              <span className="text-white text-[44px] font-bold leading-none">{initial}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-5">
-            <ContactTile label="Phone" value={client.phone} />
-            <ContactTile label="Email" value={client.email} />
+          <h1 className="font-serif font-semibold text-[27px] leading-tight text-ink-900 text-center mt-4">
+            {client.full_name}
+          </h1>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+            <span
+              className={`inline-flex items-center gap-1.5 text-[13px] font-semibold px-3 py-1.5 rounded-full ${
+                client.active ? "bg-brand-50 text-brand-700" : "bg-ink-100 text-ink-600"
+              }`}
+            >
+              <span className={`w-[7px] h-[7px] rounded-full ${client.active ? "bg-brand-500" : "bg-ink-400"}`} />
+              {client.active ? "Active" : "Inactive"}
+            </span>
+            <span className="text-[13px] font-semibold px-3 py-1.5 rounded-full bg-surface-sunken text-ink-600">
+              {isHorseOwnerOnly
+                ? "Horse owner"
+                : `Rider${client.skill_level && hasLessons ? ` · ${SKILL_LABEL[client.skill_level]}` : ""}`}
+            </span>
+            {isHorseOwner && !isHorseOwnerOnly && (
+              <span
+                className="text-[13px] font-semibold px-3 py-1.5 rounded-full bg-saddle-50 text-saddle-700"
+                title="Takes lessons and owns a horse boarded here — billed for both."
+              >
+                Rider + owner
+              </span>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-5">
+            {onboarding && (
+              <OnboardingInviteButton
+                clientId={client.id}
+                status={onboarding.status}
+                sentAt={onboarding.sent_at}
+                sentTo={onboarding.sent_to}
+              />
+            )}
+            {session.role === "owner" && (
+              <InviteToAppButton
+                clientId={client.id}
+                hasPortalAccount={Boolean(client.profile_id)}
+                hasPendingInvite={hasPendingInvite}
+                hasEmail={Boolean(client.email)}
+              />
+            )}
+            <EditClientButton client={client} />
+            {session.role === "owner" && <DeleteClientButton clientId={client.id} />}
+          </div>
+
+          {/* Contact fields — cream boxes */}
+          <div className="mt-5 flex flex-col gap-2.5">
+            <div className="px-4 py-3.5 bg-ink-50 rounded-2xl">
+              <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400">Phone</div>
+              <div className="text-[16px] font-medium text-ink-900 mt-1">
+                {client.phone ? (
+                  <a href={`tel:${client.phone.replace(/\s+/g, "")}`} className="hover:underline">{client.phone}</a>
+                ) : <span className="text-ink-300">—</span>}
+              </div>
+            </div>
+            <div className="px-4 py-3.5 bg-ink-50 rounded-2xl">
+              <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink-400">Email</div>
+              <div className="text-[16px] font-medium text-ink-900 mt-1 break-all">
+                {client.email ? (
+                  <a href={`mailto:${client.email}`} className="hover:underline">{client.email}</a>
+                ) : <span className="text-ink-300">—</span>}
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -360,15 +362,6 @@ export default async function ClientDetailPage({
 }
 
 // ---------- helpers ----------
-function ContactTile({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="bg-ink-50/60 rounded-xl px-4 py-3">
-      <p className="text-[10px] uppercase tracking-[0.08em] font-semibold text-ink-500">{label}</p>
-      <p className="text-sm text-ink-900 mt-1 truncate">{value ?? <span className="text-ink-400">—</span>}</p>
-    </div>
-  );
-}
-
 function BalanceLine({ balance }: { balance: number | null }) {
   if (balance == null) {
     return <p className="text-sm text-neutral-500">—</p>;
@@ -391,36 +384,41 @@ function LessonList({
   empty: string;
 }) {
   if (lessons.length === 0) {
-    return <p className="text-sm text-neutral-500">{empty}</p>;
+    return <p className="text-[14.5px] text-ink-400 italic">{empty}</p>;
   }
+  const STATUS_TAG: Record<string, { label: string; cls: string }> = {
+    scheduled: { label: "Scheduled", cls: "text-saddle-700 bg-saddle-100" },
+    completed: { label: "Completed", cls: "text-brand-700 bg-brand-50" },
+    cancelled: { label: "Cancelled", cls: "text-ink-500 bg-ink-100" },
+    no_show:   { label: "No show",   cls: "text-alert-700 bg-alert-100" },
+  };
   return (
-    <div className="border border-neutral-200 rounded-md bg-white divide-y divide-neutral-200">
-      {lessons.map((l) => (
-        <div
-          key={l.id}
-          className="
-            px-4 py-2.5 text-sm
-            sm:grid sm:grid-cols-[1.4fr_1fr_1fr_auto] sm:gap-3 sm:items-center
-          "
-        >
-          <div className="text-neutral-700">
-            {fmtDayLabel(new Date(l.starts_at))} · {fmtTime(l.starts_at)}
-          </div>
-          <div className="text-neutral-700 sm:text-inherit">
-            {l.horse?.name ?? "—"}
-            <span className="text-neutral-400 sm:hidden"> · </span>
-            <span className="sm:hidden text-neutral-600">
-              {l.trainer?.full_name ?? "—"}
+    <div className="flex flex-col gap-3">
+      {lessons.map((l) => {
+        const d = new Date(l.starts_at);
+        const day = d.toLocaleDateString("en-GB", { day: "numeric", timeZone: "Europe/Vilnius" });
+        const mon = d.toLocaleDateString("en-GB", { month: "short", timeZone: "Europe/Vilnius" });
+        const tag = STATUS_TAG[l.status] ?? STATUS_TAG.scheduled;
+        return (
+          <div key={l.id} className="bg-white border border-ink-100 rounded-2xl shadow-soft px-4 py-3.5 flex items-center gap-3.5">
+            <div className="w-[52px] text-center shrink-0">
+              <div className="font-mono font-semibold text-[22px] text-brand-700 leading-none">{day}</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-ink-400 mt-1">{mon}</div>
+            </div>
+            <div className="flex-1 border-l border-ink-100 pl-3.5 min-w-0">
+              <div className="text-[15px] font-bold text-ink-900 truncate">
+                {fmtTime(l.starts_at)} · {l.horse?.name ?? "—"}
+              </div>
+              <div className="text-[13px] text-ink-500 mt-0.5 truncate">
+                with {l.trainer?.full_name ?? "—"}
+              </div>
+            </div>
+            <span className={`shrink-0 text-[11px] font-bold uppercase tracking-[0.06em] px-2.5 py-1.5 rounded-full ${tag.cls}`}>
+              {tag.label}
             </span>
           </div>
-          <div className="hidden sm:block text-neutral-600">
-            {l.trainer?.full_name ?? "—"}
-          </div>
-          <div className="mt-0.5 sm:mt-0 text-[10px] uppercase tracking-wider text-neutral-500">
-            {l.status.replace("_", " ")}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

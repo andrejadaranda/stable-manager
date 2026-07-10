@@ -82,12 +82,14 @@ export default async function ClientsPage({
       {/* Sort row — "Owes" floats clients who owe the most to the top,
           owner-only since it exposes balances. */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] uppercase tracking-[0.12em] text-ink-400 mr-1">Sort</span>
-        <SortChip href={qs({ sort: "name" })}   label="Name"   active={sort === "name"} />
-        <SortChip href={qs({ sort: "recent" })} label="Recent" active={sort === "recent"} />
-        {isOwner && (
-          <SortChip href={qs({ sort: "owes" })} label="Owes" active={sort === "owes"} />
-        )}
+        <span className="text-[11px] uppercase tracking-[0.12em] text-ink-400 mr-1 font-bold">Sort</span>
+        <div className="inline-flex bg-surface-sunken rounded-full p-[3px]">
+          <SortChip href={qs({ sort: "name" })}   label="Name"   active={sort === "name"} />
+          <SortChip href={qs({ sort: "recent" })} label="Recent" active={sort === "recent"} />
+          {isOwner && (
+            <SortChip href={qs({ sort: "owes" })} label="Owes" active={sort === "owes"} />
+          )}
+        </div>
       </div>
 
       <ClientListWithSearch
@@ -139,10 +141,10 @@ function SortChip({
     <Link
       href={href}
       className={`
-        h-8 inline-flex items-center px-3 rounded-full text-[12px] font-medium transition-colors
+        inline-flex items-center px-4 py-[7px] rounded-full text-[14px] font-semibold transition-colors
         ${active
-          ? "bg-navy-700 text-white shadow-sm"
-          : "bg-white text-ink-600 hover:bg-ink-100/60 ring-1 ring-ink-200"}
+          ? "bg-brand-700 text-white shadow-sm"
+          : "text-ink-500 hover:text-ink-800"}
       `}
     >
       {label}
