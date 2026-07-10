@@ -194,8 +194,12 @@ export function LessonParticipantsPanel({
     const nameKey = (g?.guardian_name || g?.guardian_phone)
       ? `n:${(g?.guardian_name ?? "").trim().toLowerCase()}|${(g?.guardian_phone ?? "").replace(/\s+/g, "")}`
       : null;
-    const key = linked ? `c:${linked}` : nameKey ?? `solo:${p.client_id}`;
-    const label = linked || nameKey
+    // Group by the ENTERED parent name/phone FIRST — two children typed with
+    // different mums must always split, even if an older row still carries a
+    // stale guardian_client_id pointing at the lesson payer. Only fall back to
+    // the linked parent id when no name/phone was captured.
+    const key = nameKey ?? (linked ? `c:${linked}` : `solo:${p.client_id}`);
+    const label = nameKey || linked
       ? (g?.guardian_name?.trim() || g?.guardian_phone?.trim() || "Parent")
       : null;
     let grp = byKey.get(key);
