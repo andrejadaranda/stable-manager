@@ -413,19 +413,117 @@ export async function sendInvoiceToClient(
   return { emailedTo, chatPosted, notes };
 }
 
+// Supabase client type is inferred; keep the helpers loosely typed.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+/** Marking an invoice paid records the money so revenue + the client's
+ *  balance actually move (client_account_summary = payments − charges;
+ *  an invoice on its own isn't a charge). We create ONE payment per line
+ *  item, linked to that item's source charge (lesson / boarding / misc) so
+ *  finance buckets it correctly AND it can't double-count a charge already
+ *  settled via its own "Mark paid" (we skip any charge that already has a
+ *  payment). Idempotent: no-op if the invoice already has payments. */
+async function applyInvoicePaymentSet(supabase: any, stableId: string, invoiceId: string): Promise<void> {
+  const { data: already } = await supabase.from("payments").select("id").eq("invoice_id", invoiceId).limit(1);
+  if (already && already.length) return;
+
+  const { data: inv } = await supabase.from("invoices").select("client_id, number").eq("id", invoiceId).maybeSingle();
+  const invRow = inv as { client_id: string | null; number: string } | null;
+  if (!invRow?.client_id) return;
+
+  const { data: items } = await supabase
+    .from("invoice_items")
+    .select("line_total, lesson_id, boarding_charge_id, client_charge_id")
+    .eq("invoice_id", invoiceId);
+  const itemRows = (items ?? []) as Array<{
+    line_total: number | string;
+    lesson_id: string | null;
+    boarding_charge_id: string | null;
+    client_charge_id: string | null;
+  }>;
+  if (itemRows.length === 0) return;
+
+  // Charges this client has ALREADY paid — so we don't double-pay one that
+  // was settled directly (e.g. boarding "Mark paid").
+  const { data: prior } = await supabase
+    .from("payments")
+    .select("lesson_id, boarding_charge_id, client_charge_id")
+    .eq("client_id", invRow.client_id);
+  const paidLesson = new Set((prior ?? []).map((p: any) => p.lesson_id).filter(Boolean));
+  const paidBoard  = new Set((prior ?? []).map((p: any) => p.boarding_charge_id).filter(Boolean));
+  const paidCharge = new Set((prior ?? []).map((p: any) => p.client_charge_id).filter(Boolean));
+
+  // A line item can reference a charge that was later DELETED (dangling id) or,
+  // in messy data, one in another stable. A payments trigger enforces
+  // same-stable links, so we must only attach links that still resolve in THIS
+  // stable — otherwise the whole "mark paid" would throw. Invalid links are
+  // dropped and the payment is recorded as a plain invoice payment.
+  const boardIds  = itemRows.map((it) => it.boarding_charge_id).filter(Boolean) as string[];
+  const lessonIds = itemRows.map((it) => it.lesson_id).filter(Boolean) as string[];
+  const chargeIds = itemRows.map((it) => it.client_charge_id).filter(Boolean) as string[];
+  const validBoard  = new Set<string>();
+  const validLesson = new Set<string>();
+  const validCharge = new Set<string>();
+  if (boardIds.length) {
+    const { data } = await supabase.from("horse_boarding_charges").select("id").eq("stable_id", stableId).in("id", boardIds);
+    (data ?? []).forEach((r: any) => validBoard.add(r.id));
+  }
+  if (lessonIds.length) {
+    const { data } = await supabase.from("lessons").select("id").eq("stable_id", stableId).in("id", lessonIds);
+    (data ?? []).forEach((r: any) => validLesson.add(r.id));
+  }
+  if (chargeIds.length) {
+    const { data } = await supabase.from("client_charges").select("id").eq("stable_id", stableId).in("id", chargeIds);
+    (data ?? []).forEach((r: any) => validCharge.add(r.id));
+  }
+
+  const now = new Date().toISOString();
+  const rows = itemRows
+    .filter((it) => {
+      if (it.lesson_id && paidLesson.has(it.lesson_id)) return false;
+      if (it.boarding_charge_id && paidBoard.has(it.boarding_charge_id)) return false;
+      if (it.client_charge_id && paidCharge.has(it.client_charge_id)) return false;
+      return Number(it.line_total) > 0;
+    })
+    .map((it) => ({
+      stable_id: stableId,
+      client_id: invRow.client_id,
+      amount: it.line_total,
+      method: "other",
+      paid_at: now,
+      invoice_id: invoiceId,
+      notes: `Invoice ${invRow.number}`,
+      lesson_id: it.lesson_id && validLesson.has(it.lesson_id) ? it.lesson_id : null,
+      boarding_charge_id: it.boarding_charge_id && validBoard.has(it.boarding_charge_id) ? it.boarding_charge_id : null,
+      client_charge_id: it.client_charge_id && validCharge.has(it.client_charge_id) ? it.client_charge_id : null,
+    }));
+
+  if (rows.length > 0) {
+    const { error } = await supabase.from("payments").insert(rows);
+    if (error) throw error;
+  }
+}
+
+/** Reverse the auto-created payments when an invoice leaves 'paid'. */
+async function removeInvoicePaymentSet(supabase: any, invoiceId: string): Promise<void> {
+  const { error } = await supabase.from("payments").delete().eq("invoice_id", invoiceId);
+  if (error) throw error;
+}
+
 export async function setInvoiceStatus(
   invoiceId: string,
   status: "issued" | "paid" | "overdue" | "cancelled",
 ): Promise<void> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
-  void session;
   const supabase = createSupabaseServerClient();
   const { error } = await supabase
     .from("invoices")
     .update({ status })
     .eq("id", invoiceId);
   if (error) throw error;
+  if (status === "paid") await applyInvoicePaymentSet(supabase, session.stableId, invoiceId);
+  else await removeInvoicePaymentSet(supabase, invoiceId);
 }
 
 /** Bulk status change — one UPDATE … WHERE id IN (...). Used by the
@@ -438,7 +536,6 @@ export async function setInvoiceStatusBulk(
 ): Promise<number> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
-  void session;
   const ids = Array.from(new Set(invoiceIds)).filter(Boolean);
   if (ids.length === 0) return 0;
   const supabase = createSupabaseServerClient();
@@ -448,7 +545,13 @@ export async function setInvoiceStatusBulk(
     .in("id", ids)
     .select("id");
   if (error) throw error;
-  return (data ?? []).length;
+  const changed = (data ?? []) as Array<{ id: string }>;
+  // Record / reverse the money for each affected invoice.
+  for (const row of changed) {
+    if (status === "paid") await applyInvoicePaymentSet(supabase, session.stableId, row.id);
+    else await removeInvoicePaymentSet(supabase, row.id);
+  }
+  return changed.length;
 }
 
 export async function listInvoices(opts: { limit?: number } = {}): Promise<Array<InvoiceRow & { client: { id: string; full_name: string } | null }>> {
