@@ -22,7 +22,9 @@ type Metrics = {
 };
 
 const fmtEUR = (n: number) =>
-  new Intl.NumberFormat(undefined, { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+
+type CardCfg = { label: string; value: string; sub: string; pct: number; tone: string; wide?: boolean };
 
 export function MetricsPanel(m: Metrics) {
   const [range, setRange] = useState<"week" | "month">(m.isPersonal ? "week" : "month");
@@ -41,123 +43,53 @@ export function MetricsPanel(m: Metrics) {
   const empty = lessons === 0 && revenue === 0 && m.outstandingBalance === 0;
   const rangeWord = range === "week" ? "this week" : "this month";
 
+  const cards: CardCfg[] = m.isPersonal
+    ? [
+        { label: `Rides ${rangeWord}`, value: `${lessons}`, sub: completed > 0 ? `${completed} completed` : "Log a session", pct: Math.min(100, lessons * 14), tone: "bg-brand-500" },
+        { label: "Horses in care", value: `${m.activeHorses}`, sub: m.activeHorses === 0 ? "Add your first horse" : "Currently active", pct: m.activeHorses > 0 ? 100 : 0, tone: "bg-saddle-500" },
+      ]
+    : m.isOwner
+    ? [
+        { label: `Lessons ${rangeWord}`, value: `${lessons}`, sub: completed > 0 ? `${completedRatio}% completed` : "Scheduled", pct: completedRatio, tone: "bg-brand-500" },
+        { label: `Collected ${rangeWord}`, value: fmtEUR(revenue), sub: `${collectionPct}% of what's owed`, pct: collectionPct, tone: "bg-brand-600" },
+        { label: "Client balance", value: fmtEUR(m.outstandingBalance), sub: m.outstandingBalance > 0 ? `${collectionPct}% collected` : "All paid up", pct: collectionPct, tone: m.outstandingBalance > 0 ? "bg-saddle-500" : "bg-brand-500", wide: true },
+      ]
+    : [
+        { label: `Lessons ${rangeWord}`, value: `${lessons}`, sub: completed > 0 ? `${completedRatio}% completed` : "Scheduled", pct: completedRatio, tone: "bg-brand-500" },
+        { label: "Horses in care", value: `${m.activeHorses}`, sub: m.activeHorses === 0 ? "None active yet" : "Currently active", pct: m.activeHorses > 0 ? 100 : 0, tone: "bg-saddle-500" },
+      ];
+
   return (
-    <aside className="card-elevated p-5 md:p-6 flex flex-col gap-5 lg:sticky lg:top-4 self-start">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-navy-900">Metrics</h2>
-        {/* Range toggle */}
-        <div className="inline-flex rounded-full bg-ink-100 p-0.5 text-[11px] font-medium">
-          <button
-            type="button"
-            onClick={() => setRange("week")}
-            className={`px-2.5 py-1 rounded-full transition-colors ${range === "week" ? "bg-white text-navy-900 shadow-sm" : "text-ink-500"}`}
-          >
-            Week
-          </button>
-          <button
-            type="button"
-            onClick={() => setRange("month")}
-            className={`px-2.5 py-1 rounded-full transition-colors ${range === "month" ? "bg-white text-navy-900 shadow-sm" : "text-ink-500"}`}
-          >
-            Month
-          </button>
+    <aside className="flex flex-col gap-3 lg:sticky lg:top-4 self-start">
+      <div className="flex items-center justify-between gap-2 px-1">
+        <h2 className="font-serif font-semibold text-[20px] text-ink-900">This {range}</h2>
+        <div className="inline-flex rounded-full bg-surface-sunken p-[3px] text-[12px] font-semibold">
+          <button type="button" onClick={() => setRange("week")} className={`px-3.5 py-1.5 rounded-full transition-colors ${range === "week" ? "bg-white text-ink-900 shadow-sm" : "text-ink-500"}`}>Week</button>
+          <button type="button" onClick={() => setRange("month")} className={`px-3.5 py-1.5 rounded-full transition-colors ${range === "month" ? "bg-white text-ink-900 shadow-sm" : "text-ink-500"}`}>Month</button>
         </div>
       </div>
 
       {empty ? (
-        <EmptyMetrics isPersonal={m.isPersonal} />
-      ) : m.isPersonal ? (
-        <>
-          <KpiRing
-            label={`Rides ${rangeWord}`}
-            value={`${lessons}`}
-            sub={completed > 0 ? `${completed} completed` : "Log a session to track progress"}
-            pct={Math.min(100, lessons * 14)}
-            color="#E04E25"
-          />
-          <KpiRing
-            label="Horses in care"
-            value={`${m.activeHorses}`}
-            sub={m.activeHorses === 0 ? "Add your first horse" : "Currently active"}
-            pct={m.activeHorses > 0 ? 100 : 0}
-            color="#1E2A47"
-          />
-        </>
-      ) : m.isOwner ? (
-        <>
-          <KpiRing
-            label={`Lessons ${rangeWord}`}
-            value={`${lessons}`}
-            sub={completed > 0 ? `${completedRatio}% completed` : "Scheduled"}
-            pct={completedRatio}
-            color="#E04E25"
-          />
-          <KpiRing
-            label={`Collected ${rangeWord}`}
-            value={fmtEUR(revenue)}
-            sub={`${collectionPct}% of what's owed`}
-            pct={collectionPct}
-            color="#1E2A47"
-          />
-          <KpiRing
-            label="Client balance"
-            value={fmtEUR(m.outstandingBalance)}
-            sub={m.outstandingBalance > 0 ? `${collectionPct}% collected` : "All paid up"}
-            // Ring fills with the share ALREADY collected, so a fuller ring
-            // always means better (more paid up) — not "more debt".
-            pct={collectionPct}
-            color={m.outstandingBalance > 0 ? "#C2841A" : "#3F7A3A"}
-          />
-        </>
+        <div className="card-elevated p-5"><EmptyMetrics isPersonal={m.isPersonal} /></div>
       ) : (
-        <>
-          <KpiRing
-            label={`Lessons ${rangeWord}`}
-            value={`${lessons}`}
-            sub={completed > 0 ? `${completedRatio}% completed` : "Scheduled"}
-            pct={completedRatio}
-            color="#E04E25"
-          />
-          <KpiRing
-            label="Horses in care"
-            value={`${m.activeHorses}`}
-            sub={m.activeHorses === 0 ? "None active yet" : "Currently active"}
-            pct={m.activeHorses > 0 ? 100 : 0}
-            color="#1E2A47"
-          />
-        </>
+        <div className="grid grid-cols-2 gap-3">
+          {cards.map((c, i) => (
+            <MetricCard key={i} {...c} />
+          ))}
+        </div>
       )}
     </aside>
   );
 }
 
-function KpiRing({
-  label, value, sub, pct, color,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  pct: number;
-  color: string;
-}) {
-  const r = 26;
-  const c = 2 * Math.PI * r;
-  const dash = (Math.min(100, Math.max(0, pct)) / 100) * c;
+function MetricCard({ label, value, sub, pct, tone, wide }: CardCfg) {
   return (
-    <div className="flex items-center gap-4">
-      <svg width="64" height="64" viewBox="0 0 64 64" className="shrink-0">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="#EFEAE2" strokeWidth="7" />
-        <circle
-          cx="32" cy="32" r={r} fill="none"
-          stroke={color} strokeWidth="7" strokeLinecap="round"
-          strokeDasharray={`${dash} ${c}`}
-          transform="rotate(-90 32 32)"
-        />
-      </svg>
-      <div className="min-w-0">
-        <div className="text-[11px] uppercase tracking-[0.04em] text-ink-500">{label}</div>
-        <div className="font-display text-2xl text-navy-900 leading-tight">{value}</div>
-        <div className="text-[12px] text-ink-500 truncate">{sub}</div>
+    <div className={`bg-white border border-ink-100 rounded-2xl shadow-soft p-4 ${wide ? "col-span-2" : ""}`}>
+      <div className="text-[10.5px] font-bold uppercase tracking-[0.06em] text-ink-400">{label}</div>
+      <div className="font-mono font-semibold text-[24px] text-ink-900 mt-2 tabular-nums">{value}</div>
+      <div className="text-[12px] text-ink-500 mt-0.5 truncate">{sub}</div>
+      <div className="h-[7px] rounded-full bg-surface-sunken overflow-hidden mt-3">
+        <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
       </div>
     </div>
   );
