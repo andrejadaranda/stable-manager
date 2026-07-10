@@ -12,6 +12,7 @@
 // Clients are still routed to /dashboard/my-lessons (their portal home).
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { syncSubscriptionFromCheckoutSession } from "@/lib/stripe/sync";
@@ -130,86 +131,39 @@ export default async function DashboardHome({
         </div>
       </header>
 
-      {/* Primary action band — Calendar lives front-and-centre because
-          90% of trainer interactions start here. The big "Open
-          Calendar" tile leads; smaller links sit beside it for the
-          secondary flows. Sticks to the top of the dashboard so it's
-          the first thing visible after Hi greeting. */}
-      <div className="grid grid-cols-1 sm:grid-cols-[1.6fr_1fr_1fr] gap-3">
-        <Link
-          href="/dashboard/calendar"
-          className="
-            group rounded-2xl bg-brand-600 hover:bg-brand-700 active:bg-brand-800
-            text-white shadow-lift transition-colors
-            px-5 py-4 flex items-center gap-4
-          "
-        >
-          <span
-            aria-hidden
-            className="w-12 h-12 shrink-0 rounded-xl bg-white/15 inline-flex items-center justify-center"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
-              <path d="M3 9h18M8 3v3M16 3v3" />
-            </svg>
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block font-display text-xl leading-none">Open calendar</span>
-            <span className="block text-[12.5px] text-white/85 mt-1">
-              Book a lesson, check availability, drag to reschedule
+      {/* Day at a glance — three quick numbers + the calendar entry. */}
+      <div className="rounded-3xl bg-white border border-ink-100 shadow-soft p-5">
+        <div className="grid grid-cols-3 gap-3 pb-4 border-b border-ink-100">
+          <Glance value={String(s.todayLessons.length)} label={`Lesson${s.todayLessons.length === 1 ? "" : "s"} today`} />
+          {!isPersonal && (
+            <Glance value={`€${Math.abs(Number(s.outstandingBalance ?? 0)).toFixed(0)}`} label="To collect" due />
+          )}
+          <Glance value={String(s.activeHorses ?? 0)} label="Horses in care" />
+        </div>
+        <Link href="/dashboard/calendar" className="group flex items-center justify-between gap-3 pt-4">
+          <span className="flex items-center gap-3 min-w-0">
+            <span className="w-11 h-11 shrink-0 rounded-xl bg-brand-100 text-brand-700 inline-flex items-center justify-center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5" /><path d="M3 9h18M8 3v3M16 3v3" /></svg>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-bold text-ink-900">Open calendar</span>
+              <span className="block text-[12.5px] text-ink-500 truncate">Book, check availability, drag to reschedule</span>
             </span>
           </span>
-          <span aria-hidden className="text-white/80 group-hover:translate-x-0.5 transition-transform">
-            →
-          </span>
+          <span aria-hidden className="text-ink-300 group-hover:translate-x-0.5 transition-transform text-lg">›</span>
         </Link>
+      </div>
 
+      {/* Quick actions */}
+      <div className="grid grid-cols-4 gap-2.5">
+        <QuickAction href="/dashboard/calendar" label="Book lesson" tone="bg-brand-100 text-brand-700" icon={<path d="M12 5v14M5 12h14" />} />
+        <QuickAction href="/dashboard/sessions" label="Log ride" tone="bg-saddle-100 text-saddle-700" icon={<><path d="m3 11 18-5v12L3 14v-3Z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>} />
         {isPersonal ? (
-          <Link
-            href="/dashboard/horses"
-            className="
-              rounded-2xl bg-white shadow-soft hover:shadow-lift transition-shadow
-              px-4 py-4 flex flex-col justify-center gap-1
-            "
-          >
-            <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-brand-700">
-              + Add horse
-            </span>
-            <span className="text-[12.5px] text-ink-600">
-              Up to {isPersonal ? "2 horses (Mini) / 5 horses (Plus)" : "your plan limit"}.
-            </span>
-          </Link>
+          <QuickAction href="/dashboard/welfare" label="Welfare" tone="bg-sky-100 text-sky-700" icon={<path d="M19 14c1.5-1.5 3-3.3 3-5.5A5.5 5.5 0 0 0 12 5 5.5 5.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7Z" />} />
         ) : (
-          <Link
-            href="/dashboard/calendar"
-            className="
-              rounded-2xl bg-white shadow-soft hover:shadow-lift transition-shadow
-              px-4 py-4 flex flex-col justify-center gap-1
-            "
-          >
-            <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-brand-700">
-              + New lesson
-            </span>
-            <span className="text-[12.5px] text-ink-600">
-              Click any time slot to book.
-            </span>
-          </Link>
+          <QuickAction href="/dashboard/finance/invoices" label="New invoice" tone="bg-sky-100 text-sky-700" icon={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M9 13h6M9 17h4" /></>} />
         )}
-
-        <Link
-          href="/dashboard/sessions"
-          className="
-            rounded-2xl bg-white shadow-soft hover:shadow-lift transition-shadow
-            px-4 py-4 flex flex-col justify-center gap-1
-          "
-        >
-          <span className="text-[10px] uppercase tracking-[0.14em] font-semibold text-navy-700">
-            Log a {isPersonal ? "ride" : "session"}
-          </span>
-          <span className="text-[12.5px] text-ink-600">
-            Record a ride that just happened.
-          </span>
-        </Link>
+        <QuickAction href="/dashboard/finance" label="More" tone="bg-surface-sunken text-ink-600" icon={<><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></>} />
       </div>
 
       {/* ── MAIN GRID ─────────────────────────────────────────────── */}
@@ -297,6 +251,26 @@ export default async function DashboardHome({
 }
 
 // ---------- Components ----------------------------------------
+
+function Glance({ value, label, due }: { value: string; label: string; due?: boolean }) {
+  return (
+    <div className="min-w-0 text-center">
+      <div className={`font-mono font-semibold text-[24px] tabular-nums leading-none ${due ? "text-alert-700" : "text-ink-900"}`}>{value}</div>
+      <div className="text-[11px] text-ink-500 mt-1.5 leading-tight">{label}</div>
+    </div>
+  );
+}
+
+function QuickAction({ href, label, tone, icon }: { href: string; label: string; tone: string; icon: ReactNode }) {
+  return (
+    <Link href={href} className="flex flex-col items-center gap-2 bg-white border border-ink-100 rounded-2xl shadow-soft py-3.5 active:scale-[0.97] transition-transform">
+      <span className={`w-10 h-10 rounded-xl inline-flex items-center justify-center ${tone}`}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
+      </span>
+      <span className="text-[12px] font-semibold text-ink-700 text-center leading-tight">{label}</span>
+    </Link>
+  );
+}
 
 function TimelineRow({ lesson }: { lesson: DashboardLesson }) {
   const start = new Date(lesson.starts_at);
