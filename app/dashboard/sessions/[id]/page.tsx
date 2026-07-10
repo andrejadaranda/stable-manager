@@ -15,7 +15,6 @@ import { SessionMap } from "@/components/sessions/SessionMap";
 import { ShareRideDialog } from "@/components/sessions/ShareRideDialog";
 import { BeaconShareDialog } from "@/components/sessions/BeaconShareDialog";
 import { EditSessionButton } from "@/components/sessions/edit-session-button";
-import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -102,65 +101,68 @@ export default async function SessionDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <PageHeader
-          title={s.horse?.name ? `${s.horse.name} · ${SESSION_TYPE_LABEL[s.type]}` : SESSION_TYPE_LABEL[s.type]}
-          subtitle={`${started.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Vilnius" })} · ${started.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius" })}${finished ? ` → ${finished.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius" })}` : ""}`}
-        />
-        <div className="flex items-center gap-2">
-          {/* Edit a logged (non-live) session — fix type/duration/notes/rating. */}
-          {s.status !== "live" && (
-            <EditSessionButton
-              session={{ id: s.id, type: s.type, duration_minutes: s.duration_minutes, notes: s.notes, rating: s.rating }}
-            />
-          )}
-          {/* Live safety beacon — mint a public share link while the ride is in progress */}
-          {s.status === "live" && <BeaconShareDialog sessionId={s.id} />}
-          {/* BUG #FF guard — empty-string polylines (0m stationary rides)
-              pass the truthy check but produce no map/GPX/share content.
-              A real Google-encoded polyline is ≥10 chars for one point. */}
-          {s.status !== "live" && s.encoded_polyline && s.encoded_polyline.length >= 10 && (
-            <>
-              {/* GPX export — power-user retention vs Equilab / Garmin / Strava */}
-              <a
-                href={`/api/sessions/${s.id}/export.gpx`}
-                download
-                className="
-                  inline-flex items-center justify-center gap-1.5
-                  h-10 px-3.5 rounded-xl text-sm font-medium
-                  bg-white border border-ink-200 text-ink-800
-                  hover:bg-ink-50 active:bg-ink-100 transition-colors
-                "
-                title="Download a GPX file you can open in Garmin Connect, Strava, RideWithGPS, etc."
-              >
-                ⬇ GPX
-              </a>
-              <ShareRideDialog sessionId={s.id} />
-            </>
-          )}
+      {/* Head — horse avatar + type + meta + chip */}
+      <div className="flex items-center gap-3">
+        <span className="w-14 h-14 rounded-2xl bg-saddle-100 text-saddle-700 inline-flex items-center justify-center text-xl font-bold shrink-0">
+          {(s.horse?.name?.[0] ?? "?").toUpperCase()}
+        </span>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-serif font-semibold text-[24px] leading-tight text-ink-900 truncate">
+            {SESSION_TYPE_LABEL[s.type]}
+          </h1>
+          <p className="text-[13px] text-ink-500 mt-0.5 truncate">
+            {s.horse?.name ? `${s.horse.name} · ` : ""}
+            {started.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Vilnius" })}
+            {" · "}
+            {started.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius" })}
+          </p>
         </div>
+        <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.06em] px-3 py-1.5 rounded-full bg-saddle-100 text-saddle-700">
+          {SESSION_TYPE_LABEL[s.type]}
+        </span>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {s.status !== "live" && (
+          <EditSessionButton
+            session={{ id: s.id, type: s.type, duration_minutes: s.duration_minutes, notes: s.notes, rating: s.rating }}
+          />
+        )}
+        {s.status === "live" && <BeaconShareDialog sessionId={s.id} />}
+        {s.status !== "live" && s.encoded_polyline && s.encoded_polyline.length >= 10 && (
+          <>
+            <a
+              href={`/api/sessions/${s.id}/export.gpx`}
+              download
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-xl text-sm font-medium bg-white border border-ink-200 text-ink-800 hover:bg-ink-50 active:bg-ink-100 transition-colors"
+              title="Download a GPX file you can open in Garmin Connect, Strava, RideWithGPS, etc."
+            >
+              ⬇ GPX
+            </a>
+            <ShareRideDialog sessionId={s.id} />
+          </>
+        )}
       </div>
 
       {/* Map */}
       <SessionMap encodedPolyline={s.encoded_polyline} />
 
-      {/* Headline numbers */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card label="Distance" value={`${km} km`} />
-        <Card label="Time"     value={time} />
-        <Card label="Avg"      value={avg} />
-        <Card label="Max"      value={max} />
+      {/* Hero stats — distance + duration */}
+      <div className="grid grid-cols-2 gap-3">
+        <BigStat value={km} unit="km" label="Distance" />
+        <BigStat value={time} unit="" label="Duration" />
       </div>
 
-      {/* Secondary metrics — elevation + calories */}
-      {(s.elevation_gain_m != null || s.kcal_estimate != null) && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card label="↑ Climb"   value={s.elevation_gain_m != null ? `${s.elevation_gain_m} m` : "—"} subtle />
-          <Card label="↓ Descent" value={s.elevation_loss_m != null ? `${s.elevation_loss_m} m` : "—"} subtle />
-          <Card label="Calories"  value={s.kcal_estimate != null ? `${s.kcal_estimate} kcal` : "—"} subtle />
-          <Card label="Moving"    value={s.moving_seconds != null ? formatHMS(s.moving_seconds) : "—"} subtle />
-        </div>
-      )}
+      {/* Secondary stat grid */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card label="Avg"     value={avg} subtle />
+        <Card label="Max"     value={max} subtle />
+        <Card label="Moving"  value={s.moving_seconds != null ? formatHMS(s.moving_seconds) : "—"} subtle />
+        <Card label="↑ Climb" value={s.elevation_gain_m != null ? `${s.elevation_gain_m} m` : "—"} subtle />
+        <Card label="↓ Descent" value={s.elevation_loss_m != null ? `${s.elevation_loss_m} m` : "—"} subtle />
+        <Card label="Energy"  value={s.kcal_estimate != null ? `${s.kcal_estimate} kcal` : "—"} subtle />
+      </div>
 
       {/* Per-km splits — Strava staple */}
       {s.splits_km && s.splits_km.length > 0 && (
@@ -193,6 +195,17 @@ export default async function SessionDetailPage({
         {s.status === "abandoned" && <span className="text-amber-700">Abandoned</span>}
         {s.rating && <span>★ {s.rating}/5</span>}
       </div>
+    </div>
+  );
+}
+
+function BigStat({ value, unit, label }: { value: string; unit: string; label: string }) {
+  return (
+    <div className="rounded-2xl border border-ink-100 bg-white p-5 shadow-soft">
+      <div className="font-mono font-semibold text-[30px] text-ink-900 tabular-nums leading-none">
+        {value}<span className="text-[14px] text-ink-400 font-sans">{unit ? ` ${unit}` : ""}</span>
+      </div>
+      <div className="text-[11px] uppercase tracking-[0.08em] text-ink-400 font-bold mt-2">{label}</div>
     </div>
   );
 }
