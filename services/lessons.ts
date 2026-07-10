@@ -309,13 +309,48 @@ export async function addNewChildToLesson(
   const gName  = (opts.guardianName  ?? "").trim();
   const gPhone = (opts.guardianPhone ?? "").trim();
 
+  // Resolve the guardian PARENT as a real client. If a parent name was
+  // given, dedupe-by-phone or create a distinct parent client and link the
+  // child to THAT parent — so children of DIFFERENT parents in one group
+  // don't all collapse under the lesson's payer, and each parent is an
+  // openable client with their own contacts. With no parent name we fall
+  // back to the lesson's paying client (the single-family case).
+  let guardianId: string = (lesson as { client_id: string }).client_id;
+  if (gName) {
+    const phoneNorm = gPhone.replace(/\s+/g, "");
+    let parentId: string | null = null;
+    if (phoneNorm) {
+      const { data: existingParent } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("phone", phoneNorm)
+        .maybeSingle();
+      if (existingParent) parentId = (existingParent as { id: string }).id;
+    }
+    if (!parentId) {
+      const { data: parent, error: pErr } = await supabase
+        .from("clients")
+        .insert({
+          stable_id: session.stableId,
+          full_name: gName,
+          phone:     phoneNorm || null,
+          active:    true,
+        })
+        .select("id")
+        .single();
+      if (pErr || !parent) return { ok: false, reason: pErr?.message ?? "PARENT_CREATE_FAILED" };
+      parentId = (parent as { id: string }).id;
+    }
+    guardianId = parentId;
+  }
+
   const { data: child, error: cErr } = await supabase
     .from("clients")
     .insert({
       stable_id:            session.stableId,
       full_name:            name,
       is_minor:             true,
-      guardian_client_id:   (lesson as { client_id: string }).client_id,
+      guardian_client_id:   guardianId,
       guardian_name:        gName || null,
       guardian_phone:       gPhone || null,
       default_lesson_price: price || null,

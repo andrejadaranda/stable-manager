@@ -13,8 +13,8 @@ const initial: BlockState = { ok: false, error: null };
 
 function fmt(iso: string, withTime: boolean): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) +
-    (withTime ? ` ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : "");
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/Vilnius" }) +
+    (withTime ? ` ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius" })}` : "");
 }
 
 export function TimeOffPanel({ blocks }: { blocks: AvailabilityBlock[] }) {

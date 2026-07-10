@@ -235,8 +235,13 @@ export function CalendarShell({
     startTransition(async () => {
       const fd = new FormData();
       fd.set("lesson_id", lessonId);
-      fd.set("starts_at", newStartLocal);
-      fd.set("ends_at",   toLocalInput(newEnd));
+      // Send absolute instants (ISO+Z), NOT a naive "YYYY-MM-DDTHH:mm" —
+      // the service stores the string raw into a timestamptz, and a
+      // zone-less string gets read as UTC on Vercel, shifting the lesson
+      // by the Vilnius offset (2-3h). newStart was parsed in the browser's
+      // local zone (Vilnius), so toISOString() is the correct instant.
+      fd.set("starts_at", newStart.toISOString());
+      fd.set("ends_at",   newEnd.toISOString());
       const res = await rescheduleLessonAction(fd);
       if (!res.ok) {
         setDropError(res.error);

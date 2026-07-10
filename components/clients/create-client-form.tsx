@@ -14,6 +14,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useSearchParams } from "next/navigation";
 import {
   createClientAction,
   type CreateClientState,
@@ -26,6 +27,12 @@ type ReminderPrefValue = "none" | "email" | "sms" | "both";
 
 export function CreateClientPanel() {
   const [open, setOpen] = useState(false);
+  // Empty-state "Add your first client" CTA links to ?new=1 — open the
+  // dialog automatically so the button actually does something.
+  const sp = useSearchParams();
+  useEffect(() => {
+    if (sp.get("new") === "1") setOpen(true);
+  }, [sp]);
   return (
     <>
       <Button type="button" onClick={() => setOpen(true)} size="md" variant="primary">

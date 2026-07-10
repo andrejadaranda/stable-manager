@@ -186,6 +186,9 @@ export function MessagePanel({
       <MessageInput threadId={threadId} onOptimistic={(opt) => {
         seenIdsRef.current.add(opt.id);
         setMessages((prev) => [...prev, opt]);
+      }} onOptimisticRemove={(id) => {
+        seenIdsRef.current.delete(id);
+        setMessages((prev) => prev.filter((m) => m.id !== id));
       }} sessionUserId={sessionUserId} />
     </>
   );
@@ -196,10 +199,12 @@ export function MessagePanel({
 function MessageInput({
   threadId,
   onOptimistic,
+  onOptimisticRemove,
   sessionUserId,
 }: {
   threadId: string;
   onOptimistic: (m: ChatMessageRow) => void;
+  onOptimisticRemove: (id: string) => void;
   sessionUserId: string;
 }) {
   const [value, setValue] = useState("");
@@ -232,8 +237,9 @@ function MessageInput({
         setError(res.error);
         // Restore the input so user can retry.
         setValue(text);
-        // We don't currently roll back the optimistic message; the
-        // user sees their failed text reappear in the box and can resend.
+        // Roll back the optimistic bubble so a failed send doesn't leave
+        // a phantom message that looks delivered.
+        onOptimisticRemove(tempId);
       }
     });
   }

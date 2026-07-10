@@ -105,7 +105,7 @@ export default async function SessionDetailPage({
       <div className="flex items-start justify-between gap-3">
         <PageHeader
           title={s.horse?.name ? `${s.horse.name} · ${SESSION_TYPE_LABEL[s.type]}` : SESSION_TYPE_LABEL[s.type]}
-          subtitle={`${started.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${started.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}${finished ? ` → ${finished.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+          subtitle={`${started.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Vilnius" })} · ${started.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius" })}${finished ? ` → ${finished.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius" })}` : ""}`}
         />
         <div className="flex items-center gap-2">
           {/* Edit a logged (non-live) session — fix type/duration/notes/rating. */}

@@ -193,7 +193,7 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
     vet_copay:  "vet",
     equipment:  "equipment",
     transport:  "transport",
-    supplement: "feed",
+    supplement: "supplements",
   };
   const reimbursementByCat = new Map<ExpenseCategory, number>();
 

@@ -182,7 +182,7 @@ export function DayAgenda({
             <span className="text-[13px] font-semibold text-rose-700">
               {b.all_day
                 ? "Blocked · all day"
-                : `Blocked ${new Date(b.starts_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}–${new Date(b.ends_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
+                : `Blocked ${new Date(b.starts_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius" })}–${new Date(b.ends_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius" })}`}
               {b.reason ? <span className="font-normal text-rose-600"> · {b.reason}</span> : null}
             </span>
           </div>

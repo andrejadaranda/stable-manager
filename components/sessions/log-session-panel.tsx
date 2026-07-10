@@ -5,7 +5,8 @@
 // expanded, the form behaves exactly as before — same persistence
 // (localStorage last-pick), same validation, same submission flow.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { LogSessionForm } from "./log-session-form";
 
 type HorseOpt  = { id: string; name: string };
@@ -19,6 +20,11 @@ export function LogSessionPanel({
   clients: ClientOpt[];
 }) {
   const [open, setOpen] = useState(false);
+  // Empty-state "Log past session" CTA links to ?new=1 — auto-open.
+  const sp = useSearchParams();
+  useEffect(() => {
+    if (sp.get("new") === "1") setOpen(true);
+  }, [sp]);
 
   if (!open) {
     return (

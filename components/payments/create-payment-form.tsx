@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useSearchParams } from "next/navigation";
 import {
   addPaymentAction,
   type AddPaymentState,
@@ -39,6 +40,11 @@ export function CreatePaymentPanel({
   outstanding?: OutstandingCharge[];
 }) {
   const [open, setOpen] = useState(false);
+  // Empty-state "Record a payment" CTA links to ?new=1 — auto-open.
+  const sp = useSearchParams();
+  useEffect(() => {
+    if (sp.get("new") === "1") setOpen(true);
+  }, [sp]);
   return (
     <>
       <button

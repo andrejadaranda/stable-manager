@@ -24,6 +24,7 @@
 
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useSearchParams } from "next/navigation";
 import {
   createHorseAction,
   type CreateHorseState,
@@ -36,6 +37,11 @@ export type ClientOpt = { id: string; full_name: string };
 
 export function CreateHorsePanel({ clients = [] }: { clients?: ClientOpt[] }) {
   const [open, setOpen] = useState(false);
+  // Empty-state / onboarding / dashboard CTAs link to ?new=1 — auto-open.
+  const sp = useSearchParams();
+  useEffect(() => {
+    if (sp.get("new") === "1") setOpen(true);
+  }, [sp]);
   return (
     <>
       <Button

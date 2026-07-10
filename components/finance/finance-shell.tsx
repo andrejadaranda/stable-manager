@@ -9,17 +9,30 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { MonthFinancials } from "@/services/finance";
 import { HelpHint } from "@/components/ui";
 
-const FMT_EUR = new Intl.NumberFormat(undefined, {
+// Pin the locale so server + client render the same string (an undefined
+// locale renders with the machine's locale → hydration mismatch #425/#422).
+const FMT_EUR = new Intl.NumberFormat("en-IE", {
   style: "currency",
   currency: "EUR",
 });
 
 const EXPENSE_LABEL: Record<string, string> = {
   feed:        "Feed",
+  hay:         "Hay",
+  bedding:     "Bedding",
   vet:         "Vet",
   farrier:     "Farrier",
+  supplements: "Supplements",
+  tack:        "Tack",
+  equipment:   "Equipment",
+  repair:      "Repair",
   maintenance: "Maintenance",
   staff:       "Staff",
+  insurance:   "Insurance",
+  utilities:   "Utilities",
+  transport:   "Transport",
+  competition: "Competition",
+  registration:"Registration",
   other:       "Other",
 };
 

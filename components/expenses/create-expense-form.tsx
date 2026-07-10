@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useSearchParams } from "next/navigation";
 import {
   addExpenseAction,
   type AddExpenseState,
@@ -13,6 +14,11 @@ type HorseOpt = { id: string; name: string };
 
 export function CreateExpensePanel({ horses }: { horses: HorseOpt[] }) {
   const [open, setOpen] = useState(false);
+  // Empty-state "Add an expense" CTA links to ?new=1 — auto-open.
+  const sp = useSearchParams();
+  useEffect(() => {
+    if (sp.get("new") === "1") setOpen(true);
+  }, [sp]);
   return (
     <>
       <button

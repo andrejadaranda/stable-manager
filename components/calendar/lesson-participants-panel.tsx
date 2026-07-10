@@ -12,6 +12,7 @@
 // app/dashboard/calendar/participants-actions.ts.
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import {
   addParticipantAction,
   removeParticipantAction,
@@ -84,6 +85,16 @@ export function LessonParticipantsPanel({
   function resetAddForm() {
     setAddClientId(""); setAddChildName(""); setAddHorseId("");
     setAddParentName(""); setAddParentPhone(""); setAddPrice("");
+  }
+
+  // Enter inside an add-rider field must NOT bubble up to submit the outer
+  // edit-lesson form (which would save + close the whole lesson). Trap it
+  // and run the add instead.
+  function onAddKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      startTransition(() => { submitAdd(); });
+    }
   }
 
   async function submitAdd() {
@@ -226,7 +237,14 @@ export function LessonParticipantsPanel({
               {grp.members.map((p) => (
                 <li key={p.client_id} className="py-2 flex items-center justify-between gap-2">
                   <div className="text-[13px] text-ink-900 min-w-0">
-                    <span className="font-medium">{p.clients?.full_name ?? "Unknown rider"}</span>
+                    {/* Name links into the client profile — where the
+                        parent's name/phone live for a child rider. */}
+                    <Link
+                      href={`/dashboard/clients/${p.client_id}`}
+                      className="font-medium text-brand-800 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-500"
+                    >
+                      {p.clients?.full_name ?? "Unknown rider"}
+                    </Link>
                     <span className="text-ink-500"> on </span>
                     <span className="font-medium">{p.horses?.name ?? "no horse yet"}</span>
                   </div>
@@ -363,6 +381,7 @@ export function LessonParticipantsPanel({
                 <input
                   value={addChildName}
                   onChange={(e) => setAddChildName(e.target.value)}
+                  onKeyDown={onAddKeyDown}
                   placeholder="Full name"
                   maxLength={120}
                   className="h-8 rounded-md border border-ink-200 bg-white text-[16px] px-1.5"
@@ -391,6 +410,7 @@ export function LessonParticipantsPanel({
                 <input
                   value={addParentName}
                   onChange={(e) => setAddParentName(e.target.value)}
+                  onKeyDown={onAddKeyDown}
                   placeholder="Parent full name"
                   maxLength={120}
                   className="h-8 rounded-md border border-ink-200 bg-white text-[16px] px-1.5"
@@ -401,6 +421,7 @@ export function LessonParticipantsPanel({
                 <input
                   value={addParentPhone}
                   onChange={(e) => setAddParentPhone(e.target.value)}
+                  onKeyDown={onAddKeyDown}
                   inputMode="tel"
                   placeholder="+370…"
                   maxLength={40}
@@ -415,6 +436,7 @@ export function LessonParticipantsPanel({
             <input
               value={addPrice}
               onChange={(e) => setAddPrice(e.target.value)}
+              onKeyDown={onAddKeyDown}
               type="number" min="0" step="0.01"
               placeholder="€"
               className="h-8 rounded-md border border-ink-200 bg-white text-[16px] px-1.5 tabular-nums"
