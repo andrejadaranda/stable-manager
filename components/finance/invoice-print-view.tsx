@@ -31,7 +31,10 @@ export function InvoicePrintView({ detail }: { detail: InvoiceDetail }) {
         }}
       />
 
-      <article className="invoice-print-root bg-white rounded-2xl shadow-soft p-8 md:p-10 max-w-3xl mx-auto">
+      <article className="invoice-print-root bg-white rounded-2xl shadow-lift overflow-hidden max-w-3xl mx-auto border border-ink-100">
+        {/* Brand band */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-brand-700 via-brand-500 to-saddle-500" aria-hidden />
+        <div className="p-8 md:p-10">
         {/* Letterhead — Longrein lockup + invoice meta */}
         <header className="flex items-start justify-between gap-6 mb-8 pb-6 border-b border-ink-200">
           <span className="inline-flex items-center gap-2.5">
@@ -96,25 +99,45 @@ export function InvoicePrintView({ detail }: { detail: InvoiceDetail }) {
         </section>
 
         {/* Totals */}
-        <section className="flex justify-end mb-8">
-          <table className="text-[13px] min-w-[260px]">
-            <tbody>
-              <tr><td className="py-1.5 text-ink-500">Subtotal</td>
-                  <td className="py-1.5 text-right tabular-nums">€{Number(invoice.subtotal).toFixed(2)}</td></tr>
-              {Number(invoice.vat_rate) > 0 && (
-                <tr><td className="py-1.5 text-ink-500">VAT {invoice.vat_rate}%</td>
-                    <td className="py-1.5 text-right tabular-nums">€{Number(invoice.vat_amount).toFixed(2)}</td></tr>
-              )}
-              <tr className="border-t border-ink-300">
-                <td className="py-2 text-ink-900 font-semibold">Total</td>
-                <td className="py-2 text-right tabular-nums text-xl font-semibold text-ink-900">€{Number(invoice.total).toFixed(2)}</td>
-              </tr>
-            </tbody>
-          </table>
+        <section className="flex justify-end mb-6">
+          <div className="w-full sm:w-[64%] min-w-[260px] flex flex-col gap-1">
+            <div className="flex items-center justify-between py-1.5 text-[13.5px] text-ink-600">
+              <span>Subtotal</span>
+              <span className="font-mono tabular-nums text-ink-800">€{Number(invoice.subtotal).toFixed(2)}</span>
+            </div>
+            {Number(invoice.vat_rate) > 0 && (
+              <div className="flex items-center justify-between py-1.5 text-[13.5px] text-ink-600">
+                <span>VAT {invoice.vat_rate}%</span>
+                <span className="font-mono tabular-nums text-ink-800">€{Number(invoice.vat_amount).toFixed(2)}</span>
+              </div>
+            )}
+            <div className="mt-1.5 flex items-center justify-between px-4 py-3.5 rounded-2xl bg-brand-800 text-white">
+              <span className="font-bold text-[15px]">Total</span>
+              <span className="font-mono font-semibold text-[22px] tabular-nums">€{Number(invoice.total).toFixed(2)}</span>
+            </div>
+          </div>
         </section>
 
         {!issuer.vat_code && (
-          <p className="text-[11px] text-ink-400 mb-6">VAT not applied — issuer is not VAT-registered.</p>
+          <p className="text-[11px] text-ink-400 mb-4">VAT not applied — issuer is not VAT-registered.</p>
+        )}
+
+        {/* Payment block */}
+        {(issuer.iban || invoice.due_at) && (
+          <section className="rounded-2xl bg-ink-50 p-4 mb-6">
+            {issuer.iban && (
+              <>
+                <p className="text-[10px] uppercase tracking-[0.12em] text-ink-400 font-bold">Pay to</p>
+                <p className="font-mono text-[14px] font-semibold text-ink-900 mt-1.5">IBAN {issuer.iban}</p>
+              </>
+            )}
+            {invoice.due_at && (
+              <p className="text-[12.5px] text-ink-600 mt-2">
+                Reference <span className="font-semibold text-ink-900">{invoice.number}</span> · due{" "}
+                <span className={invoice.status === "overdue" ? "font-semibold text-alert-700" : "font-semibold text-ink-900"}>{dateStr(invoice.due_at)}</span>
+              </p>
+            )}
+          </section>
         )}
 
         {invoice.notes && (
@@ -124,10 +147,11 @@ export function InvoicePrintView({ detail }: { detail: InvoiceDetail }) {
           </section>
         )}
 
-        <footer className="border-t border-ink-200 pt-4 mt-6 flex items-center justify-between text-[11px] text-ink-400">
-          <span>{issuer.legal_name ?? "Longrein"}{issuer.iban ? ` · IBAN ${issuer.iban}` : ""}</span>
-          <span>Generated with Longrein · longrein.eu</span>
-        </footer>
+        <p className="text-center font-serif italic text-[15px] text-ink-500 mt-6">Thank you for riding with us.</p>
+        <p className="text-center text-[11px] text-ink-300 mt-2">
+          {issuer.legal_name ?? "Longrein"} · Generated with Longrein · longrein.eu
+        </p>
+        </div>
       </article>
     </>
   );
