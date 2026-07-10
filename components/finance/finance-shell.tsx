@@ -49,6 +49,25 @@ const CATEGORY_TONE: Record<string, string> = {
   other:         "bg-ink-100 text-ink-700",
 };
 
+// Solid bar-fill colour per source/category key (progress tracks).
+const CATEGORY_FILL: Record<string, string> = {
+  lessons:       "bg-sky-500",
+  packages:      "bg-brand-600",
+  boarding:      "bg-saddle-500",
+  uncategorized: "bg-ink-400",
+  feed:          "bg-saddle-600",
+  hay:           "bg-saddle-500",
+  bedding:       "bg-saddle-400",
+  vet:           "bg-rose-500",
+  farrier:       "bg-violet-500",
+  supplements:   "bg-emerald-500",
+  tack:          "bg-amber-500",
+  equipment:     "bg-ink-500",
+  maintenance:   "bg-sky-500",
+  staff:         "bg-navy-500",
+  other:         "bg-ink-400",
+};
+
 export function FinanceShell({ data }: { data: MonthFinancials }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -98,27 +117,35 @@ export function FinanceShell({ data }: { data: MonthFinancials }) {
         />
       </div>
 
-      {/* Headline KPIs --------------------------------------- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <KpiCard
-          label="Revenue"
-          value={FMT_EUR.format(data.revenue.total)}
-          sub="Money in"
-          tone="ok"
-        />
-        <KpiCard
-          label="Expenses"
-          value={FMT_EUR.format(data.expenses.total)}
-          sub="Money out"
-          tone="warn"
-        />
-        <KpiCard
-          label="Net"
-          value={FMT_EUR.format(data.net)}
-          sub={data.net >= 0 ? "Profit" : "Loss"}
-          tone={data.net >= 0 ? "ok" : "danger"}
-          big
-        />
+      {/* Summary hero — net profit + revenue/expenses split -- */}
+      <div className="relative overflow-hidden rounded-3xl p-6 text-brand-50 shadow-lift bg-gradient-to-br from-brand-700 to-brand-900">
+        <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-saddle-200">
+          Net {data.net >= 0 ? "profit" : "loss"} · {data.label}
+        </div>
+        <div className="font-mono font-semibold text-[46px] md:text-[52px] leading-none tracking-tight mt-2 tabular-nums">
+          {FMT_EUR.format(data.net)}
+        </div>
+        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-100 mt-3 bg-white/10 px-3 py-1.5 rounded-full">
+          {data.net >= 0 ? "In profit this month" : "Running at a loss this month"}
+        </span>
+        <div className="flex gap-3 mt-5">
+          <div className="flex-1 bg-white/[0.07] border border-white/10 rounded-2xl p-3.5">
+            <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-brand-50/60 flex items-center gap-1.5">
+              <span className="w-[7px] h-[7px] rounded-full bg-brand-300" />Revenue
+            </div>
+            <div className="font-mono font-semibold text-[22px] mt-1.5 text-brand-200 tabular-nums">
+              {FMT_EUR.format(data.revenue.total)}
+            </div>
+          </div>
+          <div className="flex-1 bg-white/[0.07] border border-white/10 rounded-2xl p-3.5">
+            <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-brand-50/60 flex items-center gap-1.5">
+              <span className="w-[7px] h-[7px] rounded-full bg-saddle-400" />Expenses
+            </div>
+            <div className="font-mono font-semibold text-[22px] mt-1.5 text-saddle-300 tabular-nums">
+              {FMT_EUR.format(data.expenses.total)}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Revenue breakdown ----------------------------------- */}
@@ -304,21 +331,34 @@ function CategoryRows({
   total: number;
 }) {
   return (
-    <ul className="flex flex-col">
-      {rows.map((r) => (
-        <ItemRow
-          key={r.key}
-          primary={
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${CATEGORY_TONE[r.key] ?? CATEGORY_TONE.other}`}>
-              {r.label}
+    <div className="px-5 py-3 flex flex-col">
+      {rows.map((r) => {
+        const pct = total > 0 ? Math.round((r.amount / total) * 100) : 0;
+        const tone = CATEGORY_TONE[r.key] ?? CATEGORY_TONE.other;
+        const fill = CATEGORY_FILL[r.key] ?? "bg-ink-400";
+        return (
+          <div key={r.key} className="flex items-center gap-3 py-3 border-t border-ink-100 first:border-0">
+            <span className={`w-9 h-9 rounded-xl shrink-0 inline-flex items-center justify-center text-[13px] font-bold ${tone}`}>
+              {r.label[0]?.toUpperCase() ?? "•"}
             </span>
-          }
-          secondary={r.meta}
-          amount={r.amount}
-          total={total}
-        />
-      ))}
-    </ul>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[15px] font-semibold text-ink-900 truncate">{r.label}</span>
+                <span className="font-mono font-semibold text-[15px] text-ink-900 tabular-nums shrink-0">
+                  {FMT_EUR.format(r.amount)}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-surface-sunken mt-2 overflow-hidden">
+                <div className={`h-full rounded-full ${fill}`} style={{ width: `${pct}%` }} />
+              </div>
+              <p className="text-[11px] text-ink-400 mt-1 tabular-nums">
+                {r.meta ? `${r.meta} · ` : ""}{pct}%
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -356,37 +396,6 @@ function ItemRow({
     <li className="border-t border-ink-100 first:border-0">
       {href ? <Link href={href}>{Inner}</Link> : Inner}
     </li>
-  );
-}
-
-function KpiCard({
-  label,
-  value,
-  sub,
-  tone,
-  big,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  tone?: "ok" | "warn" | "danger";
-  big?: boolean;
-}) {
-  const valueClass =
-    tone === "warn"   ? "text-amber-700"   :
-    tone === "ok"     ? "text-emerald-800" :
-    tone === "danger" ? "text-rose-800"    :
-                        "text-navy-900";
-  return (
-    <div className={`bg-white rounded-2xl shadow-soft p-5 ${big ? "ring-1 ring-emerald-200" : ""}`}>
-      <p className="text-[10px] uppercase tracking-[0.14em] font-semibold text-ink-500">
-        {label}
-      </p>
-      <p className={`font-display ${big ? "text-4xl" : "text-3xl"} tabular-nums mt-1.5 ${valueClass}`}>
-        {value}
-      </p>
-      <p className="text-[11.5px] text-ink-500 mt-1">{sub}</p>
-    </div>
   );
 }
 
