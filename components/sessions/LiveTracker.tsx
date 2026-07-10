@@ -568,9 +568,17 @@ export function LiveTracker({
               {phase === "tracking" ? "Live" : phase === "paused" ? "Paused" : "Saving…"}
             </span>
           </div>
-          {accuracyM != null && (
-            <span className="text-[11px] text-ink-500">
-              GPS ±{Math.round(accuracyM)}m · {pointCount} pts
+          {phase === "tracking" && (
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-1 rounded-full ${
+              accuracyM == null ? "bg-amber-50 text-amber-700"
+              : accuracyM <= 20 ? "bg-emerald-50 text-emerald-700"
+              : accuracyM <= 50 ? "bg-amber-50 text-amber-700"
+              : "bg-rose-50 text-rose-700"
+            }`}>
+              <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+              {accuracyM == null
+                ? "Searching for GPS…"
+                : `±${Math.round(accuracyM)}m · ${pointCount} ${pointCount === 1 ? "fix" : "fixes"}`}
             </span>
           )}
         </div>
@@ -581,6 +589,17 @@ export function LiveTracker({
             {km} <span className="text-2xl text-ink-500">km</span>
           </div>
           <div className="text-sm text-ink-500">distance</div>
+          {/* Reassurance: fixes ARE arriving, distance just needs movement. */}
+          {phase === "tracking" && pointCount > 0 && distanceM < 5 && (
+            <p className="text-[12px] text-emerald-700 font-medium pt-1">
+              GPS locked ✓ — start moving and the distance will climb.
+            </p>
+          )}
+          {phase === "tracking" && accuracyM == null && (
+            <p className="text-[12px] text-amber-700 font-medium pt-1">
+              Waiting for a GPS fix — head outside, under open sky.
+            </p>
+          )}
         </div>
 
         {/* Secondary stats grid */}
