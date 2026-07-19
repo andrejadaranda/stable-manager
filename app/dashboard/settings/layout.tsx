@@ -22,6 +22,7 @@ const GROUPS: Group[] = [
     title: "Personal",
     tabs: [
       { href: "/dashboard/settings/profile",  label: "Profile",  ownerOnly: false },
+      { href: "/dashboard/settings/calendar", label: "Calendar sync", ownerOnly: false },
       { href: "/dashboard/settings/security", label: "Security", ownerOnly: false },
     ],
   },
