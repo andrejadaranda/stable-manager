@@ -249,6 +249,15 @@ export async function GET(req: Request) {
   // Dormant until push is configured.
   const morningDigestResults = await runMorningLessonDigest(supabase);
 
+  // ---- Auto-complete past lessons -----------------------------------
+  // Lessons never transition on their own — without this every past lesson
+  // sits at 'scheduled' forever, which makes the calendar and stats read
+  // wrong. Any lesson that has ended and is still 'scheduled' becomes
+  // 'completed'. Money is unaffected (finance counts scheduled + completed
+  // identically; only 'cancelled' is excluded), and 'no_show'/'cancelled'
+  // are left untouched so a manual mark always wins.
+  const autoCompleteResults = await runAutoCompletePastLessons(supabase);
+
   // ---- External calendar import (spouse's work → busy blocks) -------
   // Re-fetch every user's subscribed .ics feed and rewrite their imported
   // availability_blocks. Transient fetch failures keep the last good import.
@@ -268,9 +277,31 @@ export async function GET(req: Request) {
     push: pushResults,
     ownerNudge: ownerNudgeResults,
     morningDigest: morningDigestResults,
+    autoComplete: autoCompleteResults,
     externalCal: externalCalResults,
     window: { from: winFrom.toISOString(), to: winTo.toISOString() },
   });
+}
+
+// ----------------------------------------------------------------
+// Auto-complete past lessons. Any 'scheduled' lesson whose ends_at is in
+// the past becomes 'completed'. Idempotent by construction (the WHERE
+// clause stops matching once flipped). Leaves no_show/cancelled alone.
+// ----------------------------------------------------------------
+async function runAutoCompletePastLessons(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+): Promise<{ completed: number }> {
+  const { data, error } = await supabase
+    .from("lessons")
+    .update({ status: "completed" })
+    .eq("status", "scheduled")
+    .lt("ends_at", new Date().toISOString())
+    .select("id");
+  if (error) {
+    console.error("[cron/auto-complete] update failed:", error);
+    return { completed: 0 };
+  }
+  return { completed: (data ?? []).length };
 }
 
 // ----------------------------------------------------------------
