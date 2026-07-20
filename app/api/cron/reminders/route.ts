@@ -31,6 +31,7 @@ import { sendTrialEndingEmail } from "@/lib/email/trial-ending";
 import { sendOwnerWeeklyNudgeEmail } from "@/lib/email/owner-weekly-nudge";
 import { sendSMS, toE164Lithuania } from "@/lib/sms/send";
 import { sendPushToUser, pushConfigured, type PushPayload } from "@/lib/push/send";
+import { syncAllExternalCalendars } from "@/services/external-calendar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -248,6 +249,16 @@ export async function GET(req: Request) {
   // Dormant until push is configured.
   const morningDigestResults = await runMorningLessonDigest(supabase);
 
+  // ---- External calendar import (spouse's work → busy blocks) -------
+  // Re-fetch every user's subscribed .ics feed and rewrite their imported
+  // availability_blocks. Transient fetch failures keep the last good import.
+  let externalCalResults: Awaited<ReturnType<typeof syncAllExternalCalendars>> | { error: string };
+  try {
+    externalCalResults = await syncAllExternalCalendars(supabase);
+  } catch (err: any) {
+    externalCalResults = { error: err?.message ?? "external calendar sync failed" };
+  }
+
   return NextResponse.json({
     ok: true,
     ...results,
@@ -257,6 +268,7 @@ export async function GET(req: Request) {
     push: pushResults,
     ownerNudge: ownerNudgeResults,
     morningDigest: morningDigestResults,
+    externalCal: externalCalResults,
     window: { from: winFrom.toISOString(), to: winTo.toISOString() },
   });
 }

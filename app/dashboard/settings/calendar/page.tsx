@@ -1,8 +1,13 @@
-// Settings → Calendar sync. Shows the signed-in user's private iCal feed URL.
+// Settings → Calendar sync.
+//  • Export: the signed-in user's private iCal feed URL (Longrein → Google/Apple).
+//  • Import: subscribe Longrein to an external calendar (e.g. spouse's work) so
+//    its events become busy blocks. Import is staff-only (owner/employee).
 
 import { getSession } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CalendarSyncPanel } from "@/components/settings/calendar-sync-panel";
+import { ExternalCalendarPanel } from "@/components/settings/external-calendar-panel";
+import { getExternalCalendarConfig } from "@/services/external-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -19,19 +24,36 @@ export default async function CalendarSyncPage() {
 
   const token = (data as { calendar_token: string | null } | null)?.calendar_token ?? null;
 
-  if (!token) {
-    return (
-      <div className="flex flex-col gap-3">
-        <h2 className="font-serif font-semibold text-[22px] text-ink-900">Calendar sync</h2>
-        <p className="text-[13.5px] text-ink-500">
-          Your calendar link isn&apos;t ready yet. Refresh in a moment, or contact support if it persists.
-        </p>
-      </div>
-    );
-  }
+  const isStaff = session.role === "owner" || session.role === "employee";
+  const external = isStaff ? await getExternalCalendarConfig().catch(() => null) : null;
 
-  const feedUrl = `${APP_ORIGIN}/api/calendar/${token}`;
-  const webcalUrl = feedUrl.replace(/^https?:\/\//, "webcal://");
+  return (
+    <div className="flex flex-col gap-6">
+      {token ? (
+        <CalendarSyncPanel
+          feedUrl={`${APP_ORIGIN}/api/calendar/${token}`}
+          webcalUrl={`${APP_ORIGIN}/api/calendar/${token}`.replace(/^https?:\/\//, "webcal://")}
+        />
+      ) : (
+        <div className="flex flex-col gap-3">
+          <h2 className="font-serif font-semibold text-[22px] text-ink-900">Calendar sync</h2>
+          <p className="text-[13.5px] text-ink-500">
+            Your calendar link isn&apos;t ready yet. Refresh in a moment, or contact support if it persists.
+          </p>
+        </div>
+      )}
 
-  return <CalendarSyncPanel feedUrl={feedUrl} webcalUrl={webcalUrl} />;
+      {external && (
+        <ExternalCalendarPanel
+          initial={{
+            url: external.url,
+            label: external.label,
+            syncedAt: external.syncedAt,
+            status: external.status,
+            blockCount: external.blockCount,
+          }}
+        />
+      )}
+    </div>
+  );
 }
