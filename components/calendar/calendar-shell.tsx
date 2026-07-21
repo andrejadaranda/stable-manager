@@ -99,6 +99,11 @@ export function CalendarShell({
   const [dayKey,  setDayKey]  = useState<string>(initialDayKey);
   const [slot,    setSlot]    = useState<Slot | null>(null);
   const [selected, setSelected] = useState<CalendarLesson | null>(null);
+  // "Book again" prefill for the create modal (client/horse/service/price from
+  // an existing lesson; day + time are picked fresh).
+  const [createPrefill, setCreatePrefill] = useState<
+    { clientId?: string; horseId?: string; serviceId?: string; price?: number | null } | null
+  >(null);
 
   // Optimistic overrides: lessonId → new starts/ends. Cleared after
   // server reconciliation via router.refresh(). Server-truth re-arrives
@@ -425,8 +430,9 @@ export function CalendarShell({
           services={services}
           arenas={arenas}
           activePackagesByClient={activePackagesByClient}
-          onClose={() => setSlot(null)}
+          onClose={() => { setSlot(null); setCreatePrefill(null); }}
           initial={slot.startsLocal ? slot : undefined}
+          prefill={createPrefill ?? undefined}
         />
       )}
 
@@ -441,6 +447,13 @@ export function CalendarShell({
           horses={horses}
           arenas={arenas}
           onClose={() => setSelected(null)}
+          onBookAgain={(prefill) => {
+            // Close edit, open a fresh create modal prefilled with this lesson's
+            // client/horse/service/price — the owner picks the new day + time.
+            setSelected(null);
+            setCreatePrefill(prefill);
+            setSlot(seedSlotForDay(dayKey));
+          }}
         />
       )}
     </div>

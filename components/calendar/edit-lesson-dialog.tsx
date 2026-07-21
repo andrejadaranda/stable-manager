@@ -7,14 +7,12 @@
 //   * 15-min step on datetime-local inputs.
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
   updateLessonAction,
   cancelLessonAction,
   deleteLessonAction,
-  duplicateLessonAction,
   markLessonPaidAction,
   markLessonUnpaidAction,
   fetchLessonChangesAction,
@@ -48,6 +46,7 @@ export function EditLessonDialog({
   horses = [],
   arenas = [],
   onClose,
+  onBookAgain,
 }: {
   lesson: CalendarLesson;
   /** Stable's active services. Used to render a swap-service select. */
@@ -62,6 +61,8 @@ export function EditLessonDialog({
   /** Active arenas — feeds the arena dropdown. Migration 63. */
   arenas?:  Array<{ id: string; name: string; color: string }>;
   onClose: () => void;
+  /** "Book again": open a fresh create modal prefilled from this lesson. */
+  onBookAgain?: (prefill: { clientId?: string; horseId?: string; serviceId?: string; price?: number | null }) => void;
 }) {
   const [editState,   editAction]   = useFormState<UpdateLessonState, FormData>(
     updateLessonAction,   updateLessonInitialState,
@@ -78,28 +79,14 @@ export function EditLessonDialog({
   const [deleteState, deleteAction] = useFormState<UpdateLessonState, FormData>(
     deleteLessonAction, updateLessonInitialState,
   );
-  const [bookAgainState, bookAgainAction] = useFormState<UpdateLessonState, FormData>(
-    duplicateLessonAction, updateLessonInitialState,
-  );
   const [sellPkgState, sellPkgAction] = useFormState<UpdateLessonState, FormData>(
     sellPackageForLessonAction, updateLessonInitialState,
   );
-  const router = useRouter();
-
   // Close once a just-sold package has covered the lesson.
   useEffect(() => {
     if (sellPkgState.success) onClose();
   }, [sellPkgState.success, onClose]);
 
-  // "Book again" succeeded — the clone lives next week. Navigate there and
-  // close. (The action no longer redirects server-side; doing so inside a
-  // transition white-screened the page.)
-  useEffect(() => {
-    if (bookAgainState.success) {
-      onClose();
-      if (bookAgainState.day) router.push(`/dashboard/calendar?date=${bookAgainState.day}`);
-    }
-  }, [bookAgainState.success, bookAgainState.day, onClose, router]);
 
   // Close the dialog once a delete succeeds (the row is gone).
   useEffect(() => {
@@ -575,7 +562,18 @@ export function EditLessonDialog({
           <div className="mt-1 pt-3 border-t border-ink-100 flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs text-ink-500">Quick action</span>
             <div className="flex items-center gap-2">
-              <BookAgainButton formAction={bookAgainAction} lessonId={lesson.id} />
+              {onBookAgain && (
+                <BookAgainButton
+                  onClick={() =>
+                    onBookAgain({
+                      clientId:  lesson.client?.id ?? undefined,
+                      horseId:   (lesson.horse as { id?: string } | null)?.id ?? undefined,
+                      serviceId: lesson.service_id ?? undefined,
+                      price:     lesson.price ?? undefined,
+                    })
+                  }
+                />
+              )}
               <DeleteLessonButton formAction={deleteAction} lessonId={lesson.id} />
               <CancelButton
                 disabled={lesson.status === "cancelled"}
@@ -584,8 +582,8 @@ export function EditLessonDialog({
               />
             </div>
           </div>
-          {(deleteState.error || bookAgainState.error) && (
-            <p className="mt-2 text-[12px] text-rose-700">{deleteState.error || bookAgainState.error}</p>
+          {deleteState.error && (
+            <p className="mt-2 text-[12px] text-rose-700">{deleteState.error}</p>
           )}
         </form>
 
@@ -720,31 +718,18 @@ function SaveButton() {
 
 // "Book again" — clones this lesson to the same time next week and jumps
 // there. Same nested-form rule: no inner <form>.
-function BookAgainButton({
-  formAction,
-  lessonId,
-}: {
-  formAction: (formData: FormData) => void;
-  lessonId: string;
-}) {
-  const [pending, startTransition] = useTransition();
-  function handle() {
-    const fd = new FormData();
-    fd.set("lesson_id", lessonId);
-    startTransition(() => formAction(fd));
-  }
+function BookAgainButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
-      onClick={handle}
-      disabled={pending}
+      onClick={onClick}
       className="
         h-10 px-3.5 rounded-xl text-xs font-medium
-        text-brand-700 bg-brand-50 hover:bg-brand-100 disabled:opacity-50
+        text-brand-700 bg-brand-50 hover:bg-brand-100
         transition-colors
       "
     >
-      {pending ? "Booking…" : "Book again"}
+      Book again
     </button>
   );
 }

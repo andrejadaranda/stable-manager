@@ -1,5 +1,5 @@
 import { requireBusinessAccount } from "@/lib/auth/redirects";
-import { getCalendar } from "@/services/lessons";
+import { getCalendar, autoCompletePastLessons } from "@/services/lessons";
 import { listClients } from "@/services/clients";
 import { listHorses } from "@/services/horses";
 import { listTrainers } from "@/services/profiles";
@@ -22,6 +22,10 @@ export default async function CalendarPage({
   searchParams: { date?: string; view?: string };
 }) {
   await requireBusinessAccount("owner", "employee");
+
+  // Auto-complete any lessons whose time has passed, so the calendar shows the
+  // right status immediately (not only after the daily cron). Best-effort.
+  await autoCompletePastLessons().catch(() => {});
 
   const ref = searchParams.date ? new Date(searchParams.date) : new Date();
   const refDate = fmtISODate(ref);

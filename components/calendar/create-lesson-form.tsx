@@ -117,6 +117,7 @@ export function CreateLessonForm({
   activePackagesByClient = {},
   onClose,
   initial,
+  prefill,
 }: {
   clients: ClientOpt[];
   horses: HorseOpt[];
@@ -132,20 +133,23 @@ export function CreateLessonForm({
   activePackagesByClient?: Record<string, PackageSummaryRow>;
   onClose: () => void;
   initial?: { startsLocal?: string; endsLocal?: string };
+  /** "Book again" prefill — seed client/horse/service/price from an existing
+   *  lesson, leaving the day + time for the owner to pick. */
+  prefill?: { clientId?: string; horseId?: string; serviceId?: string; price?: number | null };
 }) {
   const [state, formAction] = useFormState<CreateLessonState, FormData>(
     createLessonAction, initialState,
   );
 
   // Controlled fields so we can auto-fill defaults intelligently.
-  const [clientId, setClientId] = useState("");
-  const [horseId, setHorseId]   = useState("");
+  const [clientId, setClientId] = useState(prefill?.clientId ?? "");
+  const [horseId, setHorseId]   = useState(prefill?.horseId ?? "");
   // Single-trainer stables (e.g. an owner who is the only coach) shouldn't
   // be asked "who will train?" — auto-assign the only trainer and hide the
   // picker. Multi-trainer stables still get the dropdown.
   const soleTrainer = trainers.length === 1 ? trainers[0] : null;
   const [trainerId, setTrainerId] = useState(soleTrainer?.id ?? "");
-  const [serviceId, setServiceId] = useState("");
+  const [serviceId, setServiceId] = useState(prefill?.serviceId ?? "");
   // Default to the first active arena (typically "Main arena") so single-
   // arena stables don't need to touch the picker at all.
   const [arenaId,   setArenaId]   = useState(arenas[0]?.id ?? "");
@@ -160,8 +164,10 @@ export function CreateLessonForm({
   const seedEnd   = initial?.endsLocal   || addMinutes(seedStart, DEFAULT_DURATION_MIN);
   const [startsLocal, setStartsLocal] = useState(seedStart);
   const [endsLocal, setEndsLocal]     = useState(seedEnd);
-  const [price, setPrice] = useState("");
-  const [priceManuallyEdited, setPriceManuallyEdited] = useState(false);
+  const [price, setPrice] = useState(prefill?.price != null ? String(prefill.price) : "");
+  // Treat a prefilled price as user-set so the client-default effect doesn't
+  // clobber it. (A prefilled service will still re-seed price on mount.)
+  const [priceManuallyEdited, setPriceManuallyEdited] = useState(prefill?.price != null && !prefill?.serviceId);
   const [notes, setNotes] = useState("");
   // Use-package toggle. Defaults to true when an active package exists
   // for the picked client — covering by package is what owners do most

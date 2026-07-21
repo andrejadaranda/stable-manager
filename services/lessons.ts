@@ -771,6 +771,22 @@ export async function deleteLesson(lessonId: string): Promise<void> {
   if (error) throw error;
 }
 
+/** Flip any of this stable's past `scheduled` lessons to `completed`. Best-
+ *  effort, idempotent (the WHERE stops matching once flipped). Called on
+ *  calendar load so a lesson auto-completes the moment its time has passed —
+ *  without waiting for the daily cron. Leaves no_show/cancelled untouched. */
+export async function autoCompletePastLessons(): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+  await supabase
+    .from("lessons")
+    .update({ status: "completed" })
+    .eq("stable_id", session.stableId)
+    .eq("status", "scheduled")
+    .lt("ends_at", new Date().toISOString());
+}
+
 export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
   const session = await getSession();
   requireRole(session, "owner", "employee");
