@@ -22,6 +22,7 @@ import {
 import { useFocusTrap } from "@/lib/utils/useFocusTrap";
 import type { PackageSummaryRow } from "@/services/packages";
 import type { ServiceRow } from "@/services/services";
+import { parseIntake } from "@/lib/intake/parse";
 
 const initialState: CreateLessonState = { error: null, success: false };
 
@@ -160,6 +161,13 @@ export function CreateLessonForm({
   const [newClientName, setNewClientName] = useState("");
   const [newClientPhone, setNewClientPhone] = useState("");
 
+  // ----- Smart intake: paste ONE free-text message → prefill a DRAFT -----
+  // Never commits: parses name/phone/date/time and fills the fields below;
+  // the owner reviews and hits "Create lesson" as usual.
+  const [intakeOpen, setIntakeOpen] = useState(false);
+  const [intakeText, setIntakeText] = useState("");
+  const [intakeMsg, setIntakeMsg]   = useState<string | null>(null);
+
   const seedStart = initial?.startsLocal || nowRoundedLocal();
   const seedEnd   = initial?.endsLocal   || addMinutes(seedStart, DEFAULT_DURATION_MIN);
   const [startsLocal, setStartsLocal] = useState(seedStart);
@@ -204,6 +212,37 @@ export function CreateLessonForm({
   }
   function removeChild(key: string) {
     setGroupChildren((prev) => prev.filter((c) => c.key !== key));
+  }
+
+  // Parse the pasted message and fill the DRAFT fields. Only fills what it
+  // finds — never blanks a field the parser didn't detect.
+  function applyIntake() {
+    const d = parseIntake(intakeText, new Date());
+    if (d.name || d.phone) {
+      setAddingClient(true);
+      if (d.name)  setNewClientName(d.name);
+      if (d.phone) setNewClientPhone(d.phone);
+    }
+    if (d.date || d.time) {
+      const date = d.date ?? toLocalInput(new Date()).slice(0, 10);
+      const time = d.time ?? "09:00";
+      const local = `${date}T${time}`;
+      setStartsLocal(local);
+      setEndsManuallyEdited(false);
+      setEndsLocal(addMinutes(local, DEFAULT_DURATION_MIN));
+    }
+    if (d.notes) setNotes(d.notes);
+    const found = [
+      d.name  ? "name"  : null,
+      d.phone ? "phone" : null,
+      d.date  ? "date"  : null,
+      d.time  ? "time"  : null,
+    ].filter(Boolean);
+    setIntakeMsg(
+      found.length
+        ? `Filled: ${found.join(", ")}. Review below, then Create lesson.`
+        : "Couldn't read a name/date/time — fill the fields manually.",
+    );
   }
 
   const activePackage = clientId ? activePackagesByClient[clientId] ?? null : null;
@@ -355,6 +394,54 @@ export function CreateLessonForm({
             ))}
           </div>
           <input type="hidden" name="lesson_type" value={lessonType} />
+
+          {/* Smart intake — paste a phone/chat message, we draft the lesson.
+              Private lessons only (single client). Fills the fields below;
+              never auto-creates. */}
+          {lessonType === "private" && (
+            <div className="rounded-xl border border-navy-100 bg-navy-50/40 px-3 py-2.5">
+              {!intakeOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setIntakeOpen(true)}
+                  className="flex items-center gap-1.5 text-[12.5px] font-medium text-navy-700 hover:text-navy-900"
+                >
+                  <span aria-hidden>✨</span> Paste a message to fill this in
+                </button>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[12.5px] font-medium text-navy-900">Smart intake</p>
+                    <button
+                      type="button"
+                      onClick={() => { setIntakeOpen(false); setIntakeText(""); setIntakeMsg(null); }}
+                      className="text-[11px] text-ink-500 hover:text-navy-900"
+                    >
+                      Hide
+                    </button>
+                  </div>
+                  <textarea
+                    value={intakeText}
+                    onChange={(e) => setIntakeText(e.target.value)}
+                    rows={2}
+                    placeholder='e.g. "Justė 8 m. be patirties +37061234567 gruodžio 12 15:00"'
+                    className="rounded-lg border border-ink-200 bg-white text-sm text-ink-900 placeholder:text-ink-400 px-3 py-2 leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={applyIntake}
+                      disabled={!intakeText.trim()}
+                      className="h-8 px-3 rounded-lg text-[12.5px] font-medium bg-navy-800 text-white hover:bg-navy-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Fill from message
+                    </button>
+                    {intakeMsg && <span className="text-[11px] text-ink-600 leading-snug">{intakeMsg}</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* GROUP: paying parent + children each with a price */}
           {lessonType === "group" && (
