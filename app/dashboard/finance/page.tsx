@@ -12,8 +12,10 @@
 
 import { requireBusinessAccount } from "@/lib/auth/redirects";
 import { getMonthFinancials, getRevenueTrend } from "@/services/finance";
+import { getMonthForecast } from "@/services/billing";
 import { ensureBoardingForCurrentMonth } from "@/services/boarding";
 import { FinanceShell } from "@/components/finance/finance-shell";
+import { ForecastStrip } from "@/components/finance/forecast-strip";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +38,16 @@ export default async function FinancePage({
     ? (searchParams.period as string)
     : currentYearMonth();
 
-  const [data, trend] = await Promise.all([
+  const [data, trend, forecast] = await Promise.all([
     getMonthFinancials(period),
     getRevenueTrend(period, 6),
+    getMonthForecast(period),
   ]);
 
-  return <FinanceShell data={data} trend={trend} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <ForecastStrip forecast={forecast} />
+      <FinanceShell data={data} trend={trend} />
+    </div>
+  );
 }

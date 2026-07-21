@@ -95,6 +95,47 @@ export async function getMonthBillableItems(
   return listBillableItems({ from, to, clientId });
 }
 
+// ---------------------------------------------------------------------------
+// Income forecast (Stage D). Three live numbers for a month, all reading the
+// same billable_items view — so they move automatically as lessons are booked,
+// delivered and paid. No "recalculate" button: recomputed on every page load.
+// Reimbursements (farrier/vet/etc) are excluded — they offset expenses, not
+// income.
+// ---------------------------------------------------------------------------
+export type MonthForecast = {
+  received: number;   // already collected against this month's items
+  pending: number;    // delivered but not fully paid — owed now
+  projected: number;  // scheduled (future this month) and not yet paid — still coming
+  expected: number;   // received + pending + projected
+};
+
+export async function getMonthForecast(
+  yearMonth: string,
+  clientId?: string,
+): Promise<MonthForecast> {
+  const items = (await getMonthBillableItems(yearMonth, clientId)).filter(
+    (i) => !i.isReimbursement && i.status !== "cancelled" && i.status !== "refunded",
+  );
+
+  let received = 0;
+  let pending = 0;
+  let projected = 0;
+  for (const i of items) {
+    received += i.paidAmount;
+    if (i.remaining > 0) {
+      if (i.status === "scheduled") projected += i.remaining;
+      else pending += i.remaining; // delivered / paid-but-short
+    }
+  }
+  const round = (n: number) => Math.round(n * 100) / 100;
+  return {
+    received: round(received),
+    pending: round(pending),
+    projected: round(projected),
+    expected: round(received + pending + projected),
+  };
+}
+
 /** First and last calendar day of a "YYYY-MM" month, as YYYY-MM-DD strings. */
 export function monthBounds(yearMonth: string): { from: string; to: string } {
   const [y, m] = yearMonth.split("-").map(Number);
