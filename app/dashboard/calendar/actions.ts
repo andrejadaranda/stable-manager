@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import {
   createLesson,
   createRecurringLessons,
@@ -346,7 +345,7 @@ export async function createLessonAction(
 // =============================================================
 // Update / cancel a lesson
 // =============================================================
-export type UpdateLessonState = { error: string | null; success: boolean };
+export type UpdateLessonState = { error: string | null; success: boolean; day?: string };
 
 const VALID_STATUSES = ["scheduled", "completed", "cancelled", "no_show"] as const;
 type LessonStatus = (typeof VALID_STATUSES)[number];
@@ -547,7 +546,11 @@ export async function duplicateLessonAction(
     return { error: `Could not book again: ${m || "unknown error"}.`, success: false };
   }
   revalidatePath("/dashboard/calendar");
-  redirect(`/dashboard/calendar?date=${day}`);
+  // Return the target day and let the client navigate. Calling redirect() here
+  // while this action is dispatched inside startTransition surfaced as a
+  // client-side exception ("Book again" white-screened), so we hand the jump
+  // back to the dialog instead.
+  return { error: null, success: true, day };
 }
 
 export async function fetchLessonChangesAction(lessonId: string): Promise<LessonChange[]> {

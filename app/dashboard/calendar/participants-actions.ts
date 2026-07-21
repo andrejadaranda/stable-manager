@@ -12,6 +12,8 @@ import {
   setLessonParticipantPrice,
   listLessonParticipants,
   promoteFromWaitlist,
+  markParticipantPaid,
+  markParticipantUnpaid,
 } from "@/services/lessons";
 
 export type ParticipantsActionState = {
@@ -160,6 +162,43 @@ export async function setParticipantPriceAction(
     return { ...initial, error: (err as Error)?.message ?? "Failed to set price." };
   }
 
+  revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
+
+export async function markParticipantPaidAction(
+  _prev: ParticipantsActionState,
+  fd: FormData,
+): Promise<ParticipantsActionState> {
+  const lessonId = String(fd.get("lesson_id") ?? "");
+  const clientId = String(fd.get("client_id") ?? "");
+  const methodRaw = String(fd.get("method") ?? "cash");
+  const method = (["cash", "card", "transfer", "other"].includes(methodRaw) ? methodRaw : "cash") as
+    "cash" | "card" | "transfer" | "other";
+  if (!lessonId || !clientId) return { ...initial, error: "Missing rider." };
+  try {
+    await markParticipantPaid(lessonId, clientId, method);
+  } catch (err) {
+    const m = (err as Error)?.message ?? "";
+    if (m === "NO_PRICE") return { ...initial, error: "Set a price for this rider first." };
+    return { ...initial, error: `Couldn't mark paid: ${m || "unknown error"}.` };
+  }
+  revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
+
+export async function markParticipantUnpaidAction(
+  _prev: ParticipantsActionState,
+  fd: FormData,
+): Promise<ParticipantsActionState> {
+  const lessonId = String(fd.get("lesson_id") ?? "");
+  const clientId = String(fd.get("client_id") ?? "");
+  if (!lessonId || !clientId) return { ...initial, error: "Missing rider." };
+  try {
+    await markParticipantUnpaid(lessonId, clientId);
+  } catch (err) {
+    return { ...initial, error: (err as Error)?.message ?? "Failed to undo." };
+  }
   revalidatePath("/dashboard/calendar");
   return { error: null, success: true };
 }

@@ -457,6 +457,7 @@ export async function listLessonParticipants(lessonId: string) {
   const { data, error } = await supabase
     .from("lesson_participants")
     .select(`
+      id,
       client_id,
       horse_id,
       status,
@@ -470,7 +471,81 @@ export async function listLessonParticipants(lessonId: string) {
     .order("joined_at");
 
   if (error) throw error;
-  return data ?? [];
+  const rows = (data ?? []) as Array<{ id: string }>;
+
+  // Attach how much each participant has paid so far (per-rider payments carry
+  // lesson_participant_id). Lets the UI show a "Paid" state per rider.
+  const ids = rows.map((r) => r.id).filter(Boolean);
+  const paidByPart = new Map<string, number>();
+  if (ids.length > 0) {
+    const { data: pays } = await supabase
+      .from("payments")
+      .select("lesson_participant_id, amount")
+      .in("lesson_participant_id", ids);
+    for (const p of (pays ?? []) as Array<{ lesson_participant_id: string; amount: number }>) {
+      paidByPart.set(p.lesson_participant_id, (paidByPart.get(p.lesson_participant_id) ?? 0) + Number(p.amount));
+    }
+  }
+  return rows.map((r) => ({ ...r, paid_amount: paidByPart.get(r.id) ?? 0 }));
+}
+
+type PayMethod = "cash" | "card" | "transfer" | "other";
+
+/** Mark one group participant paid — records a payment against that rider only
+ *  (lesson_participant_id, NOT lesson_id, since a group has many payers).
+ *  Idempotent: a participant already carrying a payment is left as-is. */
+export async function markParticipantPaid(
+  lessonId: string,
+  participantClientId: string,
+  method: PayMethod = "cash",
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+
+  const { data: part } = await supabase
+    .from("lesson_participants")
+    .select("id, price")
+    .eq("lesson_id", lessonId)
+    .eq("client_id", participantClientId)
+    .single();
+  const p = part as { id: string; price: number | null } | null;
+  if (!p) throw new Error("PARTICIPANT_NOT_FOUND");
+  const price = Number(p.price);
+  if (!Number.isFinite(price) || price <= 0) throw new Error("NO_PRICE");
+
+  const { data: existing } = await supabase
+    .from("payments").select("id").eq("lesson_participant_id", p.id).limit(1);
+  if (existing && existing.length > 0) return; // already paid — no double charge
+
+  const { error } = await supabase.from("payments").insert({
+    stable_id:             session.stableId,
+    client_id:             participantClientId,
+    lesson_participant_id: p.id,
+    amount:                price,
+    method,
+  });
+  if (error) throw error;
+}
+
+/** Undo a participant's payment(s). */
+export async function markParticipantUnpaid(
+  lessonId: string,
+  participantClientId: string,
+): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+
+  const { data: part } = await supabase
+    .from("lesson_participants")
+    .select("id")
+    .eq("lesson_id", lessonId)
+    .eq("client_id", participantClientId)
+    .single();
+  const p = part as { id: string } | null;
+  if (!p) return;
+  await supabase.from("payments").delete().eq("lesson_participant_id", p.id);
 }
 
 /** Set one participant's price (per-child pricing in a group lesson) and,

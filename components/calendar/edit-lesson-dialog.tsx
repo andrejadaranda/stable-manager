@@ -7,6 +7,7 @@
 //   * 15-min step on datetime-local inputs.
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import {
@@ -83,11 +84,22 @@ export function EditLessonDialog({
   const [sellPkgState, sellPkgAction] = useFormState<UpdateLessonState, FormData>(
     sellPackageForLessonAction, updateLessonInitialState,
   );
+  const router = useRouter();
 
   // Close once a just-sold package has covered the lesson.
   useEffect(() => {
     if (sellPkgState.success) onClose();
   }, [sellPkgState.success, onClose]);
+
+  // "Book again" succeeded — the clone lives next week. Navigate there and
+  // close. (The action no longer redirects server-side; doing so inside a
+  // transition white-screened the page.)
+  useEffect(() => {
+    if (bookAgainState.success) {
+      onClose();
+      if (bookAgainState.day) router.push(`/dashboard/calendar?date=${bookAgainState.day}`);
+    }
+  }, [bookAgainState.success, bookAgainState.day, onClose, router]);
 
   // Close the dialog once a delete succeeds (the row is gone).
   useEffect(() => {

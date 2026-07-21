@@ -20,15 +20,21 @@ import {
   setParticipantPriceAction,
   loadParticipants,
   promoteWaitlistAction,
+  markParticipantPaidAction,
+  markParticipantUnpaidAction,
 } from "@/app/dashboard/calendar/participants-actions";
 
+type PayMethod = "cash" | "card" | "transfer";
+
 type Participant = {
+  id:        string;
   client_id: string;
   horse_id:  string | null;
   status:    string;
   no_show:   boolean;
   joined_at: string;
   price:     number | null;
+  paid_amount?: number;
   clients:   {
     id: string;
     full_name: string;
@@ -55,6 +61,29 @@ export function LessonParticipantsPanel({
   const [pickerOpen,   setPickerOpen]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
   const [pending,      startTransition] = useTransition();
+  // Per-rider payment method (group lessons: each family pays separately).
+  const [methodByClient, setMethodByClient] = useState<Record<string, PayMethod>>({});
+
+  async function handleParticipantPaid(clientId: string) {
+    setError(null);
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    fd.set("client_id", clientId);
+    fd.set("method", methodByClient[clientId] ?? "cash");
+    const r = await markParticipantPaidAction({ error: null, success: false }, fd);
+    if (r.error) setError(r.error);
+    else await refresh();
+  }
+
+  async function handleParticipantUnpaid(clientId: string) {
+    setError(null);
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    fd.set("client_id", clientId);
+    const r = await markParticipantUnpaidAction({ error: null, success: false }, fd);
+    if (r.error) setError(r.error);
+    else await refresh();
+  }
 
   const refresh = async () => {
     const rows = await loadParticipants(lessonId);
@@ -240,48 +269,97 @@ export function LessonParticipantsPanel({
               </p>
             )}
             <ul className="flex flex-col divide-y divide-ink-100/70">
-              {grp.members.map((p) => (
-                <li key={p.client_id} className="py-2 flex items-center justify-between gap-2">
-                  <div className="text-[13px] text-ink-900 min-w-0">
-                    {/* Name links into the client profile — where the
-                        parent's name/phone live for a child rider. */}
-                    <Link
-                      href={`/dashboard/clients/${p.client_id}`}
-                      className="font-medium text-brand-800 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-500"
-                    >
-                      {p.clients?.full_name ?? "Unknown rider"}
-                    </Link>
-                    <span className="text-ink-500"> on </span>
-                    <span className="font-medium">{p.horses?.name ?? "no horse yet"}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <div className="flex items-center gap-0.5 text-[12px] text-ink-500">
-                      €
-                      <input
-                        type="number" min="0" step="0.01"
-                        defaultValue={p.price ?? ""}
-                        onBlur={(e) => {
-                          if (e.target.value !== String(p.price ?? "")) {
-                            startTransition(() => handleSetPrice(p.client_id, e.target.value));
-                          }
-                        }}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
-                        placeholder="—"
-                        aria-label={`Price for ${p.clients?.full_name ?? "rider"}`}
-                        className="w-16 h-7 rounded-md border border-ink-200 bg-white text-[12px] px-1.5 tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-                      />
+              {grp.members.map((p) => {
+                const price = Number(p.price ?? 0);
+                const isPaid = price > 0 && (p.paid_amount ?? 0) >= price;
+                const method = methodByClient[p.client_id] ?? "cash";
+                return (
+                <li key={p.client_id} className="py-2 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[13px] text-ink-900 min-w-0">
+                      {/* Name links into the client profile — where the
+                          parent's name/phone live for a child rider. */}
+                      <Link
+                        href={`/dashboard/clients/${p.client_id}`}
+                        className="font-medium text-brand-800 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-500"
+                      >
+                        {p.clients?.full_name ?? "Unknown rider"}
+                      </Link>
+                      <span className="text-ink-500"> on </span>
+                      <span className="font-medium">{p.horses?.name ?? "no horse yet"}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => startTransition(() => handleRemove(p.client_id))}
-                      disabled={pending}
-                      className="h-7 px-2 text-[11px] text-ink-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors disabled:opacity-50"
-                    >
-                      Remove
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-0.5 text-[12px] text-ink-500">
+                        €
+                        <input
+                          type="number" min="0" step="0.01"
+                          defaultValue={p.price ?? ""}
+                          onBlur={(e) => {
+                            if (e.target.value !== String(p.price ?? "")) {
+                              startTransition(() => handleSetPrice(p.client_id, e.target.value));
+                            }
+                          }}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+                          placeholder="—"
+                          aria-label={`Price for ${p.clients?.full_name ?? "rider"}`}
+                          className="w-16 h-7 rounded-md border border-ink-200 bg-white text-[12px] px-1.5 tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => startTransition(() => handleRemove(p.client_id))}
+                        disabled={pending}
+                        className="h-7 px-2 text-[11px] text-ink-500 hover:text-rose-700 hover:bg-rose-50 rounded-md transition-colors disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Per-rider payment — each family pays separately. */}
+                  {price <= 0 ? (
+                    <p className="text-[11px] text-ink-400 pl-0.5">Set a price to mark paid</p>
+                  ) : isPaid ? (
+                    <div className="flex items-center gap-2 pl-0.5">
+                      <span className="text-[11.5px] font-semibold text-emerald-700">Paid ✓</span>
+                      <button
+                        type="button"
+                        onClick={() => startTransition(() => handleParticipantUnpaid(p.client_id))}
+                        disabled={pending}
+                        className="text-[11px] text-ink-500 hover:text-rose-700 disabled:opacity-50"
+                      >
+                        Undo
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 flex-wrap pl-0.5">
+                      <div className="inline-flex rounded-lg border border-ink-200 bg-white p-0.5">
+                        {(["cash", "card", "transfer"] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setMethodByClient((s) => ({ ...s, [p.client_id]: m }))}
+                            className={`h-7 px-2 rounded-md text-[10.5px] font-semibold capitalize transition-colors ${
+                              method === m ? "bg-brand-700 text-white" : "text-ink-600 hover:bg-ink-100/60"
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => startTransition(() => handleParticipantPaid(p.client_id))}
+                        disabled={pending}
+                        className="h-8 px-3 rounded-lg text-[11.5px] font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                      >
+                        {pending ? "…" : "Mark paid"}
+                      </button>
+                    </div>
+                  )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
         ))}
