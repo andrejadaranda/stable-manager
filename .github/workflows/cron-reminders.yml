@@ -1,0 +1,24 @@
+name: Cron — reminders every 10 min
+
+# Vercel Hobby crons run at most once per day, but the reminders route needs to
+# fire ~every 10 min (15-min-before lesson push, morning digest, auto-complete,
+# external calendar sync). GitHub Actions triggers it on a schedule instead.
+# Requires a repo secret CRON_SECRET matching the Vercel env var of the same
+# name (Settings → Secrets and variables → Actions → New repository secret).
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger reminders cron
+        run: |
+          curl -fsS --max-time 60 -X GET \
+            "https://app.longrein.eu/api/cron/reminders" \
+            -H "Authorization: Bearer ${CRON_SECRET}"
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
