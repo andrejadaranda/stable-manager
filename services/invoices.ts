@@ -11,6 +11,13 @@ import { startDirectChat, sendChatMessage } from "@/services/chat";
 const esc = (s: string) =>
   String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
 
+/** VAT breakdown for an invoice from a subtotal + the stable's rate (%). */
+function vatFor(subtotal: number, ratePct: number): { rate: number; amount: number; total: number } {
+  const rate = Number(ratePct) || 0;
+  const amount = Math.round(subtotal * rate) / 100; // subtotal * (rate/100), 2dp
+  return { rate, amount, total: Math.round((subtotal + amount) * 100) / 100 };
+}
+
 export type InvoiceRow = {
   id:           string;
   stable_id:    string;
@@ -167,6 +174,7 @@ export async function generateInvoiceForClient(clientId: string): Promise<{ id: 
   if (items.length === 0) return { id: null };
 
   const subtotal = items.reduce((a, it) => a + it.amount, 0);
+  const vat = vatFor(subtotal, issuer.vat_rate);
   const { data: numberRpc, error: rpcErr } = await supabase
     .rpc("next_invoice_number", { p_stable_id: session.stableId });
   if (rpcErr || !numberRpc) throw new Error("NUMBERING_FAILED");
@@ -178,9 +186,9 @@ export async function generateInvoiceForClient(clientId: string): Promise<{ id: 
       client_id: clientId,
       number: numberRpc as string,
       subtotal,
-      vat_rate: 0,
-      vat_amount: 0,
-      total: subtotal,
+      vat_rate: vat.rate,
+      vat_amount: vat.amount,
+      total: vat.total,
       status: "issued",
     })
     .select("id")
@@ -235,9 +243,9 @@ export async function createCustomInvoiceForClient(
       client_id: clientId,
       number: numberRpc as string,
       subtotal: amt,
-      vat_rate: 0,
-      vat_amount: 0,
-      total: amt,
+      vat_rate: vatFor(amt, issuer.vat_rate).rate,
+      vat_amount: vatFor(amt, issuer.vat_rate).amount,
+      total: vatFor(amt, issuer.vat_rate).total,
       status: "issued",
     })
     .select("id")
@@ -598,7 +606,8 @@ export async function generateMonthlyInvoices(periodStart: string, periodEnd: st
 
   for (const [clientId, items] of byClient.entries()) {
     const subtotal = items.reduce((acc, it) => acc + it.amount, 0);
-    const total    = subtotal; // no VAT unless issuer is registered — Sprint 6 #1b
+    const vat      = vatFor(subtotal, issuer.vat_rate);
+    const total    = vat.total;
 
     const { data: numberRpc, error: rpcErr } = await supabase
       .rpc("next_invoice_number", { p_stable_id: session.stableId });
@@ -613,8 +622,8 @@ export async function generateMonthlyInvoices(periodStart: string, periodEnd: st
         period_start: periodStart.slice(0, 10),
         period_end:   periodEnd.slice(0, 10),
         subtotal,
-        vat_rate:     0,
-        vat_amount:   0,
+        vat_rate:     vat.rate,
+        vat_amount:   vat.amount,
         total,
         status:       "issued",
       })
