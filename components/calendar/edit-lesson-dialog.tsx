@@ -619,12 +619,13 @@ function PaidQuickActions({
   unpaidAction: (formData: FormData) => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const [method, setMethod] = useState<"cash" | "card" | "transfer">("cash");
   if (priceIsZero) return null;
 
   function handleMarkPaid() {
     const fd = new FormData();
     fd.set("lesson_id", lessonId);
-    fd.set("method",    "cash");
+    fd.set("method",    method);
     startTransition(() => paidAction(fd));
   }
 
@@ -652,19 +653,36 @@ function PaidQuickActions({
     );
   }
   return (
-    <button
-      type="button"
-      onClick={handleMarkPaid}
-      disabled={pending}
-      className="
-        h-10 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap
-        bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800
-        disabled:opacity-50 disabled:cursor-not-allowed
-        transition-colors
-      "
-    >
-      {pending ? "Marking…" : "Mark paid"}
-    </button>
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {/* How did they pay — picked before marking paid. */}
+      <div className="inline-flex rounded-lg border border-ink-200 bg-white p-0.5">
+        {(["cash", "card", "transfer"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMethod(m)}
+            className={`h-8 px-2.5 rounded-md text-[11px] font-semibold capitalize transition-colors ${
+              method === m ? "bg-brand-700 text-white" : "text-ink-600 hover:bg-ink-100/60"
+            }`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={handleMarkPaid}
+        disabled={pending}
+        className="
+          h-10 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap
+          bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800
+          disabled:opacity-50 disabled:cursor-not-allowed
+          transition-colors
+        "
+      >
+        {pending ? "Marking…" : "Mark paid"}
+      </button>
+    </div>
   );
 }
 
