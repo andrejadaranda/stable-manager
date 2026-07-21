@@ -17,6 +17,7 @@ import { ClientBoardingSection } from "@/components/clients/client-boarding-sect
 import { AgreementsPanel } from "@/components/clients/agreements-panel";
 import { ChargesPanel } from "@/components/clients/charges-panel";
 import { OwesBreakdown } from "@/components/clients/owes-breakdown";
+import { GenerateBillButton } from "@/components/finance/generate-bill-button";
 import { InviteToAppButton } from "@/components/clients/invite-to-app-button";
 import { OnboardingInviteButton } from "@/components/clients/onboarding-invite-button";
 import { getPendingInviteForClient } from "@/services/invitations";
@@ -277,6 +278,8 @@ export default async function ClientDetailPage({
               </button>
             </form>
           </section>
+
+          <GenerateBillButton clientId={client.id} />
 
           {/* Owes breakdown — only rendered when the client actually
               owes money. We pass the balance as the source-of-truth so

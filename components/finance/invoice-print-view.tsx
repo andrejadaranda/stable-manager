@@ -42,7 +42,9 @@ export function InvoicePrintView({ detail }: { detail: InvoiceDetail }) {
             <Wordmark size="lg" />
           </span>
           <div className="text-right">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-ink-500 font-semibold">Invoice</p>
+            <p className="text-[11px] uppercase tracking-[0.22em] text-ink-500 font-semibold">
+              {invoice.kind === "proforma" ? "Proforma · Išankstinė sąskaita" : "Invoice · Sąskaita faktūra"}
+            </p>
             <h1 className="text-xl font-semibold mt-0.5 text-ink-900">{invoice.number}</h1>
             <div className="mt-1.5"><StatusBadge status={invoice.status} /></div>
           </div>

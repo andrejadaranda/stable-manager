@@ -32,6 +32,7 @@ export type InvoiceRow = {
   vat_amount:   number;
   total:        number;
   status:       "issued" | "paid" | "overdue" | "cancelled";
+  kind:         "invoice" | "proforma";
   notes:        string | null;
 };
 
