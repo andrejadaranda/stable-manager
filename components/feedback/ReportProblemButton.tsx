@@ -74,7 +74,7 @@ export function ReportProblemButton() {
           type="button"
           onClick={() => setOpen(true)}
           className="
-            fixed z-40 rounded-full bg-brand-700 hover:bg-brand-600 text-surface
+            fixed z-30 rounded-full bg-brand-700 hover:bg-brand-600 text-surface
             shadow-lift transition-colors inline-flex items-center justify-center gap-2
             font-medium
             bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3

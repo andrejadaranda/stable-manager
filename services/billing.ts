@@ -136,6 +136,77 @@ export async function getMonthForecast(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Consolidated monthly bill (Stage B). Everything owed by / paid by ONE person
+// in a period, from EVERY source — lessons, boarding, farrier/vet/misc — plus
+// future scheduled lessons. Each line is tagged as belonging to a real invoice
+// (faktūra: already delivered/paid) or a proforma (išankstinė: future,
+// not-yet-delivered). Already-invoiced and cancelled lines are excluded so
+// nothing is billed twice. This is the read-only collection layer; Stage C
+// turns these buckets into actual documents.
+// ---------------------------------------------------------------------------
+export type DocumentKind = "invoice" | "proforma";
+
+export type ClientBillable = BillableItem & { documentKind: DocumentKind };
+
+export type MonthlyBillBucket = {
+  lines: ClientBillable[];
+  subtotal: number; // sum of amounts (pre-VAT)
+};
+
+export type MonthlyBillPreview = {
+  clientId: string;
+  from: string;
+  to: string;
+  invoice: MonthlyBillBucket;   // delivered / paid — belongs on the faktūra
+  proforma: MonthlyBillBucket;  // future scheduled — belongs on the išankstinė
+  grandTotal: number;
+};
+
+/** Future (not-yet-delivered) items go on a proforma; everything already
+ *  delivered or paid goes on the real invoice. */
+function documentKindFor(item: BillableItem): DocumentKind {
+  return item.status === "scheduled" ? "proforma" : "invoice";
+}
+
+/**
+ * Every billable line for one client in [from, to] that is not already on an
+ * invoice and not cancelled/refunded — tagged invoice vs proforma. Includes
+ * reimbursement charges (farrier/vet are legitimate lines on a CLIENT bill),
+ * unlike the income forecast which excludes them.
+ */
+export async function collectClientBillables(
+  clientId: string,
+  range: { from: string; to: string },
+): Promise<ClientBillable[]> {
+  const items = await listBillableItems({ clientId, from: range.from, to: range.to });
+  return items
+    .filter((i) => !i.invoiced && i.status !== "cancelled" && i.status !== "refunded")
+    .map((i) => ({ ...i, documentKind: documentKindFor(i) }));
+}
+
+/** Consolidated preview for one client's month, split into faktūra + proforma. */
+export async function previewClientMonthlyBill(
+  clientId: string,
+  yearMonth: string,
+): Promise<MonthlyBillPreview> {
+  const { from, to } = monthBounds(yearMonth);
+  const lines = await collectClientBillables(clientId, { from, to });
+
+  const invoiceLines = lines.filter((l) => l.documentKind === "invoice");
+  const proformaLines = lines.filter((l) => l.documentKind === "proforma");
+  const sum = (xs: ClientBillable[]) => Math.round(xs.reduce((a, x) => a + x.amount, 0) * 100) / 100;
+
+  return {
+    clientId,
+    from,
+    to,
+    invoice: { lines: invoiceLines, subtotal: sum(invoiceLines) },
+    proforma: { lines: proformaLines, subtotal: sum(proformaLines) },
+    grandTotal: sum(lines),
+  };
+}
+
 /** First and last calendar day of a "YYYY-MM" month, as YYYY-MM-DD strings. */
 export function monthBounds(yearMonth: string): { from: string; to: string } {
   const [y, m] = yearMonth.split("-").map(Number);
