@@ -38,6 +38,8 @@ type Participant = {
   clients:   {
     id: string;
     full_name: string;
+    phone: string | null;
+    email: string | null;
     guardian_client_id: string | null;
     guardian_name: string | null;
     guardian_phone: string | null;
@@ -63,6 +65,11 @@ export function LessonParticipantsPanel({
   const [pending,      startTransition] = useTransition();
   // Per-rider payment method (group lessons: each family pays separately).
   const [methodByClient, setMethodByClient] = useState<Record<string, PayMethod>>({});
+  // Quick client-info card — opens ON TOP of the edit-lesson dialog so the
+  // owner can grab the parent's phone for a reminder without leaving the
+  // lesson. The full client page stays available via a link inside the card.
+  const [infoOf, setInfoOf] = useState<Participant | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function handleParticipantPaid(clientId: string) {
     setError(null);
@@ -277,14 +284,16 @@ export function LessonParticipantsPanel({
                 <li key={p.client_id} className="py-2 flex flex-col gap-1.5">
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-[13px] text-ink-900 min-w-0">
-                      {/* Name links into the client profile — where the
-                          parent's name/phone live for a child rider. */}
-                      <Link
-                        href={`/dashboard/clients/${p.client_id}`}
-                        className="font-medium text-brand-800 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-500"
+                      {/* Tapping the name opens a quick info card on top of
+                          the dialog (parent phone for reminders) — no page
+                          navigation. Full profile is linked inside the card. */}
+                      <button
+                        type="button"
+                        onClick={() => { setInfoOf(p); setCopied(false); }}
+                        className="font-medium text-brand-800 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-500 text-left"
                       >
                         {p.clients?.full_name ?? "Unknown rider"}
-                      </Link>
+                      </button>
                       <span className="text-ink-500"> on </span>
                       <span className="font-medium">{p.horses?.name ?? "no horse yet"}</span>
                     </div>
@@ -558,6 +567,156 @@ export function LessonParticipantsPanel({
           </div>
         </div>
       )}
+
+      {/* Quick client-info card — floats above the edit-lesson dialog. */}
+      {infoOf && (
+        <ClientInfoCard
+          p={infoOf}
+          copied={copied}
+          onCopy={(val) => {
+            navigator.clipboard?.writeText(val).then(
+              () => { setCopied(true); setTimeout(() => setCopied(false), 1500); },
+              () => {},
+            );
+          }}
+          onClose={() => setInfoOf(null)}
+        />
+      )}
     </section>
+  );
+}
+
+// ---------------------------------------------------------------
+// Quick client-info card. Opens on top of the edit-lesson dialog so
+// the owner can grab a parent's phone for a reminder in one tap,
+// close it, and stay in the lesson. Full profile link for the rest.
+// ---------------------------------------------------------------
+function ClientInfoCard({
+  p,
+  copied,
+  onCopy,
+  onClose,
+}: {
+  p: Participant;
+  copied: boolean;
+  onCopy: (val: string) => void;
+  onClose: () => void;
+}) {
+  const c = p.clients;
+  const parentPhone = c?.guardian_phone?.trim() || null;
+  const parentName  = c?.guardian_name?.trim() || null;
+  const ownPhone    = c?.phone?.trim() || null;
+  const ownEmail    = c?.email?.trim() || null;
+  // The number most useful for a reminder: a child's parent, else the rider.
+  const primaryPhone = parentPhone || ownPhone;
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-900/40 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${c?.full_name ?? "Rider"} contact`}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-xs bg-surface rounded-2xl shadow-lift overflow-hidden"
+      >
+        <div className="px-4 py-3 border-b border-ink-100 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-navy-900 truncate">{c?.full_name ?? "Rider"}</p>
+            <p className="text-[11.5px] text-ink-500 mt-0.5">
+              on {p.horses?.name ?? "no horse yet"}
+              {Number(p.price ?? 0) > 0 && <> · €{Number(p.price).toFixed(2)}</>}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-ink-400 hover:text-navy-900 p-1 -mr-1 rounded-lg shrink-0"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="px-4 py-3 flex flex-col gap-3">
+          {parentName || parentPhone ? (
+            <ContactRow
+              label={parentName ? `Parent · ${parentName}` : "Parent"}
+              phone={parentPhone}
+              copied={copied}
+              onCopy={onCopy}
+            />
+          ) : null}
+
+          {(ownPhone || ownEmail) && (
+            <ContactRow
+              label={parentPhone ? "Rider" : "Contact"}
+              phone={ownPhone}
+              email={ownEmail}
+              copied={copied}
+              onCopy={onCopy}
+            />
+          )}
+
+          {!primaryPhone && !ownEmail && (
+            <p className="text-[12px] text-ink-500">No phone or email on file yet.</p>
+          )}
+
+          <Link
+            href={`/dashboard/clients/${p.client_id}`}
+            className="text-[12px] font-medium text-brand-700 hover:text-brand-800 mt-0.5"
+          >
+            Open full profile →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactRow({
+  label,
+  phone,
+  email,
+  copied,
+  onCopy,
+}: {
+  label: string;
+  phone?: string | null;
+  email?: string | null;
+  copied: boolean;
+  onCopy: (val: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-[10.5px] uppercase tracking-[0.1em] text-ink-400 font-semibold">{label}</p>
+      {phone && (
+        <div className="flex items-center gap-2">
+          <a href={`tel:${phone.replace(/\s+/g, "")}`} className="text-[14px] font-medium text-navy-900 tabular-nums">
+            {phone}
+          </a>
+          <button
+            type="button"
+            onClick={() => onCopy(phone)}
+            className="h-6 px-2 rounded-md text-[11px] font-medium bg-ink-100 text-ink-700 hover:bg-ink-200"
+          >
+            {copied ? "Copied ✓" : "Copy"}
+          </button>
+        </div>
+      )}
+      {email && (
+        <a href={`mailto:${email}`} className="text-[12.5px] text-brand-700 hover:text-brand-800 break-all">
+          {email}
+        </a>
+      )}
+    </div>
   );
 }
