@@ -6,9 +6,14 @@ name: Cron — reminders every 10 min
 # Requires a repo secret CRON_SECRET matching the Vercel env var of the same
 # name (Settings → Secrets and variables → Actions → New repository secret).
 
+# NOTE: the every-10-min schedule is intentionally DISABLED until CRON_SECRET
+# is set as a repo secret (Settings → Secrets and variables → Actions). While
+# the secret is missing the curl gets 401, the job fails, and GitHub emails a
+# "run failed" notice every 10 min — hundreds of emails. Re-enable by
+# uncommenting the schedule below once CRON_SECRET exists.
 on:
-  schedule:
-    - cron: "*/10 * * * *"
+  # schedule:
+  #   - cron: "*/10 * * * *"
   workflow_dispatch: {}
 
 jobs:
