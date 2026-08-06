@@ -27,6 +27,7 @@ import type { AvailabilityBlock } from "@/services/availability.pure";
 import type { PackageSummaryRow } from "@/services/packages";
 import type { ServiceRow } from "@/services/services";
 import { CreateLessonForm } from "./create-lesson-form";
+import { QuickAddBar } from "./quick-add-bar";
 import { EditLessonDialog } from "./edit-lesson-dialog";
 import { WeekGrid } from "./week-grid";
 import { DayGrid } from "./day-grid";
@@ -298,6 +299,17 @@ export function CalendarShell({
           handleCreateAt(seed.startsLocal, seed.endsLocal);
         }}
       />
+
+      {/* Quick add — type "Justė 16h" → lesson. The primary, TimeTree-simple
+          way to book; the "+ New lesson" form above stays for full detail. */}
+      {editable && (
+        <QuickAddBar
+          clients={clients.map((c) => ({ id: c.id, full_name: c.full_name }))}
+          trainerId={trainers.length === 1 ? trainers[0].id : ""}
+          arenaId={arenas[0]?.id ?? ""}
+          dayKey={dayKey}
+        />
+      )}
 
       {/* Arena filter chips — only when stable has more than the default
           single arena. Owners on a single-arena yard never see noise. */}
