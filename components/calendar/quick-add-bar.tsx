@@ -61,7 +61,7 @@ export function QuickAddBar({
     const date = d.date ?? dayKey;
     const time = d.time ?? defaultTime(dayKey);
     const start = buildLocal(date, time);
-    if (!start) { setMsg("Couldn't read a time — try like \"Justė 16h\"."); return; }
+    if (!start) { setMsg("Neatpažinau laiko — bandyk pvz. „Justė 16h\"."); return; }
     const end = new Date(start.getTime() + DURATION_MIN * 60_000);
 
     const fd = new FormData();
@@ -78,7 +78,7 @@ export function QuickAddBar({
       const r = await createLessonAction({ error: null, success: false }, fd);
       if (r.error) { setMsg(r.error); return; }
       setText("");
-      setMsg(`Added ✓ ${labelFor(name, time)}`);
+      setMsg(`Įrašyta ✓ ${labelFor(name, time)}`);
       inputRef.current?.focus();
       router.refresh();
       setTimeout(() => setMsg(null), 2500);
@@ -94,7 +94,7 @@ export function QuickAddBar({
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }}
-          placeholder='Quick add — e.g. "Justė 16h"'
+          placeholder='pvz.: „Justė 16h" arba „Emilija rytoj 15:30"'
           aria-label="Quick add lesson"
           className="flex-1 min-w-0 h-11 rounded-xl border border-ink-200 bg-white text-[16px] text-ink-900 placeholder:text-ink-400 px-3 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
         />
