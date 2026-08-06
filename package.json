@@ -7,12 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "npm run test:personal",
+    "test:personal": "node --test \"services/personalDashboard/__tests__/*.test.ts\"",
     "types:gen": "supabase gen types typescript --linked > lib/types/database.ts",
     "cap:sync": "npx cap sync ios",
     "cap:open": "npx cap open ios",
     "cap:run": "npx cap run ios"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
     "@capacitor-community/background-geolocation": "^1.2.0",
     "@capacitor/core": "^6.1.2",
     "@capacitor/geolocation": "^6.0.1",
