@@ -81,7 +81,9 @@ export function ClientList({
             <div className="flex items-center justify-between gap-2.5 mx-4 mb-3.5 pt-3 border-t border-ink-100">
               <span className="inline-flex items-center gap-1.5 text-[13px] text-ink-500 min-w-0">
                 <svg className="text-ink-300 shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" /></svg>
-                <span className="truncate tabular-nums">{c.phone ?? "—"}</span>
+                {/* Show the client's own phone; fall back to the parent/guardian's
+                    number when the rider (usually a child) has none of their own. */}
+                <span className="truncate tabular-nums">{c.phone ?? (c as { guardian_phone?: string | null }).guardian_phone ?? "—"}</span>
               </span>
 
               <span className="shrink-0 flex items-center gap-2">
