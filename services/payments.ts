@@ -228,7 +228,7 @@ export async function listClientOwedItems(clientId: string): Promise<OwedItem[]>
       .from("lessons")
       .select(
         `
-        id, starts_at, price, package_id, status,
+        id, starts_at, price, package_id, status, lesson_type,
         horse:horses(name),
         payments(amount)
         `,
@@ -254,9 +254,9 @@ export async function listClientOwedItems(clientId: string): Promise<OwedItem[]>
       .order("period_start", { ascending: true }),
   ]);
 
-  if (lessonsRes.error)  throw lessonsRes.error;
-  if (chargesRes.error)  throw chargesRes.error;
-  if (boardingRes.error) throw boardingRes.error;
+  if (lessonsRes.error)   throw lessonsRes.error;
+  if (chargesRes.error)   throw chargesRes.error;
+  if (boardingRes.error)  throw boardingRes.error;
 
   const items: OwedItem[] = [];
 
@@ -265,9 +265,13 @@ export async function listClientOwedItems(clientId: string): Promise<OwedItem[]>
     starts_at: string;
     price: number | string;
     status: string;
+    lesson_type: string | null;
     horse: { name: string } | { name: string }[] | null;
     payments: { amount: number | string }[] | null;
   }>) {
+    // Group lessons are billed per participant below — never charge the
+    // whole club total to the payer here.
+    if (row.lesson_type === "group") continue;
     const price = Number(row.price);
     const paid  = (row.payments ?? []).reduce((s, p) => s + Number(p.amount ?? 0), 0);
     const owed  = Math.max(0, price - paid);
