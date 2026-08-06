@@ -284,6 +284,9 @@ function TimelineRow({ lesson }: { lesson: DashboardLesson }) {
     timeZone: "Europe/Vilnius",
   });
   const dur = Math.round((end.getTime() - start.getTime()) / 60000);
+  // The lesson's own local day — tapping the row jumps straight to it in the
+  // calendar (en-CA → YYYY-MM-DD, in the stable's timezone).
+  const dateStr = start.toLocaleDateString("en-CA", { timeZone: "Europe/Vilnius" });
 
   const accent =
     lesson.status === "completed"
@@ -293,22 +296,28 @@ function TimelineRow({ lesson }: { lesson: DashboardLesson }) {
         : "#F4663D";
 
   return (
-    <li className="flex items-center gap-3 px-3 py-2.5 bg-surface-muted/40 rounded-xl hover:bg-surface-muted/70 transition-colors">
-      <span className="w-1 h-9 rounded-sm shrink-0" style={{ background: accent }} />
-      <div className="w-14 shrink-0 text-sm font-semibold text-navy-900 tabular-nums">{time}</div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-navy-900 truncate">
-          {lesson.horse?.name ?? "—"}
-          <span className="text-ink-400 font-normal"> · </span>
-          <span className="text-ink-700 font-normal">{lesson.client?.full_name ?? "—"}</span>
-        </p>
-        <p className="text-[11.5px] text-ink-500 mt-0.5">
-          {lesson.trainer?.full_name ?? "Unassigned"} · {dur} min
-        </p>
-      </div>
-      <Badge tone={lessonStatusTone(lesson.status as LessonStatus)} dot>
-        {lessonStatusLabel(lesson.status as LessonStatus)}
-      </Badge>
+    <li>
+      <Link
+        href={`/dashboard/calendar?date=${dateStr}`}
+        className="flex items-center gap-3 px-3 py-2.5 bg-surface-muted/40 rounded-xl hover:bg-surface-muted/70 transition-colors"
+      >
+        <span className="w-1 h-9 rounded-sm shrink-0" style={{ background: accent }} />
+        <div className="w-14 shrink-0 text-sm font-semibold text-navy-900 tabular-nums">{time}</div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-navy-900 truncate">
+            {lesson.horse?.name ?? "—"}
+            <span className="text-ink-400 font-normal"> · </span>
+            <span className="text-ink-700 font-normal">{lesson.client?.full_name ?? "—"}</span>
+          </p>
+          <p className="text-[11.5px] text-ink-500 mt-0.5">
+            {lesson.trainer?.full_name ?? "Unassigned"} · {dur} min
+          </p>
+        </div>
+        <Badge tone={lessonStatusTone(lesson.status as LessonStatus)} dot>
+          {lessonStatusLabel(lesson.status as LessonStatus)}
+        </Badge>
+        <span aria-hidden className="text-ink-300 text-lg shrink-0">›</span>
+      </Link>
     </li>
   );
 }
