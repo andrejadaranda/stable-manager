@@ -270,7 +270,9 @@ export function EditLessonDialog({
             {!isPackage && (
               <PaidQuickActions
                 lessonId={lesson.id}
-                isPaid={isPaid || isPartial}
+                fullyPaid={isPaid}
+                hasPayments={lesson.paid_amount > 0}
+                owed={Math.max(0, Number(lesson.price) - lesson.paid_amount)}
                 priceIsZero={Number(lesson.price) <= 0}
                 paidAction={paidAction}
                 unpaidAction={unpaidAction}
@@ -617,25 +619,39 @@ export function EditLessonDialog({
 // the parent form because no nested <form> element is emitted.
 function PaidQuickActions({
   lessonId,
-  isPaid,
+  fullyPaid,
+  hasPayments,
+  owed,
   priceIsZero,
   paidAction,
   unpaidAction,
 }: {
   lessonId: string;
-  isPaid: boolean;
+  /** True only when payments already cover the full lesson price. */
+  fullyPaid: boolean;
+  /** True when any payment is recorded (partial or full) — enables Undo. */
+  hasPayments: boolean;
+  /** Remaining balance on this lesson (price − already paid). */
+  owed: number;
   priceIsZero: boolean;
   paidAction: (formData: FormData) => void;
   unpaidAction: (formData: FormData) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [method, setMethod] = useState<"cash" | "card" | "transfer">("cash");
+  // Blank = settle the full remaining balance. Typing a number records
+  // exactly what was received; more than `owed` becomes account credit.
+  const [amount, setAmount] = useState("");
   if (priceIsZero) return null;
+
+  const received = amount.trim() ? Number(amount) : owed;
+  const surplus = Number.isFinite(received) ? Math.round((received - owed) * 100) / 100 : 0;
 
   function handleMarkPaid() {
     const fd = new FormData();
     fd.set("lesson_id", lessonId);
     fd.set("method",    method);
+    if (amount.trim()) fd.set("amount", amount.trim());
     startTransition(() => paidAction(fd));
   }
 
@@ -645,7 +661,7 @@ function PaidQuickActions({
     startTransition(() => unpaidAction(fd));
   }
 
-  if (isPaid) {
+  if (fullyPaid) {
     return (
       <button
         type="button"
@@ -663,35 +679,65 @@ function PaidQuickActions({
     );
   }
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      {/* How did they pay — picked before marking paid. */}
-      <div className="inline-flex rounded-lg border border-ink-200 bg-white p-0.5">
-        {(["cash", "card", "transfer"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMethod(m)}
-            className={`h-8 px-2.5 rounded-md text-[11px] font-semibold capitalize transition-colors ${
-              method === m ? "bg-brand-700 text-white" : "text-ink-600 hover:bg-ink-100/60"
-            }`}
-          >
-            {m}
-          </button>
-        ))}
+    <div className="flex flex-col items-end gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap justify-end">
+        {/* Amount received — blank pays the full balance (€{owed}). */}
+        <div className="inline-flex items-center rounded-lg border border-ink-200 bg-white h-8 px-2">
+          <span className="text-ink-400 text-[12px]">€</span>
+          <input
+            type="number" min="0" step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder={owed.toFixed(2)}
+            aria-label="Amount received"
+            className="w-16 h-full bg-transparent text-[13px] tabular-nums px-1 focus:outline-none"
+          />
+        </div>
+        {/* How did they pay. */}
+        <div className="inline-flex rounded-lg border border-ink-200 bg-white p-0.5">
+          {(["cash", "card", "transfer"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMethod(m)}
+              className={`h-7 px-2 rounded-md text-[11px] font-semibold capitalize transition-colors ${
+                method === m ? "bg-brand-700 text-white" : "text-ink-600 hover:bg-ink-100/60"
+              }`}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={handleMarkPaid}
+          disabled={pending}
+          className="
+            h-9 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap
+            bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800
+            disabled:opacity-50 disabled:cursor-not-allowed
+            transition-colors
+          "
+        >
+          {pending ? "Marking…" : "Mark paid"}
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={handleMarkPaid}
-        disabled={pending}
-        className="
-          h-10 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap
-          bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800
-          disabled:opacity-50 disabled:cursor-not-allowed
-          transition-colors
-        "
-      >
-        {pending ? "Marking…" : "Mark paid"}
-      </button>
+      {/* Overpayment hint — what turns into carry-forward credit. */}
+      {surplus > 0.001 && (
+        <p className="text-[11px] text-brand-700">
+          €{surplus.toFixed(2)} saved as credit for future lessons
+        </p>
+      )}
+      {hasPayments && (
+        <button
+          type="button"
+          onClick={handleMarkUnpaid}
+          disabled={pending}
+          className="text-[11px] text-ink-500 hover:text-rose-700 disabled:opacity-50"
+        >
+          Undo payments
+        </button>
+      )}
     </div>
   );
 }

@@ -600,6 +600,10 @@ export async function markLessonPaidAction(
     methodRaw === "card" || methodRaw === "transfer" || methodRaw === "other"
       ? methodRaw
       : "cash";
+  // Optional custom amount. Blank → settle the full remaining balance on
+  // this lesson (classic Mark paid). A number records exactly what was
+  // received; anything ABOVE the lesson price is banked as account credit.
+  const amountRaw = String(formData.get("amount") ?? "").trim();
   if (!lessonId) return { error: "Missing lesson id.", success: false };
 
   try {
@@ -624,12 +628,44 @@ export async function markLessonPaidAction(
       return { error: "Lesson price is 0 — nothing to mark paid.", success: false };
     }
 
-    await addPayment({
-      clientId: l.client_id,
-      amount:   Number(l.price),
-      method,
-      lessonId: l.id,
-    });
+    // How much is still owed on THIS lesson (price minus anything already paid).
+    const { data: prevPays } = await supabase
+      .from("payments").select("amount").eq("lesson_id", l.id);
+    const alreadyPaid = ((prevPays ?? []) as Array<{ amount: number }>)
+      .reduce((s, p) => s + Number(p.amount), 0);
+    const owed = Math.max(0, Number(l.price) - alreadyPaid);
+
+    // Received = the typed amount, or the full remaining balance when blank.
+    let received: number;
+    if (amountRaw) {
+      received = Number(amountRaw);
+      if (!Number.isFinite(received) || received <= 0) {
+        return { error: "Enter a valid amount.", success: false };
+      }
+    } else {
+      received = owed;
+    }
+    if (received <= 0) {
+      return { error: "This lesson is already fully paid.", success: false };
+    }
+
+    // Apply up to what's owed against the lesson; bank the rest as account
+    // credit (a payment with NO lesson link) so it lowers the client's
+    // balance and gets drawn down by their next lessons.
+    const toLesson = Math.min(received, owed);
+    const surplus  = Math.round((received - toLesson) * 100) / 100;
+
+    if (toLesson > 0) {
+      await addPayment({ clientId: l.client_id, amount: toLesson, method, lessonId: l.id });
+    }
+    if (surplus > 0) {
+      await addPayment({
+        clientId: l.client_id,
+        amount:   surplus,
+        method,
+        notes:    "Overpayment credit — applies to future lessons",
+      });
+    }
   } catch (err: any) {
     const message = err?.message ?? "";
     if (message === "FORBIDDEN")
