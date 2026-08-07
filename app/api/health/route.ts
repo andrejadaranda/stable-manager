@@ -18,9 +18,10 @@
 // can't be consumed by the third-party monitors that would use it, and it
 // exposes nothing — a boolean and a latency figure.
 //
-// Public also means abusable, so writes are throttled to at most one row
-// per minute regardless of how often the route is hit. A flood of requests
-// costs one row a minute, not a million.
+// Public also means abusable, so writes are capped at one row per minute
+// by a unique index (migration 113). That cap is not cosmetic: uptime is
+// "pings received / pings expected", so unlimited extra rows would pin
+// the card at a permanent, meaningless 100%.
 // =============================================================
 
 import { NextResponse } from "next/server";
@@ -28,10 +29,6 @@ import { createSupabaseAdminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/** Rows closer together than this are dropped. Matches the 5-minute
- *  scheduled cadence with plenty of headroom for cron drift. */
-const MIN_WRITE_INTERVAL_MS = 60_000;
 
 /** How long health history is kept. Long enough for the 7-day card,
  *  short enough that the table never becomes a storage concern. */
@@ -63,26 +60,26 @@ export async function GET() {
   // not applied) or the write fails, the health answer itself is still
   // correct and still served.
   try {
-    const { data: newest } = await admin
-      .from("dashboard_health_checks")
-      .select("checked_at")
-      .order("checked_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Insert unconditionally. The throttle is the unique index on
+    // `checked_minute` from migration 113, NOT a check performed here.
+    //
+    // There WAS a check here — read the newest row, skip if under a
+    // minute old — and it did not hold in production: five requests two
+    // seconds apart produced five rows. That is the expected weakness of
+    // read-then-write across concurrent stateless instances (two callers
+    // can both read "last row is old" before either writes), so it was
+    // replaced rather than debugged. A duplicate-key error is the
+    // success case here and is deliberately swallowed.
+    await admin.from("dashboard_health_checks").insert({
+      ok,
+      latency_ms: latencyMs,
+      detail: detail ? String(detail).slice(0, 500) : null,
+    });
 
-    const lastAt = newest?.checked_at ? new Date(newest.checked_at as string).getTime() : 0;
-    if (Date.now() - lastAt >= MIN_WRITE_INTERVAL_MS) {
-      await admin.from("dashboard_health_checks").insert({
-        ok,
-        latency_ms: latencyMs,
-        detail: detail ? String(detail).slice(0, 500) : null,
-      });
-
-      // Prune roughly once an hour rather than on every write.
-      if (new Date().getUTCMinutes() < 5) {
-        const cutoff = new Date(Date.now() - RETENTION_DAYS * 86_400_000).toISOString();
-        await admin.from("dashboard_health_checks").delete().lt("checked_at", cutoff);
-      }
+    // Prune roughly once an hour rather than on every request.
+    if (new Date().getUTCMinutes() < 5) {
+      const cutoff = new Date(Date.now() - RETENTION_DAYS * 86_400_000).toISOString();
+      await admin.from("dashboard_health_checks").delete().lt("checked_at", cutoff);
     }
   } catch {
     /* recording is not the job; answering is */
