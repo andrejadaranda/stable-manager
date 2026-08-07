@@ -1,7 +1,13 @@
-// Screen 5 — Rinkodara. What she posted, what worked, what's missing.
+// Screen 5 — Rinkodara. Traffic first, then content.
+//
+// Traffic leads because it is the part that works without anyone adding
+// an API credential. Instagram and Facebook metrics need a Meta app and
+// a token; visitor counts need nothing, because we count them ourselves
+// into our own database (migration 114).
 
 import Link from "next/link";
 import { getMarketingSnapshot } from "@/services/personalDashboard/marketing";
+import { getTrafficSnapshot } from "@/services/personalDashboard/traffic";
 import { getStableTimeZone } from "@/services/personalDashboard/common";
 import {
   ScreenHeader,
@@ -28,9 +34,14 @@ const PLATFORM_LABEL: Record<string, string> = {
 export default async function MarketingScreen() {
   const now = new Date();
   const tz = await getStableTimeZone();
-  const m = await getMarketingSnapshot(now);
+  const [m, traffic] = await Promise.all([
+    getMarketingSnapshot(now),
+    getTrafficSnapshot(now),
+  ]);
 
   const anyData = m.posts.length > 0;
+  const delta = (a: number, b: number) =>
+    b === 0 ? (a > 0 ? "naujas" : "—") : `${a >= b ? "+" : ""}${Math.round(((a - b) / b) * 100)}%`;
 
   return (
     <>
@@ -43,6 +54,79 @@ export default async function MarketingScreen() {
           </ActionButton>
         }
       />
+
+      {/* ---------- Traffic ---------- */}
+      <Section title="Lankomumas" hint="7 d.">
+        {traffic.sites.length > 0 ? (
+          <>
+            <div className="mb-2.5 grid grid-cols-2 gap-2.5">
+              <Metric
+                label="Apsilankymai"
+                value={traffic.totalVisits7}
+                hint="atskiri seansai"
+                tone="brand"
+              />
+              <Metric
+                label="Peržiūros"
+                value={traffic.totalViews7}
+                hint="puslapių atidarymai"
+                tone="neutral"
+              />
+            </div>
+
+            <div className="space-y-2.5">
+              {traffic.sites.map((site) => (
+                <Panel key={site.host}>
+                  <div className="mb-2 flex items-baseline justify-between gap-3">
+                    <p className="truncate text-[13.5px] font-semibold text-ink-900">
+                      {site.host}
+                    </p>
+                    <Chip
+                      tone={
+                        site.visits7 >= site.visitsPrev7 && site.visitsPrev7 > 0
+                          ? "positive"
+                          : "neutral"
+                      }
+                    >
+                      {delta(site.visits7, site.visitsPrev7)}
+                    </Chip>
+                  </div>
+                  <p className="mb-2 text-[11.5px] text-ink-500">
+                    {site.visits7} apsilankymai · {site.views7} peržiūros
+                    {site.visitsPrev7 > 0 && ` · prieš tai ${site.visitsPrev7}`}
+                  </p>
+                  {site.topPaths.length > 0 && (
+                    <ul className="space-y-1">
+                      {site.topPaths.map((p) => (
+                        <li
+                          key={p.path}
+                          className="flex items-baseline justify-between gap-3 text-[11.5px]"
+                        >
+                          <span className="min-w-0 flex-1 truncate font-mono text-ink-600">
+                            {p.path}
+                          </span>
+                          <span className="shrink-0 tabular-nums text-ink-400">{p.views}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Panel>
+              ))}
+            </div>
+
+            <p className="mt-2 px-1 text-[11px] leading-snug text-ink-400">
+              Skaičiuoju pati, į tavo duomenų bazę — jokio Google, jokių
+              slapukų, jokių IP adresų. Todėl ir nereikia jokio rakto.
+              Duomenys kaupiasi nuo {traffic.since}.
+            </p>
+          </>
+        ) : (
+          <Empty
+            title="Skaičiuoklis ką tik įjungtas"
+            detail="Pirmi skaičiai atsiras per kelias minutes — kai tik kas nors atidarys Longrein puslapį. tjk.lt reikės įklijuoti vieną eilutę; parašyk, ir duosiu ją paruoštą."
+          />
+        )}
+      </Section>
 
       {/* ---------- Cadence ---------- */}
       <Section title="Tempas">

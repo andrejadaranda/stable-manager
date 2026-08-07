@@ -7,6 +7,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
+import { PageviewBeacon } from "@/components/analytics/pageview-beacon";
 // @ts-ignore — installed on Vercel; may be absent in the local sandbox.
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
@@ -87,8 +88,18 @@ export default function RootLayout({
         {/* PWA install nudge for iOS Safari + Android Chrome visitors.
             Auto-hidden when already running in standalone mode. */}
         <InstallAppBanner />
+        {/* First-party traffic counter. Writes straight into our own
+            Supabase, so the personal dashboard can show visitor numbers
+            without an API credential for a third party — which is the
+            whole point: every external analytics service needs a token
+            in an env var, and there is nobody to add one.
+            No cookie, no IP, no identifier. See migration 114. */}
+        <PageviewBeacon />
         {/* Vercel Web Analytics — counts visitors and page views.
-            Privacy-first (no cookies). Hobby tier: 2,500 events/mo. */}
+            Privacy-first (no cookies). Hobby tier: 2,500 events/mo.
+            NOTE: not currently enabled on the Vercel project, so this
+            collects nothing until someone flips it on in the dashboard.
+            Left mounted so it starts working the moment that happens. */}
         <Analytics />
         {/* Vercel Speed Insights — Core Web Vitals (load speed, INP, CLS).
             Free on Hobby. Starts collecting from real visits once deployed. */}

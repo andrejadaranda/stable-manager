@@ -2,15 +2,15 @@
 
 // Bottom tab bar for the command centre.
 //
-// Seven destinations is well past the three-to-five a consumer app would
+// Six destinations is more than the three-to-five a consumer app would
 // use, but this is a cockpit — she asked to reach every area in one tap
 // rather than behind a "More" sheet.
 //
-// Seven is the ceiling. On an iPhone 15 Pro (393pt) that is ~56pt per
-// tab, which fits a 21px icon and a 9.5px label with a little room
-// either side, but only because the labels are short. An eighth tab, or
-// a label longer than "Rinkodara", would start truncating — at that
-// point the honest move is a "More" sheet, not a smaller font.
+// Seven is the hard ceiling. On an iPhone 15 Pro (393pt) that is ~56pt
+// per tab, which fits a 21px icon and a 9.5px label only because the
+// labels are short. An eighth tab, or a label longer than "Rinkodara",
+// would start truncating — at that point the honest move is a "More"
+// sheet, not a smaller font.
 //
 // Labels are Lithuanian: she wrote the brief in Lithuanian and this is
 // hers alone, so there is nothing to internationalise.
@@ -63,11 +63,11 @@ const TABS: Tab[] = [
     label: "Longrein",
     icon: <I d="M22 12h-4l-3 9L9 3l-3 9H2" />,
   },
-  {
-    href: "/personal/social",
-    label: "Skelbti",
-    icon: <I d="M4 4h16v12H7l-3 3V4ZM8 9h8M8 12.5h5" />,
-  },
+  // The composer at /personal/social is deliberately NOT a tab. She said
+  // plainly she does not want to publish from here — only to see the
+  // numbers — and a tab for a feature she has decided against is six
+  // wasted pixels on every screen. The route still works and is linked
+  // from Rinkodara, so nothing was thrown away.
   {
     href: "/personal/marketing",
     label: "Rinkodara",
