@@ -10,7 +10,7 @@
 import {
   listGoals,
   listArchivedGoals,
-  seedDefaultGoalsIfEmpty,
+  ensureCurrentGoals,
   GOAL_METRICS,
 } from "@/services/personalDashboard/goals";
 import { getStableTimeZone } from "@/services/personalDashboard/common";
@@ -53,10 +53,10 @@ export default async function GoalsScreen() {
   const now = new Date();
   const tz = await getStableTimeZone();
 
-  // First visit gets three starter goals. A migration could not know her
-  // numbers, and an empty screen teaches nothing about what it is for.
-  // Idempotent — see seedDefaultGoalsIfEmpty.
-  await seedDefaultGoalsIfEmpty(now);
+  // First visit gets three starter goals; every later period inherits the
+  // previous one's, so a monthly target set once does not vanish on the
+  // 1st. Deletions stick — see ensureCurrentGoals.
+  await ensureCurrentGoals(now);
 
   const [weekly, monthly, quarterly, archived] = await Promise.all([
     listGoals("week", now),

@@ -162,46 +162,121 @@ const DEFAULT_GOALS: Array<{
 ];
 
 /**
- * Create the starter goals, once.
+ * Make sure the current week / month / quarter have goals.
  *
- * Idempotent in two independent ways: it returns early if she has ANY
- * goal at all (so deleting a default does not resurrect it next load),
- * and the insert itself is an upsert on the natural key.
+ * Two jobs, in order:
+ *
+ *   1. A brand-new dashboard gets the three starter goals.
+ *   2. Every later period INHERITS the previous one's goals.
+ *
+ * The second is the one that matters in daily use. Goals are stored per
+ * period — "€2000 for August" is a different row from "€2000 for
+ * September" — which is right for history but wrong for intent: setting
+ * a monthly target means "every month", not "August only". Without the
+ * carry-forward her goals would silently vanish at midnight on the 1st
+ * and she would have to retype them twelve times a year.
+ *
+ * DELETION HAS TO STICK, THOUGH. A naive "if this period is empty, copy
+ * the last one" would undo a deliberate deletion on the very next page
+ * load. So each carry is recorded once, atomically, using the existing
+ * dismissals table as the lock: `ignoreDuplicates` means the insert
+ * returns a row only for whoever got there first. Delete a goal and it
+ * stays deleted; the next period simply won't try again.
  */
-export async function seedDefaultGoalsIfEmpty(now = new Date()): Promise<boolean> {
+export async function ensureCurrentGoals(now = new Date()): Promise<boolean> {
   return safe(
     async () => {
       const ctx = await requirePersonalContext();
       const tz = await getStableTimeZone();
       const supabase = createSupabaseServerClient();
 
-      const { count } = await supabase
+      const { data: all } = await supabase
         .from("dashboard_goals")
-        .select("id", { count: "exact", head: true })
+        .select("period, period_start, goal_key, label, target, unit, category, sort_order")
         .eq("auth_user_id", ctx.authUserId);
 
-      if ((count ?? 0) > 0) return false;
+      const rows = all ?? [];
 
-      const rows = DEFAULT_GOALS.map((g) => ({
-        auth_user_id: ctx.authUserId,
-        period: g.period,
-        period_start: periodStartKey(g.period, now, tz),
-        goal_key: g.goalKey,
-        label: g.label,
-        target: g.target,
-        unit: g.unit,
-        category: g.category,
-        sort_order: g.sortOrder,
-      }));
+      // ---- 1. First run: seed the starters ----
+      if (rows.length === 0) {
+        const seeded = DEFAULT_GOALS.map((g) => ({
+          auth_user_id: ctx.authUserId,
+          period: g.period,
+          period_start: periodStartKey(g.period, now, tz),
+          goal_key: g.goalKey,
+          label: g.label,
+          target: g.target,
+          unit: g.unit,
+          category: g.category,
+          sort_order: g.sortOrder,
+        }));
+        const { error } = await supabase
+          .from("dashboard_goals")
+          .upsert(seeded, { onConflict: "auth_user_id,period,period_start,goal_key" });
+        if (error) throw error;
+        return true;
+      }
 
-      const { error } = await supabase
-        .from("dashboard_goals")
-        .upsert(rows, { onConflict: "auth_user_id,period,period_start,goal_key" });
-      if (error) throw error;
-      return true;
+      // ---- 2. Carry each period type forward ----
+      let carried = false;
+
+      for (const period of ["week", "month", "quarter"] as GoalPeriod[]) {
+        const currentStart = periodStartKey(period, now, tz);
+        const ofType = rows.filter((r) => String(r.period) === period);
+
+        // Already has goals for the period we're in — nothing to do.
+        if (ofType.some((r) => String(r.period_start) === currentStart)) continue;
+
+        const past = ofType.filter((r) => String(r.period_start) < currentStart);
+        if (past.length === 0) continue;
+
+        // The most recent past period is the one to inherit from.
+        const latestStart = past.reduce(
+          (acc, r) => (String(r.period_start) > acc ? String(r.period_start) : acc),
+          "",
+        );
+        const template = past.filter((r) => String(r.period_start) === latestStart);
+        if (template.length === 0) continue;
+
+        // Claim the carry. Only the first caller gets a row back, so two
+        // concurrent page loads cannot duplicate the work, and a later
+        // deletion is never resurrected.
+        const { data: claimed } = await supabase
+          .from("dashboard_dismissals")
+          .upsert(
+            {
+              auth_user_id: ctx.authUserId,
+              kind: "goal_carry",
+              ref_id: `${period}:${currentStart}`,
+            },
+            { onConflict: "auth_user_id,kind,ref_id", ignoreDuplicates: true },
+          )
+          .select("id");
+
+        if (!claimed || claimed.length === 0) continue;
+
+        const { error } = await supabase.from("dashboard_goals").upsert(
+          template.map((r) => ({
+            auth_user_id: ctx.authUserId,
+            period,
+            period_start: currentStart,
+            goal_key: String(r.goal_key),
+            label: String(r.label),
+            target: num(r.target),
+            unit: String(r.unit),
+            category: (r.category as string) ?? null,
+            sort_order: num(r.sort_order),
+          })),
+          { onConflict: "auth_user_id,period,period_start,goal_key" },
+        );
+        if (error) throw error;
+        carried = true;
+      }
+
+      return carried;
     },
     false,
-    "seedDefaultGoalsIfEmpty",
+    "ensureCurrentGoals",
   );
 }
 

@@ -66,9 +66,15 @@ export default async function TodayScreen() {
           hint="≥14 d. nejojo"
           tone={reengagement.length > 0 ? "warning" : "positive"}
         />
+        {/* When a goal exists this shows the goal's OWN actual, not
+            money-in-the-bank. The two differ — delivered lessons include
+            ones not yet paid for — and showing 290 € here against the
+            same 2000 € target that Finansai measures as 390 € is the kind
+            of quiet contradiction that makes someone stop trusting every
+            other number on the screen. One target, one definition. */}
         <Metric
           label="Mėnuo"
-          value={formatEur(finance.forecast.earnedToDate)}
+          value={formatEur(finance.goal ? finance.goal.actual : finance.forecast.earnedToDate)}
           hint={
             finance.goal
               ? `iš ${formatEur(finance.goal.target)}`
