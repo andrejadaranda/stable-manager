@@ -36,7 +36,7 @@ export type LoggedError = {
  */
 export async function logAppError(input: LoggedError): Promise<void> {
   try {
-    if (isSchemaNoise(input.message)) return;
+    if (isNotAnIncident(input.message)) return;
 
     const admin = createSupabaseAdminClient();
     await admin.from("dashboard_errors").insert({
@@ -78,14 +78,28 @@ export function describeError(err: unknown): { message: string; stack: string | 
 }
 
 /**
- * "The migration hasn't been applied yet" is not an incident.
+ * Two things reach this module that look like errors and are not.
  *
- * PGRST205 / PGRST202 are PostgREST's schema-cache misses, and 42P01 is
- * Postgres's own "undefined table". All three mean the same thing here.
+ * 1. NOT_FOUND — the access gate refusing a caller. Every anonymous hit
+ *    on /personal fans out into a dozen service calls, each of which
+ *    throws NOT_FOUND from requirePersonalContext(). Logging those turns
+ *    "errors in 24h" into "how many strangers loaded a URL", which is
+ *    both meaningless and trivially inflatable by anyone with curl. A
+ *    gate doing its job is the system working, not failing.
+ *
+ * 2. Schema-cache misses before the migrations are applied. PGRST205 /
+ *    PGRST202 are PostgREST's, 42P01 is Postgres's own "undefined
+ *    table". All mean "not migrated yet", which is expected and
+ *    temporary.
+ *
+ * Both are still visible in the platform logs via the console.error at
+ * the call site. They just don't belong in a number she reads to decide
+ * whether something is broken.
  */
-function isSchemaNoise(message: string): boolean {
+function isNotAnIncident(message: string): boolean {
   const m = message.toLowerCase();
   return (
+    m === "not_found" ||
     m.includes("pgrst205") ||
     m.includes("pgrst202") ||
     m.includes("42p01") ||
