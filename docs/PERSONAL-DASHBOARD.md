@@ -416,6 +416,15 @@ eilės „pasisavinimas" (`scheduled` → `publishing`) ir `external_ids`
 žymos. Nustačius `CRON_SECRET` apsauga sugriežtėja iki bearer tokeno —
 tai pagerinimas, ne būtina sąlyga.
 
-Priežastis, kodėl ne slaptažodis iš karto: GitHub Actions darbas be
-sukonfigūruoto slapto rakto gautų 401 kas 5 minutes ir siųstų po laišką
-apie nesėkmę. Būtent dėl to `cron-reminders.yml` iki šiol išjungtas.
+**Praktinė pastaba, patikrinta produkcijoje:** `CRON_SECRET` Vercel
+projekte **jau nustatytas** (endpoint'as be jo atsako 401). Vadinasi,
+GitHub Actions darbui reikia to paties rakto:
+
+> GitHub → repozitorija → Settings → Secrets and variables → Actions →
+> New repository secret → vardas `CRON_SECRET`, reikšmė tokia pati kaip
+> Vercel projekte (Settings → Environment Variables).
+
+Kol jo nėra, praėjimas kas kartą gauna 401 ir **suplanuoti įrašai
+neišeina**. Klaida tyli sąmoningai (`|| true`), kad nebūtų laiškų
+lavinos — tad simptomas bus „suplanuotas įrašas nepaskelbtas", o ne
+raudonas darbas. Mygtukas „Skelbti dabar" veikia nepriklausomai.

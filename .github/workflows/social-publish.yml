@@ -7,12 +7,24 @@ name: Publish scheduled posts
 # reminders 06:00, morning push 05:00). A third entry in vercel.json
 # would fail the deployment.
 #
-# The endpoint is safe to call without a secret — it only publishes posts
-# she already composed and scheduled, and the claim step prevents
-# double-sends. See the header comment on the route for the full
-# argument. If CRON_SECRET is set as a repo secret, it is sent and the
-# endpoint enforces it; if not, the header is simply empty and the route
-# falls back to its by-construction guarantees.
+# ⚠ REQUIRES A REPO SECRET.
+#
+# CRON_SECRET is already set in the Vercel project (verified against
+# production: the endpoint answers 401 without it). The route therefore
+# enforces bearer auth, and this job needs the SAME value configured at
+# Settings → Secrets and variables → Actions → New repository secret,
+# name CRON_SECRET.
+#
+# Until that exists, every sweep 401s and scheduled posts never go out.
+# It fails QUIETLY by design — see `|| true` below — so the symptom is
+# "my scheduled post didn't publish", not a broken workflow. Publishing
+# with the "Skelbti dabar" button is unaffected; only scheduling depends
+# on this job.
+#
+# The route stays safe regardless of who calls it: it publishes only
+# posts already composed and scheduled, once their time has passed, and
+# the claim step plus per-platform external_ids prevent double-sends.
+# See the route's header comment for the full argument.
 #
 # `|| true` and no `-f`: a failed sweep must never fail the job. At a
 # 5-minute cadence a red job means a failure email every 5 minutes, which

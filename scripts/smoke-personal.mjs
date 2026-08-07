@@ -153,16 +153,22 @@ console.log("\npersonal API (unauthenticated)");
   check("GET /api/personal/push/daily → 401", res.status === 401, `got ${res.status}`);
 }
 {
-  // The scheduled-publish sweep is deliberately callable without a
-  // secret — see the header comment on that route. What matters is that
-  // an anonymous call is a harmless no-op, not an error and not a
-  // publish: with nothing due, `published` must be 0.
+  // Two legitimate outcomes, depending on whether CRON_SECRET is set in
+  // this environment. Production has it, so the sweep 401s without a
+  // bearer; a local build usually does not, and then the route falls
+  // back to its by-construction safety. Either way the invariant under
+  // test is the same: an unauthenticated call must never publish.
   const res = await fetch(`${BASE}/api/personal/social/publish-scheduled`);
-  check("GET /api/personal/social/publish-scheduled → 200", res.status === 200, `got ${res.status}`);
+  check(
+    "GET /api/personal/social/publish-scheduled → 200 or 401",
+    res.status === 200 || res.status === 401,
+    `got ${res.status}`,
+  );
   const body = await res.json().catch(() => null);
   check(
-    "publish sweep publishes nothing when nothing is due",
-    Boolean(body) && (body.published === 0 || body.skipped === "throttled"),
+    "unauthenticated publish sweep publishes nothing",
+    Boolean(body) &&
+      (res.status === 401 || body.published === 0 || body.skipped === "throttled"),
     JSON.stringify(body),
   );
 }
