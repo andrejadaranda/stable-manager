@@ -33,6 +33,12 @@ import {
   countErrorsSince,
   type UptimeWindow,
 } from "@/services/personalDashboard/ops.pure";
+import {
+  classifyStable,
+  summarise,
+  customersCreatedBetween,
+  type TenantBreakdown,
+} from "@/services/personalDashboard/tenants";
 
 export type HealthMetric = {
   label: string;
@@ -54,7 +60,17 @@ export type FoundingMembers = {
 };
 
 export type LongreinHealth = {
-  stables: { total: number; newLast30: number; newPrev30: number };
+  /**
+   * Counts REAL external customers, not rows in the stables table.
+   * `breakdown` carries the rest so the card can show its working —
+   * see services/personalDashboard/tenants.ts for why.
+   */
+  stables: {
+    total: number;
+    newLast30: number;
+    newPrev30: number;
+    breakdown: TenantBreakdown;
+  };
   users: { total: number; activeLast7: number };
   subscriptions: { active: number; trialing: number; past_due: number; cancelled: number };
   /** null when neither Stripe nor manual plan prices can produce a number. */
@@ -82,7 +98,12 @@ const NO_FOUNDING_MEMBERS: FoundingMembers = {
 };
 
 const EMPTY: LongreinHealth = {
-  stables: { total: 0, newLast30: 0, newPrev30: 0 },
+  stables: {
+    total: 0,
+    newLast30: 0,
+    newPrev30: 0,
+    breakdown: { customers: 0, own: 0, internal: 0, total: 0 },
+  },
   users: { total: 0, activeLast7: 0 },
   subscriptions: { active: 0, trialing: 0, past_due: 0, cancelled: 0 },
   mrr: null,
@@ -104,7 +125,7 @@ export async function getLongreinHealth(now = new Date()): Promise<LongreinHealt
   return safe(
     async () => {
       // Gate first. Nothing below runs for a non-allowlisted caller.
-      await requirePersonalContext();
+      const ctx = await requirePersonalContext();
 
       const admin = createSupabaseAdminClient();
       const iso = (daysAgo: number) =>
@@ -121,9 +142,8 @@ export async function getLongreinHealth(now = new Date()): Promise<LongreinHealt
       };
 
       const [
-        stablesTotal,
-        stablesNew30,
-        stablesPrev30,
+        stableRows,
+        ownerRows,
         usersTotal,
         waitlistTotal,
         waitlistLast7,
@@ -136,9 +156,12 @@ export async function getLongreinHealth(now = new Date()): Promise<LongreinHealt
         foundingRows,
         stripeMrr,
       ] = await Promise.all([
-        countOf("stables"),
-        countOf("stables", (q) => q.gte("created_at", iso(30))),
-        countOf("stables", (q) => q.gte("created_at", iso(60)).lt("created_at", iso(30))),
+        // Rows, not counts: every stable has to be classified before it
+        // can be counted, because most of them are not customers.
+        admin.from("stables").select("id, name, created_at"),
+        // Owner email is what distinguishes a customer from a test
+        // account. `role = owner` is one row per stable.
+        admin.from("profiles").select("stable_id, auth_user_id").eq("role", "owner"),
         countOf("profiles"),
         countOf("waitlist_signups"),
         countOf("waitlist_signups", (q) => q.gte("created_at", iso(7))),
@@ -214,6 +237,44 @@ export async function getLongreinHealth(now = new Date()): Promise<LongreinHealt
 
       const monitoring = await getIntegrationConfig("monitoring");
 
+      // ---- Who is actually a customer ----
+      // Owner emails live in auth.users, which PostgREST cannot join to,
+      // so they are fetched by id with the admin auth API.
+      const ownerByStable = new Map<string, string>();
+      for (const row of ownerRows.data ?? []) {
+        if (row.stable_id && row.auth_user_id) {
+          ownerByStable.set(String(row.stable_id), String(row.auth_user_id));
+        }
+      }
+
+      const emailByUserId = new Map<string, string>();
+      await Promise.all(
+        [...new Set(ownerByStable.values())].map(async (userId) => {
+          const { data } = await admin.auth.admin.getUserById(userId);
+          if (data?.user?.email) emailByUserId.set(userId, data.user.email);
+        }),
+      );
+
+      const longreinCfg = await getIntegrationConfig("longrein");
+      const excludedIds = Array.isArray(longreinCfg?.excludedStableIds)
+        ? (longreinCfg.excludedStableIds as string[])
+        : [];
+
+      const classified = (stableRows.data ?? []).map((s) => {
+        const ownerId = ownerByStable.get(String(s.id));
+        return classifyStable({
+          id: String(s.id),
+          name: String(s.name ?? "—"),
+          createdAt: String(s.created_at),
+          ownerEmail: ownerId ? (emailByUserId.get(ownerId) ?? null) : null,
+          operatorEmail: ctx.email,
+          ownStableId: ctx.stableId,
+          excludedIds,
+        });
+      });
+
+      const breakdown = summarise(classified);
+
       // ---- Uptime and errors ----
       const checks = (healthRows.data ?? []).map((r) => ({
         checkedAt: String(r.checked_at),
@@ -249,9 +310,10 @@ export async function getLongreinHealth(now = new Date()): Promise<LongreinHealt
 
       return {
         stables: {
-          total: stablesTotal,
-          newLast30: stablesNew30,
-          newPrev30: stablesPrev30,
+          total: breakdown.customers,
+          newLast30: customersCreatedBetween(classified, iso(30), iso(0)),
+          newPrev30: customersCreatedBetween(classified, iso(60), iso(30)),
+          breakdown,
         },
         users: { total: usersTotal, activeLast7: distinctActors.size },
         subscriptions: tally,

@@ -51,9 +51,13 @@ export default async function LongreinScreen() {
       <Section title="Augimas">
         <div className="grid grid-cols-2 gap-2.5">
           <Metric
-            label="Arklidės"
+            label="Klientai"
             value={health.stables.total}
-            hint={`+${health.stables.newLast30} per 30 d.`}
+            hint={
+              health.stables.breakdown.total > health.stables.total
+                ? `iš ${health.stables.breakdown.total} — kiti testiniai`
+                : `+${health.stables.newLast30} per 30 d.`
+            }
             tone="brand"
           />
           <Metric
@@ -76,6 +80,14 @@ export default async function LongreinScreen() {
           />
         </div>
         <p className="mt-2 px-1 text-[11px] leading-snug text-ink-400">
+          „Klientai“ = tikros svetimos arklidės. Neskaičiuoju testinių
+          paskyrų, demonstracinių duomenų ir tavo pačios Trakų Jojimo Klubo —
+          iš viso lentelėje {health.stables.breakdown.total}, iš jų{" "}
+          {health.stables.breakdown.internal} testinės ir{" "}
+          {health.stables.breakdown.own} tavo. Skaičiuoti savo testus kaip
+          augimą reikštų meluoti sau.
+        </p>
+        <p className="mt-1.5 px-1 text-[11px] leading-snug text-ink-400">
           „Aktyvūs“ = žmonės, kurie per 7 dienas atliko bent vieną veiksmą,
           paliekantį pėdsaką audito žurnale. Tai artimiausias turimas
           aktyvumo signalas — atskiros analitikos lentelės nėra.
