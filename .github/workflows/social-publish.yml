@@ -7,24 +7,18 @@ name: Publish scheduled posts
 # reminders 06:00, morning push 05:00). A third entry in vercel.json
 # would fail the deployment.
 #
-# ⚠ REQUIRES A REPO SECRET.
+# NO SECRET NEEDED. This workflow works from the first push.
 #
-# CRON_SECRET is already set in the Vercel project (verified against
-# production: the endpoint answers 401 without it). The route therefore
-# enforces bearer auth, and this job needs the SAME value configured at
-# Settings → Secrets and variables → Actions → New repository secret,
-# name CRON_SECRET.
+# An earlier version required CRON_SECRET as a repo secret, because the
+# route enforced bearer auth whenever that variable existed in Vercel —
+# and it does. That made scheduled publishing depend on a setup step the
+# operator could not perform, which failed silently.
 #
-# Until that exists, every sweep 401s and scheduled posts never go out.
-# It fails QUIETLY by design — see `|| true` below — so the symptom is
-# "my scheduled post didn't publish", not a broken workflow. Publishing
-# with the "Skelbti dabar" button is unaffected; only scheduling depends
-# on this job.
-#
-# The route stays safe regardless of who calls it: it publishes only
-# posts already composed and scheduled, once their time has passed, and
-# the claim step plus per-platform external_ids prevent double-sends.
-# See the route's header comment for the full argument.
+# The route is now unauthenticated on purpose and safe by construction:
+# it publishes only posts she already composed and scheduled, once their
+# time has passed, and the claim step plus per-platform external_ids
+# prevent double-sends. Nothing about what gets published comes from the
+# caller. See the route's header comment for the full argument.
 #
 # `|| true` and no `-f`: a failed sweep must never fail the job. At a
 # 5-minute cadence a red job means a failure email every 5 minutes, which
@@ -40,9 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Sweep scheduled posts
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           curl -sS --max-time 120 \
-            ${CRON_SECRET:+-H "Authorization: Bearer $CRON_SECRET"} \
             "https://app.longrein.eu/api/personal/social/publish-scheduled" || true

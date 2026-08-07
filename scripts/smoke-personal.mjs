@@ -153,22 +153,21 @@ console.log("\npersonal API (unauthenticated)");
   check("GET /api/personal/push/daily → 401", res.status === 401, `got ${res.status}`);
 }
 {
-  // Two legitimate outcomes, depending on whether CRON_SECRET is set in
-  // this environment. Production has it, so the sweep 401s without a
-  // bearer; a local build usually does not, and then the route falls
-  // back to its by-construction safety. Either way the invariant under
-  // test is the same: an unauthenticated call must never publish.
+  // Unauthenticated by design — see the route header. Two things are
+  // under test: it answers (so the GitHub Actions sweep is never red),
+  // and the response is OPAQUE. Now that anyone can call it, echoing a
+  // publish count would let a stranger poll it to learn when she has
+  // posts queued.
   const res = await fetch(`${BASE}/api/personal/social/publish-scheduled`);
   check(
-    "GET /api/personal/social/publish-scheduled → 200 or 401",
-    res.status === 200 || res.status === 401,
+    "GET /api/personal/social/publish-scheduled → 200",
+    res.status === 200,
     `got ${res.status}`,
   );
   const body = await res.json().catch(() => null);
   check(
-    "unauthenticated publish sweep publishes nothing",
-    Boolean(body) &&
-      (res.status === 401 || body.published === 0 || body.skipped === "throttled"),
+    "publish sweep response leaks no queue detail",
+    Boolean(body) && !("published" in body) && !("results" in body) && !("released" in body),
     JSON.stringify(body),
   );
 }

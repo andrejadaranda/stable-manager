@@ -47,16 +47,24 @@ export const maxDuration = 120;
 const MIN_SWEEP_INTERVAL_MS = 20_000;
 let lastSweepAt = 0;
 
-export async function GET(request: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (expected) {
-    const auth = request.headers.get("authorization");
-    const isVercelCron = request.headers.get("x-vercel-cron") !== null;
-    if (auth !== `Bearer ${expected}` && !isVercelCron) {
-      return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
-    }
-  }
-
+export async function GET(_request: NextRequest) {
+  // NO AUTHENTICATION, deliberately. See the header comment for why this
+  // route is safe by construction rather than by secret.
+  //
+  // The earlier version required a bearer CRON_SECRET whenever that
+  // variable existed — and it does exist in this Vercel project, which
+  // meant the GitHub Actions job needed the same value copied in as a
+  // repo secret before scheduled posts would publish at all. That is a
+  // step the operator could not perform, and it failed silently, so the
+  // symptom would have been "my scheduled post never went out" with
+  // nothing to see anywhere.
+  //
+  // Removing the requirement is the better trade. What an anonymous
+  // caller can achieve here is: cause posts she already wrote and
+  // already scheduled to publish at or after the time she chose. That is
+  // the feature. They cannot compose, edit, retarget or reschedule
+  // anything — there is no request body, and nothing about what gets
+  // published comes from the caller.
   const now = Date.now();
   if (now - lastSweepAt < MIN_SWEEP_INTERVAL_MS) {
     return NextResponse.json({ ok: true, skipped: "throttled" });
@@ -69,23 +77,21 @@ export async function GET(request: NextRequest) {
     const released = await releaseStalePublishing();
     const results = await publishDuePosts(5);
 
-    return NextResponse.json({
-      ok: true,
-      released,
-      published: results.length,
-      results: results.map((r) => ({
-        status: r.status,
-        succeeded: r.succeeded,
-        failed: r.failed.map((f) => ({ platform: f.platform, error: f.error })),
-      })),
-    });
+    // The response is deliberately opaque. Now that the route is
+    // unauthenticated, echoing "published: 3" would let anyone poll it to
+    // learn when she has posts queued and when they go out. The detail
+    // she needs is on the Skelbimai screen, where it is behind the gate;
+    // the operational detail is in the platform logs.
+    console.info(
+      `[personal-social] sweep: released ${released}, processed ${results.length}`,
+      results.map((r) => ({ status: r.status, failed: r.failed.length })),
+    );
+
+    return NextResponse.json({ ok: true });
   } catch (err: any) {
     console.error("[personal-social] sweep failed:", err);
     // 200 with ok:false — a non-200 here would make the GitHub Actions
     // job red and start the failure-email cascade this design avoids.
-    return NextResponse.json(
-      { ok: false, error: err?.message ?? "sweep failed" },
-      { status: 200 },
-    );
+    return NextResponse.json({ ok: false }, { status: 200 });
   }
 }
