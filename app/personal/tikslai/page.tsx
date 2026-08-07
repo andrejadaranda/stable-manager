@@ -260,8 +260,16 @@ function GoalGroup({
               )}
 
               <div className="mt-2.5 flex justify-end">
+                {/* .bind, not an arrow function. This is a Server
+                    Component, and `async () => deleteGoalAction(g.id)`
+                    is a fresh closure — React cannot serialise it across
+                    the server/client boundary and the whole screen
+                    throws "Functions cannot be passed directly to
+                    Client Components". Binding a "use server" export
+                    produces another server action, which is a reference
+                    React can send. */}
                 <ActionButton
-                  action={async () => deleteGoalAction(g.id)}
+                  action={deleteGoalAction.bind(null, g.id)}
                   variant="ghost"
                   pendingLabel="Trinu…"
                 >

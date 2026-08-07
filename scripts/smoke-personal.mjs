@@ -19,7 +19,8 @@
 // Usage:  npm run build && npm run test:routes
 
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const PORT = process.env.SMOKE_PORT ?? "3999";
@@ -64,6 +65,54 @@ for (const path of [
 if (failures > 0) {
   console.error("\nBuild output is missing routes — run `npm run build` first.\n");
   process.exit(1);
+}
+
+// -------------------------------------------------------------------
+// 1b. No inline closures handed to Client Components.
+//
+// A Server Component may pass a server ACTION to a client component, but
+// not a fresh closure wrapping one: `action={async () => doThing(id)}`
+// cannot be serialised across the boundary and throws "Functions cannot
+// be passed directly to Client Components" — taking down the whole
+// screen, not just the button.
+//
+// This shipped once, in the goals screen, and stayed invisible because
+// the crash only happens when the list has rows to render: an empty
+// goals list never mounted the button. No amount of anonymous route
+// probing finds that. A static scan does, in milliseconds.
+//
+// The fix is always `.bind(null, arg)` on the "use server" export.
+console.log("\nserver/client boundary");
+{
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) {
+        walk(full);
+      } else if (/\.tsx$/.test(entry)) {
+        const src = readFileSync(full, "utf8");
+        // Client components are allowed to do this — the closure never
+        // crosses the boundary there.
+        if (/^\s*["']use client["']/m.test(src)) continue;
+        // `prop={async () => ...}` or `prop={() => ...}` in JSX.
+        const re = /\b\w+=\{\s*(?:async\s*)?\([^)]*\)\s*=>/g;
+        let m;
+        while ((m = re.exec(src))) {
+          const line = src.slice(0, m.index).split("\n").length;
+          offenders.push(`${full}:${line} ${m[0].trim()}`);
+        }
+      }
+    }
+  };
+  walk("app/personal");
+  walk("components/personal");
+
+  check(
+    "no inline closures passed from Server Components",
+    offenders.length === 0,
+    offenders.join("  |  "),
+  );
 }
 
 // -------------------------------------------------------------------
