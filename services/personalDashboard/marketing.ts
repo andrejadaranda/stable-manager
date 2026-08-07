@@ -26,6 +26,7 @@ import {
   fetchWebsitePosts,
   type NormalisedPost,
 } from "@/lib/personal/integrations";
+import { captureAudienceSnapshot } from "@/services/personalDashboard/social";
 
 export type SocialPost = SocialPostLite & {
   id: string;
@@ -183,6 +184,11 @@ export async function refreshSocialCache(): Promise<{
   if (fbCfg && facebook.length === 0) {
     errors.push("Facebook negrąžino įrašų — greičiausiai pasibaigęs tokenas.");
   }
+
+  // Sample the follower count while we are here. Growth goals need a
+  // stored baseline (Meta only reports the current number), and this is
+  // the moment we already know the credentials are in hand.
+  await captureAudienceSnapshot(ctx.authUserId);
 
   const all = [...instagram, ...facebook, ...website];
   if (all.length > 0) {

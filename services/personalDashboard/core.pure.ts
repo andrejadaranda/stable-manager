@@ -451,3 +451,164 @@ export function formatEur(amount: number, opts: { cents?: boolean } = {}): strin
     maximumFractionDigits: opts.cents ? 2 : 0,
   }).format(amount);
 }
+
+// -------------------------------------------------------------------
+// Weekly periods
+// -------------------------------------------------------------------
+// Added alongside month and quarter because a weekly lesson target
+// ("20 pamokų per savaitę") is one of the things she actually tracks,
+// and a month is too coarse to act on mid-week.
+
+export type WeekBounds = {
+  /** Monday of the current week, "YYYY-MM-DD". */
+  startKey: string;
+  startISO: string;
+  /** Next Monday — exclusive upper bound. */
+  endISO: string;
+  /** 1 = Monday … 7 = Sunday. */
+  dayOfWeek: number;
+};
+
+/**
+ * The current week, Monday-first.
+ *
+ * Monday-first is not a preference — it is the Lithuanian and ISO 8601
+ * week. JavaScript's getUTCDay() is Sunday-first, so the conversion
+ * below is exactly where an off-by-one would put every weekly goal a
+ * day out.
+ */
+export function weekBounds(now: Date, timeZone: string): WeekBounds {
+  const { year, month, day } = localDateParts(now, timeZone);
+
+  // Built as a UTC instant purely to ask "which weekday is this?" — both
+  // sides are the same wall-clock date, so no offset maths happens here.
+  const asUtc = new Date(Date.UTC(year, month - 1, day));
+  const jsDay = asUtc.getUTCDay(); // 0 = Sunday
+  const dayOfWeek = jsDay === 0 ? 7 : jsDay;
+
+  const monday = new Date(asUtc);
+  monday.setUTCDate(monday.getUTCDate() - (dayOfWeek - 1));
+  const nextMonday = new Date(monday);
+  nextMonday.setUTCDate(nextMonday.getUTCDate() + 7);
+
+  const key = (d: Date) => d.toISOString().slice(0, 10);
+
+  return {
+    startKey: key(monday),
+    // Local midnight, matching how monthBounds builds its boundaries.
+    startISO: new Date(`${key(monday)}T00:00:00`).toISOString(),
+    endISO: new Date(`${key(nextMonday)}T00:00:00`).toISOString(),
+    dayOfWeek,
+  };
+}
+
+/** How far through the week we are, 0..1. Monday counts as a whole day
+ *  elapsed (1/7), or Monday reads as a free pass on every weekly goal. */
+export function weekElapsedFraction(dayOfWeek: number): number {
+  return Math.min(1, Math.max(0, dayOfWeek / 7));
+}
+
+// -------------------------------------------------------------------
+// Goal forecasting
+// -------------------------------------------------------------------
+
+export type GoalForecast = {
+  /** Where this lands at period end if the current pace holds. */
+  projected: number;
+  /** projected / target. 1.0 = exactly on target. */
+  projectedRatio: number;
+  /** How much is still missing. 0 once the target is met. */
+  remaining: number;
+  /** Units per remaining day needed to close the gap. Null if none left. */
+  perDayNeeded: number | null;
+  daysRemaining: number;
+  willHit: boolean;
+};
+
+/**
+ * Project a goal forward at its current pace.
+ *
+ * Two guards carry the weight here. Dividing by `elapsed` is undefined at
+ * the start of a period, and a card reading "projected: ∞ lessons" loses
+ * someone's trust in one glance — so below a tenth of the period, no
+ * extrapolation is attempted at all. And `remaining` is clamped at zero,
+ * because "you still need -140 €" is the classic unclamped-subtraction
+ * bug that survives every visual check.
+ */
+export function forecastGoal(input: {
+  actual: number;
+  target: number;
+  elapsedFraction: number;
+  daysTotal: number;
+  daysElapsed: number;
+}): GoalForecast {
+  const { actual, target, daysTotal } = input;
+  const elapsed = Math.min(1, Math.max(0, input.elapsedFraction));
+  const daysElapsed = Math.min(daysTotal, Math.max(0, input.daysElapsed));
+  const daysRemaining = Math.max(0, daysTotal - daysElapsed);
+
+  const projected = elapsed < 0.1 ? actual : round2(actual / elapsed);
+  const remaining = Math.max(0, target - actual);
+  const perDayNeeded = daysRemaining > 0 ? round2(remaining / daysRemaining) : null;
+
+  return {
+    projected,
+    projectedRatio: target > 0 ? round2(projected / target) : 0,
+    remaining: round2(remaining),
+    perDayNeeded,
+    daysRemaining,
+    // Already met counts as hit, even if the pace has since dropped.
+    willHit: actual >= target || (target > 0 && projected >= target),
+  };
+}
+
+/**
+ * One sentence telling her what to do about this goal.
+ *
+ * A pure function rather than JSX so the wording is testable. These
+ * strings are the part of the dashboard she actually reads.
+ */
+export function goalAdvice(input: {
+  actual: number;
+  target: number;
+  unit: "eur" | "count" | "percent";
+  forecast: GoalForecast;
+  period: "week" | "month" | "quarter";
+}): string {
+  const { actual, target, unit, forecast, period } = input;
+
+  if (target <= 0) return "Tikslas nenustatytas.";
+
+  const fmt = (n: number) =>
+    unit === "eur" ? formatEur(n) : unit === "percent" ? `${round2(n)} %` : String(round2(n));
+
+  const periodWord =
+    period === "week" ? "šią savaitę" : period === "quarter" ? "šį ketvirtį" : "šį mėnesį";
+
+  if (actual >= target) {
+    const over = round2(actual - target);
+    return over > 0
+      ? `Pasiekta ir viršyta ${fmt(over)}. Gali kelti kartelę kitam kartui.`
+      : "Pasiekta. Tiksliai į tikslą.";
+  }
+
+  if (forecast.daysRemaining <= 0) {
+    return `Laikotarpis baigėsi ties ${fmt(actual)} iš ${fmt(target)}. Trūko ${fmt(forecast.remaining)}.`;
+  }
+
+  const dayWord = forecast.daysRemaining === 1 ? "diena" : "dienos";
+
+  if (forecast.willHit) {
+    return `Tokiu tempu pasieksi ${fmt(forecast.projected)} — tikslas bus įvykdytas. Liko ${forecast.daysRemaining} ${dayWord}.`;
+  }
+
+  const pace =
+    forecast.perDayNeeded === null ? "" : ` Reikia po ${fmt(forecast.perDayNeeded)} per dieną.`;
+
+  return `Tokiu tempu ${periodWord} liks ties ${fmt(forecast.projected)} iš ${fmt(target)} — trūksta ${fmt(forecast.remaining)}. Liko ${forecast.daysRemaining} ${dayWord}.${pace}`;
+}
+
+function round2(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 100) / 100;
+}

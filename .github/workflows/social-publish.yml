@@ -1,0 +1,36 @@
+name: Publish scheduled posts
+
+# Picks up social posts whose scheduled time has passed and publishes
+# them to Instagram / Facebook.
+#
+# Why not a Vercel cron: Hobby allows two, and both are taken (lesson
+# reminders 06:00, morning push 05:00). A third entry in vercel.json
+# would fail the deployment.
+#
+# The endpoint is safe to call without a secret — it only publishes posts
+# she already composed and scheduled, and the claim step prevents
+# double-sends. See the header comment on the route for the full
+# argument. If CRON_SECRET is set as a repo secret, it is sent and the
+# endpoint enforces it; if not, the header is simply empty and the route
+# falls back to its by-construction guarantees.
+#
+# `|| true` and no `-f`: a failed sweep must never fail the job. At a
+# 5-minute cadence a red job means a failure email every 5 minutes, which
+# is exactly what left cron-reminders.yml disabled.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sweep scheduled posts
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sS --max-time 120 \
+            ${CRON_SECRET:+-H "Authorization: Bearer $CRON_SECRET"} \
+            "https://app.longrein.eu/api/personal/social/publish-scheduled" || true

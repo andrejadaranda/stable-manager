@@ -27,6 +27,7 @@ import { getFinanceSnapshot } from "@/services/personalDashboard/finance";
 import { getMarketingSnapshot } from "@/services/personalDashboard/marketing";
 import { getLongreinHealth } from "@/services/personalDashboard/longrein";
 import { getIntegrationConfig } from "@/services/personalDashboard/settings";
+import { listGoals } from "@/services/personalDashboard/goals";
 
 export type Recommendation = {
   id: string;
@@ -254,14 +255,33 @@ const RECOMMENDATION_SCHEMA = {
  * never the thing computing "days since last ride".
  */
 async function buildSnapshot(now: Date): Promise<Record<string, unknown>> {
-  const [reengagement, todos, todayLessons, finance, marketing, health] = await Promise.all([
-    getReengagementList(now),
-    getOpenTodos(now),
-    getTodayLessons(now),
-    getFinanceSnapshot(now),
-    getMarketingSnapshot(now),
-    getLongreinHealth(now),
-  ]);
+  const [reengagement, todos, todayLessons, finance, marketing, health, weekGoals, monthGoals] =
+    await Promise.all([
+      getReengagementList(now),
+      getOpenTodos(now),
+      getTodayLessons(now),
+      getFinanceSnapshot(now),
+      getMarketingSnapshot(now),
+      getLongreinHealth(now),
+      listGoals("week", now),
+      listGoals("month", now),
+    ]);
+
+  // Goals go in with their FORECAST, not just their current value. "€1800
+  // of €3000" invites the model to restate the number; "at this pace you
+  // finish at €2400, you need €100/day for 12 more days" gives it
+  // something to build an action out of — which is the whole job.
+  const goalLine = (g: (typeof monthGoals)[number]) => ({
+    tikslas: g.label,
+    pasiekta: g.progress.actual,
+    siekiama: g.target,
+    vienetai: g.unit,
+    busena: g.progress.status,
+    prognoze_laikotarpio_pabaigai: g.forecast.projected,
+    ar_spes: g.forecast.willHit,
+    liko_dienu: g.forecast.daysRemaining,
+    reikia_per_diena: g.forecast.perDayNeeded,
+  });
 
   return {
     tjk: {
@@ -303,6 +323,10 @@ async function buildSnapshot(now: Date): Promise<Record<string, unknown>> {
         reakcijos: p.likes + p.comments,
       })),
       prijungta: marketing.configured,
+    },
+    tikslai: {
+      savaites: weekGoals.filter((g) => g.measurable).map(goalLine),
+      menesio: monthGoals.filter((g) => g.measurable).map(goalLine),
     },
     longrein: {
       arklidziu_is_viso: health.stables.total,

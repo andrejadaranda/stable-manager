@@ -16,12 +16,18 @@ import {
   monthBounds,
   quarterStartKey,
   monthElapsedFraction,
+  weekBounds,
+  weekElapsedFraction,
   goalProgress,
+  forecastGoal,
+  goalAdvice,
   type GoalProgress,
+  type GoalForecast,
 } from "@/services/personalDashboard/core.pure";
 
 export type GoalUnit = "eur" | "count" | "percent";
-export type GoalPeriod = "month" | "quarter";
+export type GoalPeriod = "week" | "month" | "quarter";
+export type GoalCategory = "tjk" | "longrein" | "rinkodara";
 
 export type GoalRow = {
   id: string;
@@ -31,6 +37,7 @@ export type GoalRow = {
   label: string;
   target: number;
   unit: GoalUnit;
+  category: GoalCategory | null;
   sortOrder: number;
 };
 
@@ -38,6 +45,10 @@ export type GoalWithProgress = GoalRow & {
   progress: GoalProgress;
   /** False when nothing knows how to measure this key — see RESOLVERS. */
   measurable: boolean;
+  /** Where this lands at period end at the current pace. */
+  forecast: GoalForecast;
+  /** One sentence saying what to do about it. */
+  advice: string;
 };
 
 /**
@@ -83,7 +94,123 @@ export const GOAL_METRICS: Array<{
     unit: "count",
     help: "Naujai užsiregistravę arklidžių paskyros.",
   },
+  {
+    key: "client_retention",
+    label: "Klientų sugrįžtamumas",
+    unit: "percent",
+    help: "Kiek procentų šio laikotarpio klientų grįžo joti per 30 dienų.",
+  },
+  {
+    key: "instagram_followers",
+    label: "Instagram sekėjų prieaugis",
+    unit: "count",
+    help: "Skirtumas tarp naujausio ir pirmojo laikotarpio matavimo.",
+  },
+  {
+    key: "social_posts",
+    label: "Paskelbti įrašai",
+    unit: "count",
+    help: "Iš „Skelbimų“ ekrano — kiek įrašų iš tikrųjų išėjo.",
+  },
 ];
+
+/**
+ * What a new dashboard starts with.
+ *
+ * Seeded on first visit to the Goals screen rather than in the migration:
+ * a migration cannot know her numbers, and an empty goals screen teaches
+ * nothing about what the screen is for. These three are deliberately
+ * modest and easy to edit — the point is a working example, not a
+ * prescription.
+ */
+const DEFAULT_GOALS: Array<{
+  period: GoalPeriod;
+  goalKey: string;
+  label: string;
+  target: number;
+  unit: GoalUnit;
+  category: GoalCategory;
+  sortOrder: number;
+}> = [
+  {
+    period: "month",
+    goalKey: "lesson_revenue",
+    label: "Pajamos iš treniruočių",
+    target: 3000,
+    unit: "eur",
+    category: "tjk",
+    sortOrder: 0,
+  },
+  {
+    period: "week",
+    goalKey: "lessons_taught",
+    label: "Treniruotės per savaitę",
+    target: 20,
+    unit: "count",
+    category: "tjk",
+    sortOrder: 1,
+  },
+  {
+    period: "week",
+    goalKey: "social_posts",
+    label: "Įrašai per savaitę",
+    target: 3,
+    unit: "count",
+    category: "rinkodara",
+    sortOrder: 2,
+  },
+];
+
+/**
+ * Create the starter goals, once.
+ *
+ * Idempotent in two independent ways: it returns early if she has ANY
+ * goal at all (so deleting a default does not resurrect it next load),
+ * and the insert itself is an upsert on the natural key.
+ */
+export async function seedDefaultGoalsIfEmpty(now = new Date()): Promise<boolean> {
+  return safe(
+    async () => {
+      const ctx = await requirePersonalContext();
+      const tz = await getStableTimeZone();
+      const supabase = createSupabaseServerClient();
+
+      const { count } = await supabase
+        .from("dashboard_goals")
+        .select("id", { count: "exact", head: true })
+        .eq("auth_user_id", ctx.authUserId);
+
+      if ((count ?? 0) > 0) return false;
+
+      const rows = DEFAULT_GOALS.map((g) => ({
+        auth_user_id: ctx.authUserId,
+        period: g.period,
+        period_start: periodStartKey(g.period, now, tz),
+        goal_key: g.goalKey,
+        label: g.label,
+        target: g.target,
+        unit: g.unit,
+        category: g.category,
+        sort_order: g.sortOrder,
+      }));
+
+      const { error } = await supabase
+        .from("dashboard_goals")
+        .upsert(rows, { onConflict: "auth_user_id,period,period_start,goal_key" });
+      if (error) throw error;
+      return true;
+    },
+    false,
+    "seedDefaultGoalsIfEmpty",
+  );
+}
+
+/** First day of the period `now` falls in. */
+export function periodStartKey(period: GoalPeriod, now: Date, tz: string): string {
+  if (period === "week") return weekBounds(now, tz).startKey;
+  if (period === "quarter") return quarterStartKey(now, tz);
+  return monthBounds(now, tz).startKey;
+}
 
 export async function listGoals(
   period: GoalPeriod,
@@ -95,12 +222,11 @@ export async function listGoals(
       const tz = await getStableTimeZone();
       const supabase = createSupabaseServerClient();
 
-      const periodStart =
-        period === "month" ? monthBounds(now, tz).startKey : quarterStartKey(now, tz);
+      const periodStart = periodStartKey(period, now, tz);
 
       const { data } = await supabase
         .from("dashboard_goals")
-        .select("id, period, period_start, goal_key, label, target, unit, sort_order")
+        .select("id, period, period_start, goal_key, label, target, unit, category, sort_order")
         .eq("auth_user_id", ctx.authUserId)
         .eq("period", period)
         .eq("period_start", periodStart)
@@ -114,6 +240,7 @@ export async function listGoals(
         label: String(r.label),
         target: num(r.target),
         unit: (r.unit as GoalUnit) ?? "count",
+        category: (r.category as GoalCategory) ?? null,
         sortOrder: num(r.sort_order),
       }));
 
@@ -130,13 +257,29 @@ export async function listGoals(
       );
 
       const elapsed = periodElapsedFraction(period, periodStart, now, tz);
+      const { daysTotal, daysElapsed } = periodDays(period, periodStart, now, tz);
 
       return rows.map((r) => {
-        const actual = actuals.get(r.goalKey);
+        const actual = actuals.get(r.goalKey) ?? 0;
+        const forecast = forecastGoal({
+          actual,
+          target: r.target,
+          elapsedFraction: elapsed,
+          daysTotal,
+          daysElapsed,
+        });
         return {
           ...r,
-          measurable: actual !== null && actual !== undefined,
-          progress: goalProgress(actual ?? 0, r.target, elapsed),
+          measurable: actuals.get(r.goalKey) !== null && actuals.get(r.goalKey) !== undefined,
+          progress: goalProgress(actual, r.target, elapsed),
+          forecast,
+          advice: goalAdvice({
+            actual,
+            target: r.target,
+            unit: r.unit,
+            forecast,
+            period: r.period,
+          }),
         };
       });
     },
@@ -205,6 +348,105 @@ const RESOLVERS: Record<string, Resolver> = {
 
   new_stables: async (period, periodStart) =>
     platformCount("stables", periodStart, periodEndKey(period, periodStart)),
+
+  /**
+   * Share of this period's riders who came back within 30 days.
+   *
+   * Measured from each client's FIRST lesson in the period, and only for
+   * clients whose 30-day window has actually closed. Counting someone who
+   * rode yesterday as "not retained" would drag the number down every
+   * single day and make it useless — the metric would mostly measure how
+   * recently the period started.
+   */
+  client_retention: async (period, periodStart, now) => {
+    const ctx = await requirePersonalContext();
+    const supabase = createSupabaseServerClient();
+    const endKey = periodEndKey(period, periodStart);
+
+    const { data: inPeriod } = await supabase
+      .from("lessons")
+      .select("client_id, starts_at")
+      .eq("stable_id", ctx.stableId)
+      .eq("status", "completed")
+      .not("client_id", "is", null)
+      .gte("starts_at", `${periodStart}T00:00:00Z`)
+      .lt("starts_at", `${endKey}T00:00:00Z`)
+      .limit(2000);
+
+    // Earliest lesson per client inside the period.
+    const firstRide = new Map<string, number>();
+    for (const row of inPeriod ?? []) {
+      const id = String(row.client_id);
+      const t = new Date(String(row.starts_at)).getTime();
+      if (!firstRide.has(id) || t < (firstRide.get(id) as number)) firstRide.set(id, t);
+    }
+
+    // Only clients whose 30-day window has fully elapsed can be judged.
+    const mature = [...firstRide.entries()].filter(
+      ([, t]) => now.getTime() - t >= 30 * 86_400_000,
+    );
+    if (mature.length === 0) return null;
+
+    const { data: later } = await supabase
+      .from("lessons")
+      .select("client_id, starts_at")
+      .eq("stable_id", ctx.stableId)
+      .in("status", ["completed", "scheduled"])
+      .in("client_id", mature.map(([id]) => id))
+      .limit(5000);
+
+    let returned = 0;
+    for (const [clientId, firstAt] of mature) {
+      const cameBack = (later ?? []).some((l) => {
+        if (String(l.client_id) !== clientId) return false;
+        const t = new Date(String(l.starts_at)).getTime();
+        return t > firstAt && t <= firstAt + 30 * 86_400_000;
+      });
+      if (cameBack) returned += 1;
+    }
+
+    return Math.round((returned / mature.length) * 100);
+  },
+
+  /**
+   * Follower growth across the period.
+   *
+   * Meta only ever reports the CURRENT follower count, so growth needs a
+   * stored baseline — dashboard_audience_snapshots, sampled daily. Null
+   * until there are two samples: one data point cannot show a change,
+   * and reporting "+0" would look like stagnation rather than "not
+   * measured yet".
+   */
+  instagram_followers: async (period, periodStart) => {
+    const ctx = await requirePersonalContext();
+    const supabase = createSupabaseServerClient();
+    const { data } = await supabase
+      .from("dashboard_audience_snapshots")
+      .select("captured_on, followers")
+      .eq("auth_user_id", ctx.authUserId)
+      .eq("platform", "instagram")
+      .gte("captured_on", periodStart)
+      .lt("captured_on", periodEndKey(period, periodStart))
+      .order("captured_on", { ascending: true });
+
+    const rows = data ?? [];
+    if (rows.length < 2) return null;
+    return num(rows[rows.length - 1].followers) - num(rows[0].followers);
+  },
+
+  /** Posts that actually went out, from the publishing queue. */
+  social_posts: async (period, periodStart) => {
+    const ctx = await requirePersonalContext();
+    const supabase = createSupabaseServerClient();
+    const { count } = await supabase
+      .from("dashboard_social_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("auth_user_id", ctx.authUserId)
+      .in("status", ["published", "partial"])
+      .gte("published_at", `${periodStart}T00:00:00Z`)
+      .lt("published_at", `${periodEndKey(period, periodStart)}T00:00:00Z`);
+    return count ?? 0;
+  },
 };
 
 async function platformCount(
@@ -225,6 +467,11 @@ async function platformCount(
 
 /** Exclusive end of a period, as a YYYY-MM-DD key. */
 function periodEndKey(period: GoalPeriod, periodStart: string): string {
+  if (period === "week") {
+    const d = new Date(`${periodStart}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 7);
+    return d.toISOString().slice(0, 10);
+  }
   const [y, m] = periodStart.split("-").map(Number);
   const step = period === "month" ? 1 : 3;
   const total = m - 1 + step;
@@ -237,6 +484,9 @@ function periodElapsedFraction(
   now: Date,
   tz: string,
 ): number {
+  if (period === "week") {
+    return weekElapsedFraction(weekBounds(now, tz).dayOfWeek);
+  }
   if (period === "month") {
     const { dayOfMonth, daysInMonth } = monthBounds(now, tz);
     return monthElapsedFraction(dayOfMonth, daysInMonth);
@@ -250,6 +500,79 @@ function periodElapsedFraction(
   return Math.min(1, Math.max(0, elapsed / (end - start)));
 }
 
+/** Whole days in the period, and how many have gone. Drives the forecast's
+ *  "€100 per day for 12 more days" arithmetic. */
+function periodDays(
+  period: GoalPeriod,
+  periodStart: string,
+  now: Date,
+  tz: string,
+): { daysTotal: number; daysElapsed: number } {
+  if (period === "week") {
+    return { daysTotal: 7, daysElapsed: weekBounds(now, tz).dayOfWeek };
+  }
+  if (period === "month") {
+    const { dayOfMonth, daysInMonth } = monthBounds(now, tz);
+    return { daysTotal: daysInMonth, daysElapsed: dayOfMonth };
+  }
+  const startMs = new Date(`${periodStart}T00:00:00Z`).getTime();
+  const endMs = new Date(`${periodEndKey(period, periodStart)}T00:00:00Z`).getTime();
+  const daysTotal = Math.round((endMs - startMs) / 86_400_000);
+  const daysElapsed = Math.min(
+    daysTotal,
+    Math.max(0, Math.ceil((now.getTime() - startMs) / 86_400_000)),
+  );
+  return { daysTotal, daysElapsed };
+}
+
+// -------------------------------------------------------------------
+// Archive
+// -------------------------------------------------------------------
+
+export type ArchivedGoal = GoalRow & { hit: boolean | null; actual: number | null };
+
+/**
+ * Goals from periods that have finished.
+ *
+ * `actual` is deliberately NOT recomputed here. The resolvers measure
+ * "now" against a period, and re-running them for twelve past months
+ * would be dozens of queries on a screen she opens to reminisce. Past
+ * goals show the target and the label; the honest answer to "did I hit
+ * it" for an old period is to open that period, which is a follow-up.
+ */
+export async function listArchivedGoals(limit = 30): Promise<GoalRow[]> {
+  return safe<GoalRow[]>(
+    async () => {
+      const ctx = await requirePersonalContext();
+      const tz = await getStableTimeZone();
+      const supabase = createSupabaseServerClient();
+      const thisMonth = monthBounds(new Date(), tz).startKey;
+
+      const { data } = await supabase
+        .from("dashboard_goals")
+        .select("id, period, period_start, goal_key, label, target, unit, category, sort_order")
+        .eq("auth_user_id", ctx.authUserId)
+        .lt("period_start", thisMonth)
+        .order("period_start", { ascending: false })
+        .limit(limit);
+
+      return (data ?? []).map((r) => ({
+        id: String(r.id),
+        period: r.period as GoalPeriod,
+        periodStart: String(r.period_start),
+        goalKey: String(r.goal_key),
+        label: String(r.label),
+        target: num(r.target),
+        unit: (r.unit as GoalUnit) ?? "count",
+        category: (r.category as GoalCategory) ?? null,
+        sortOrder: num(r.sort_order),
+      }));
+    },
+    [],
+    "listArchivedGoals",
+  );
+}
+
 // -------------------------------------------------------------------
 // Writes
 // -------------------------------------------------------------------
@@ -261,6 +584,7 @@ export async function upsertGoal(input: {
   label: string;
   target: number;
   unit: GoalUnit;
+  category?: GoalCategory | null;
   sortOrder?: number;
 }): Promise<void> {
   const ctx = await requirePersonalContext();
@@ -279,6 +603,7 @@ export async function upsertGoal(input: {
       label: input.label,
       target: input.target,
       unit: input.unit,
+      category: input.category ?? null,
       sort_order: input.sortOrder ?? 0,
     },
     { onConflict: "auth_user_id,period,period_start,goal_key" },

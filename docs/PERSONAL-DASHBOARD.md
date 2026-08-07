@@ -84,27 +84,39 @@ nustatymuose nieko neįvesta — įvestas raktas visada laimi.
 Modelis — `claude-opus-5`, viena generacija per dieną (unikalus indeksas
 `(auth_user_id, generated_on)`), tad puslapio perkrovimai nekainuoja.
 
-### 3.4 Instagram / Facebook (nebūtina)
+### 3.4 Instagram / Facebook — prijungimas vienu mygtuku
 
-`/personal/nustatymai`. Reikia Instagram **Business** paskyros, susietos su
-Facebook puslapiu.
+`/personal/nustatymai` → „Instagram ir Facebook". Reikia Instagram
+**Business** paskyros, susietos su Facebook puslapiu.
 
-Kaip gauti tokeną (Meta):
+Forma prašo trijų dalykų ir toliau viską padaro pati: trumpalaikį tokeną
+pakeičia ilgalaikiu, per `/me/accounts` susiranda puslapį, iš jo ištraukia
+**Page Access Token** ir prikabintą **Instagram Business ID**, ir abu
+įrašo. Rankomis konstruoti Graph API URL su app secret nebereikia — tai
+buvo pati klaidingiausia vieta.
 
-1. `developers.facebook.com` → My Apps → Create App → tipas **Business**
-2. Pridėk produktą **Facebook Login for Business**
-3. Tools → **Graph API Explorer** → pasirink savo programą ir puslapį
-4. Teisės: `instagram_basic`, `instagram_manage_insights`,
-   `pages_read_engagement`, `pages_show_list`
-5. Generate Access Token → nukopijuok
-6. Tools → **Access Token Debugger** → įklijuok → *Extend Access Token*
-   (trumpalaikis galioja 1–2 val., ilgalaikis ~60 d.)
-7. Instagram paskyros ID: Graph API Explorer užklausa
-   `me/accounts?fields=instagram_business_account`
+Ko reikia iš `developers.facebook.com`:
 
-Ilgalaikis tokenas galioja apie 60 dienų, tad kartą per du mėnesius jį
-reikės perklijuoti. Marketing ekranas tada parodys „greičiausiai pasibaigęs
-tokenas" — tai ir yra priminimas.
+1. **App ID** ir **App Secret** — programos Settings → Basic.
+2. **Trumpalaikis tokenas** — Tools → Graph API Explorer → pasirink
+   programą → Generate Access Token.
+3. Teisės, kurias reikia pažymėti generuojant:
+   `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`,
+   `instagram_basic`, `instagram_content_publish`,
+   `instagram_manage_insights`.
+
+**App Secret neįrašomas.** Jis naudojamas tik mainams ir po to
+išmetamas — laikyti be reikalo būtų nereikalinga rizika.
+
+Gautas **puslapio tokenas nebesibaigia** (skirtingai nuo 60 d. vartotojo
+tokeno) tol, kol nekeiti Facebook slaptažodžio ir neatšauki programos
+teisių. Jei vis dėlto nustotų veikti — Marketing ekranas parodys
+„greičiausiai pasibaigęs tokenas", ir formą užpildai iš naujo.
+
+**Dėl `instagram_content_publish` App Review:** kol programa yra
+„Development" režime, ji veikia be peržiūros **tavo pačios** paskyrai —
+tau kaip programos administratorei. Peržiūros reikia tik tada, jei
+programa būtų skirta kitiems žmonėms. Mums nereikia.
 
 Alternatyva per aplinkos kintamuosius: `META_IG_USER_ID`,
 `META_INSTAGRAM_ACCESS_TOKEN`, `META_PAGE_ID`, `META_FB_PAGE_ACCESS_TOKEN`.
@@ -157,10 +169,62 @@ vykdo Vercel cron `0 5 * * *` (UTC) — 8:00 Vilniuje vasarą, 7:00 žiemą.
 Siuntimas idempotentiškas per parą: antras kvietimas tą pačią dieną nieko
 nesiunčia.
 
-### 3.7 Tikslai (nebūtina, bet rekomenduoju)
+### 3.7 Tikslai
 
-`/personal/tikslai`. Be mėnesio pajamų tikslo Finansai rodo faktą, bet
-negali pasakyti, ar jo pakanka.
+`/personal/tikslai`. Pirmą kartą atidarius sukuriami trys pradiniai
+tikslai (3000 €/mėn., 20 treniruočių/sav., 3 įrašai/sav.) — juos galima
+keisti ar ištrinti; ištrinti nebegrįžta.
+
+Kiekviena kortelė rodo tris dalykus, ne vieną:
+
+| | |
+|---|---|
+| **Kur esi** | juosta + skaičius |
+| **Kur turėtum būti** | plona linija juostoje = tolygus tempas |
+| **Kuo tai baigsis** | prognozė ir kiek reikia per dieną |
+
+Trečias yra svarbiausias. Juosta mėnesio 14 d. guodžia, bet nieko
+nepasako; „tokiu tempu liks 2000 € iš 3000 €, reikia po 100 € per dieną,
+liko 10 dienų" — jau sprendimas šiai popietei.
+
+Prognozė sąmoningai **netaikoma** pirmam laikotarpio dešimtadaliui: 500 €
+antrą mėnesio dieną ekstrapoliuotųsi į 7500 €, ir kortelė meluotų.
+
+Matuojami rodikliai: pajamos, įvykusios treniruotės, nauji klientai,
+**klientų sugrįžtamumas** (per 30 d.), **Instagram sekėjų prieaugis**,
+**paskelbti įrašai**, Longrein arklidės ir laukiantieji.
+
+Sugrįžtamumas skaičiuojamas tik tiems klientams, kurių 30 d. langas jau
+pasibaigęs — kitaip vakar jojęs žmogus kas dieną temptų procentą žemyn ir
+rodiklis matuotų ne lojalumą, o tai, kaip neseniai prasidėjo laikotarpis.
+
+Sekėjų prieaugiui reikia **dviejų matavimų**. Meta grąžina tik dabartinį
+skaičių, tad kasdien įrašomas momentinis kiekis (per rytinį cron ir per
+Rinkodaros „Atnaujinti"). Pirmą dieną kortelė sako „nėra iš ko
+skaičiuoti", ne „+0".
+
+### 3.9 Skelbimai į socialinius tinklus
+
+`/personal/social`. Rašai vieną kartą — išeina į Instagram, Instagram
+Story ir Facebook.
+
+- **Nuotrauka/video** keliama tiesiai iš telefono į Supabase Storage
+  (`personal-social`). Meta pati parsisiunčia failą iš to viešo adreso —
+  todėl bucket'as viešas skaitymui. Rašyti į jį gali tik tu.
+- **„Parašyk už mane"** — Claude parašo tekstą TJK balsu (lietuviškai,
+  dalykiškai, be „nepraleisk progos!!!"), su grotažymėmis.
+- **Suplanuoti** — pasirenki laiką, ir GitHub Actions kas 5 min. paima,
+  kas jau pribrendo.
+- **Dalinė sėkmė matoma.** Jei Instagram pavyko, o Facebook ne, įrašas
+  pažymimas „dalinai", matai kurioje platformoje kas nutiko, ir
+  „Bandyti dar kartą" **nebesiunčia** ten, kur jau nuėjo.
+
+Instagram be nuotraukos neleidžia — tai jų API riba, ne mūsų. Composer'is
+pasako iš karto, o ne per nesėkmingą paskelbimą 7 val. ryto.
+
+Ką reikia žinoti: Instagram Story tekstą ignoruoja (jų API tokio lauko
+neturi), o video Instagram apdoroja asinchroniškai — jei per 90 s
+nespėja, įrašas lieka eilėje ir kitas praėjimas jį pabaigia.
 
 ---
 
@@ -254,20 +318,24 @@ patikra ir yra gedimo įrašas.
 ## 7. Testai
 
 ```bash
-npm test                    # 52 vienetiniai testai (grynoji logika)
-npm run build && npm run test:routes   # 24 maršrutų patikros
+npm test                               # 74 vienetiniai testai (grynoji logika)
+npm run build && npm run test:routes   # 30 maršrutų patikrų
 ```
 
 Node įtaisytas testų vykdyklis + natyvus TypeScript tipų nulupimas. Jokių
-naujų priklausomybių. 52 testai dengia „nejojo 2 sav" ribą, tempo
+naujų priklausomybių. 74 testai dengia „nejojo 2 sav" ribą, tempo
 skaičiavimą, prognozes, laiko juostų / vasaros laiko aritmetiką, turinio
 spragas, veikimo laiko skaičiavimą (įskaitant „spraga = gedimas" ir
-„pirmoji diena nerodo 4 %") ir MRR normalizavimą.
+„pirmoji diena nerodo 4 %"), MRR normalizavimą, savaičių ribas
+(sekmadienis priklauso prieš tai prasidėjusiai savaitei, o 21:30 UTC
+sekmadienį Vilniuje jau kita savaitė) ir tikslų prognozes (ankstyvas
+šuolis neekstrapoliuojamas, „trūksta" niekada nerodo neigiamo skaičiaus).
 
 `test:routes` paleidžia **produkcinį build'ą** ir tikrina, ką vienetinis
-testas patikrinti negali: kad visi 7 `/personal` ekranai anonimui grąžina
+testas patikrinti negali: kad visi 8 `/personal` ekranai anonimui grąžina
 404 (ne 403 ir ne 500), kad asmeniniai API endpoint'ai neįsileidžia be
-autentikacijos, kad `/api/health` atsako teisingai, ir kad produkto
+autentikacijos, kad viešas skelbimų praėjimas be autentikacijos nieko
+nepaskelbia, kad `/api/health` atsako teisingai, ir kad produkto
 puslapiai (`/login`, `/signup`, `/dashboard`, `/api/keepalive`) nesulūžo.
 
 **Ko šis testas nedaro:** netikrina prisijungusio vartotojo 200 su
@@ -293,14 +361,17 @@ reikalautų DB dublerio — sąmoningai neįtraukta į šią apimtį.
 ```
 database/110_personal_dashboard.sql      dashboard_* lentelės, RLS, view
 database/111_personal_dashboard_ops.sql  push, health checks, klaidos, FM
+database/112_personal_social_and_goals.sql  skelbimų eilė, media, savaitės
 database/APPLY_PERSONAL_DASHBOARD.sql    vienas įklijavimas + patikros
 lib/personal/access.ts                   prieigos vartai (fail-closed)
-lib/personal/integrations.ts             Instagram / Facebook / WP klientai
+lib/personal/integrations.ts             Instagram / Facebook / WP skaitymas
+lib/personal/publish.ts                  Meta skelbimas + tokenų mainai
 lib/personal/push.ts                     VAPID raktai + Web Push siuntimas
 lib/personal/error-log.ts                klaidų įrašymas (be asmens duomenų)
 services/personalDashboard/
   core.pure.ts                           gryna logika (testuojama)
   ops.pure.ts                            uptime + MRR aritmetika (testuojama)
+  social.ts                              eilė, skelbimas, AI tekstai
   common.ts                              laiko juosta, safe(), bendra
   tjk.ts  finance.ts  longrein.ts        ekranų duomenys
   marketing.ts  goals.ts  briefing.ts
@@ -309,7 +380,9 @@ services/personalDashboard/
   advisor.ts                             Claude kvietimas + kešavimas
   settings.ts                            tokenai + aplinkos kintamųjų sluoksnis
   __tests__/                             52 testai
-app/personal/                            layout, 6 ekranai, nustatymai, actions
+app/personal/                            layout, 7 ekranai, nustatymai, actions
+app/personal/social/                     kūrimas, planavimas, istorija
+app/personal/social-actions.ts           skelbimo veiksmai + Meta prijungimas
 app/personal/error.tsx                   ekrano klaidų gaudyklė
 app/error.tsx                            viso produkto klaidų gaudyklė
 app/personal-offline/                    offline atsarginis puslapis
@@ -319,7 +392,30 @@ app/api/personal/push/subscribe/route.ts prenumerata / atsisakymas
 app/api/personal/push/daily/route.ts     rytinis siuntimas (Vercel cron)
 components/personal/                     navigacija, UI primityvai, formos
 components/personal/enable-push.tsx      pranešimų įjungimas (iOS būsenos)
+components/personal/composer.tsx         įrašo kūrimas + media įkėlimas
+components/personal/post-row.tsx         įrašo eilutė + pakartotinis siuntimas
 public/sw-personal.js                    service worker (sritis /personal/)
 scripts/smoke-personal.mjs               maršrutų testas
 .github/workflows/health-check.yml       kas 5 min. tikrina /api/health
+.github/workflows/social-publish.yml     kas 5 min. siunčia suplanuotus įrašus
 ```
+
+---
+
+## 9. Kodėl skelbimai per GitHub Actions, o ne Vercel cron
+
+Vercel Hobby leidžia **du** cron darbus. Abu užimti: treniruočių
+priminimai 06:00 ir rytinis pranešimas 05:00. Trečias įrašas
+`vercel.json` faile sugriautų patį diegimą.
+
+Todėl skelbimų praėjimas gyvena GitHub Actions, kaip ir veikimo patikra.
+Endpoint'as apsaugotas ne slaptažodžiu, o **konstrukcija**: jis paskelbia
+tik tuos įrašus, kuriuos tu pati suplanavai, ir tik atėjus jų laikui;
+kūrimo ar keitimo per jį padaryti neįmanoma; dvigubą siuntimą neleidžia
+eilės „pasisavinimas" (`scheduled` → `publishing`) ir `external_ids`
+žymos. Nustačius `CRON_SECRET` apsauga sugriežtėja iki bearer tokeno —
+tai pagerinimas, ne būtina sąlyga.
+
+Priežastis, kodėl ne slaptažodis iš karto: GitHub Actions darbas be
+sukonfigūruoto slapto rakto gautų 401 kas 5 minutes ir siųstų po laišką
+apie nesėkmę. Būtent dėl to `cron-reminders.yml` iki šiol išjungtas.

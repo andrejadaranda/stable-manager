@@ -33,6 +33,7 @@ import {
   saveIntegrationConfigForUser,
 } from "@/services/personalDashboard/settings";
 import { localDateKey, REENGAGEMENT_DAYS } from "@/services/personalDashboard/core.pure";
+import { captureAudienceSnapshot } from "@/services/personalDashboard/social";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,6 +83,10 @@ export async function GET(request: NextRequest) {
       results.push({ user: redact(userId), skipped: "already sent today" });
       continue;
     }
+
+    // Sample the follower count once a day, so growth goals accumulate a
+    // baseline without her having to open the Marketing screen.
+    await captureAudienceSnapshot(userId, now);
 
     const payload = await buildPayload(admin, userId, now, today);
     const sent = await sendPersonalPush(userId, payload);

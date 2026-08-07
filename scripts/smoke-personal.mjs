@@ -52,8 +52,11 @@ for (const path of [
   ".next/server/app/personal/longrein/page.js",
   ".next/server/app/personal/nustatymai/page.js",
   ".next/server/app/api/health/route.js",
+  ".next/server/app/personal/social/page.js",
+  ".next/server/app/personal/tikslai/page.js",
   ".next/server/app/api/personal/push/subscribe/route.js",
   ".next/server/app/api/personal/push/daily/route.js",
+  ".next/server/app/api/personal/social/publish-scheduled/route.js",
 ]) {
   check(`compiled ${path.replace(".next/server/app", "")}`, existsSync(path));
 }
@@ -125,6 +128,7 @@ for (const path of [
   "/personal/marketing",
   "/personal/longrein",
   "/personal/tikslai",
+  "/personal/social",
   "/personal/nustatymai",
 ]) {
   const res = await fetch(`${BASE}${path}`, { redirect: "manual" });
@@ -147,6 +151,20 @@ console.log("\npersonal API (unauthenticated)");
 {
   const res = await fetch(`${BASE}/api/personal/push/daily`);
   check("GET /api/personal/push/daily → 401", res.status === 401, `got ${res.status}`);
+}
+{
+  // The scheduled-publish sweep is deliberately callable without a
+  // secret — see the header comment on that route. What matters is that
+  // an anonymous call is a harmless no-op, not an error and not a
+  // publish: with nothing due, `published` must be 0.
+  const res = await fetch(`${BASE}/api/personal/social/publish-scheduled`);
+  check("GET /api/personal/social/publish-scheduled → 200", res.status === 200, `got ${res.status}`);
+  const body = await res.json().catch(() => null);
+  check(
+    "publish sweep publishes nothing when nothing is due",
+    Boolean(body) && (body.published === 0 || body.skipped === "throttled"),
+    JSON.stringify(body),
+  );
 }
 {
   // No secret configured yet → the route denies. 404 (not configured) and

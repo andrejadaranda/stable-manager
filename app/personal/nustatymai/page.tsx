@@ -10,6 +10,7 @@ import { ScreenHeader, Section, Panel, Chip } from "@/components/personal/ui";
 import { ActionForm, Field } from "@/components/personal/interactive";
 import { EnablePush } from "@/components/personal/enable-push";
 import { saveSettingsAction } from "@/app/personal/actions";
+import { connectMetaAction } from "@/app/personal/social-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Nustatymai" };
@@ -71,44 +72,115 @@ export default async function SettingsScreen() {
         </Panel>
       </Section>
 
-      {/* ---------- Instagram ---------- */}
-      <Section title="Instagram" action={chip("instagram")}>
+      {/* ---------- Meta: the guided connect ---------- */}
+      <Section
+        title="Instagram ir Facebook"
+        action={
+          <Chip
+            tone={
+              status("instagram")?.configured && status("facebook")?.configured
+                ? "positive"
+                : status("facebook")?.configured
+                  ? "warning"
+                  : "neutral"
+            }
+          >
+            {status("instagram")?.configured && status("facebook")?.configured
+              ? "prijungta"
+              : status("facebook")?.configured
+                ? "tik Facebook"
+                : "neprijungta"}
+          </Chip>
+        }
+      >
         <Panel>
-          <p className="mb-3 text-[11.5px] leading-relaxed text-ink-500">
-            Reikia <strong>Instagram Business</strong> paskyros, susietos su Facebook
-            puslapiu, ir ilgalaikio tokeno su teisėmis{" "}
-            <code className="rounded bg-surface-muted px-1">instagram_basic</code> ir{" "}
-            <code className="rounded bg-surface-muted px-1">instagram_manage_insights</code>.
-            Kelias: developers.facebook.com → tavo programa → Graph API Explorer →
-            pasirink puslapį → sugeneruok tokeną → pakeisk jį į ilgalaikį.
+          <p className="mb-2 text-[11.5px] leading-relaxed text-ink-500">
+            Šitas mygtukas padaro sunkiąją dalį: trumpalaikį tokeną paverčia
+            ilgalaikiu, susiranda tavo puslapį ir prie jo prikabintą Instagram
+            Business profilį, ir viską įrašo. Tau reikia trijų dalykų iš{" "}
+            <a
+              href="https://developers.facebook.com/apps"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              developers.facebook.com
+            </a>
+            :
           </p>
-          <ActionForm action={saveSettingsAction} submitLabel="Išsaugoti">
-            <input type="hidden" name="provider" value="instagram" />
+          <ol className="mb-3 ml-4 list-decimal space-y-1.5 text-[11.5px] leading-relaxed text-ink-600">
+            <li>
+              <strong>App ID</strong> ir <strong>App Secret</strong> — programos
+              puslapyje, Settings → Basic.
+            </li>
+            <li>
+              <strong>Trumpalaikis tokenas</strong> — Tools →{" "}
+              <a
+                href="https://developers.facebook.com/tools/explorer/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                Graph API Explorer
+              </a>
+              , pasirink savo programą, tada „Generate Access Token“.
+            </li>
+            <li>
+              Teisės, kurias reikia pažymėti:{" "}
+              <code className="rounded bg-surface-muted px-1 text-[10.5px]">
+                pages_show_list, pages_read_engagement, pages_manage_posts,
+                instagram_basic, instagram_content_publish,
+                instagram_manage_insights
+              </code>
+            </li>
+          </ol>
+          <p className="mb-3 rounded-lg bg-surface-muted/70 px-2.5 py-2 text-[11px] leading-relaxed text-ink-600">
+            App Secret panaudojamas tik mainams ir <strong>neįrašomas</strong> —
+            jo daugiau niekur nereikia, o laikyti be reikalo būtų kvaila.
+            Ilgalaikis puslapio tokenas nebesibaigia tol, kol nepakeiti
+            Facebook slaptažodžio.
+          </p>
+
+          <ActionForm action={connectMetaAction} submitLabel="Prijungti">
+            <Field label="App ID" name="appId" placeholder="1234567890123456" />
+            <Field label="App Secret" name="appSecret" type="password" placeholder="…" />
             <Field
-              label="Instagram Business paskyros ID"
-              name="igUserId"
-              placeholder="17841400000000000"
-            />
-            <Field
-              label="Prieigos tokenas"
-              name="accessToken"
+              label="Trumpalaikis tokenas"
+              name="shortLivedToken"
               type="password"
               placeholder="EAAG…"
-              hint="Įrašytas tokenas niekada nerodomas atgal — matysi tik paskutinius 4 simbolius."
+            />
+            <Field
+              label="Puslapio ID (nebūtina)"
+              name="pageId"
+              placeholder="palik tuščią, jei puslapis vienas"
+              hint="Užpildyk tik jei administruoji kelis puslapius."
             />
           </ActionForm>
         </Panel>
-      </Section>
 
-      {/* ---------- Facebook ---------- */}
-      <Section title="Facebook" action={chip("facebook")}>
-        <Panel>
-          <ActionForm action={saveSettingsAction} submitLabel="Išsaugoti">
-            <input type="hidden" name="provider" value="facebook" />
-            <Field label="Puslapio ID" name="pageId" placeholder="1000000000000" />
-            <Field label="Puslapio tokenas" name="accessToken" type="password" placeholder="EAAG…" />
-          </ActionForm>
-        </Panel>
+        {/* Manual entry stays as the escape hatch: if the exchange fails
+            for a reason Meta words badly, she can still paste a token she
+            obtained another way. */}
+        <details className="mt-2.5">
+          <summary className="cursor-pointer px-1 text-[11.5px] text-ink-400">
+            Arba suvesti tokenus ranka
+          </summary>
+          <Panel className="mt-2">
+            <ActionForm action={saveSettingsAction} submitLabel="Išsaugoti Instagram">
+              <input type="hidden" name="provider" value="instagram" />
+              <Field label="Instagram Business ID" name="igUserId" placeholder="17841400000000000" />
+              <Field label="Tokenas" name="accessToken" type="password" placeholder="EAAG…" />
+            </ActionForm>
+            <div className="mt-4 border-t border-ink-100 pt-3">
+              <ActionForm action={saveSettingsAction} submitLabel="Išsaugoti Facebook">
+                <input type="hidden" name="provider" value="facebook" />
+                <Field label="Puslapio ID" name="pageId" placeholder="1000000000000" />
+                <Field label="Puslapio tokenas" name="accessToken" type="password" placeholder="EAAG…" />
+              </ActionForm>
+            </div>
+          </Panel>
+        </details>
       </Section>
 
       {/* ---------- Website ---------- */}

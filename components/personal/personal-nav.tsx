@@ -2,10 +2,15 @@
 
 // Bottom tab bar for the command centre.
 //
-// Six destinations is more than the three-to-five a consumer app would
+// Seven destinations is well past the three-to-five a consumer app would
 // use, but this is a cockpit — she asked to reach every area in one tap
-// rather than behind a "More" sheet. They fit on an iPhone 15 Pro
-// (393pt wide) at 6 × ~62pt with the labels dropped to 10px.
+// rather than behind a "More" sheet.
+//
+// Seven is the ceiling. On an iPhone 15 Pro (393pt) that is ~56pt per
+// tab, which fits a 21px icon and a 9.5px label with a little room
+// either side, but only because the labels are short. An eighth tab, or
+// a label longer than "Rinkodara", would start truncating — at that
+// point the honest move is a "More" sheet, not a smaller font.
 //
 // Labels are Lithuanian: she wrote the brief in Lithuanian and this is
 // hers alone, so there is nothing to internationalise.
@@ -57,6 +62,11 @@ const TABS: Tab[] = [
     href: "/personal/longrein",
     label: "Longrein",
     icon: <I d="M22 12h-4l-3 9L9 3l-3 9H2" />,
+  },
+  {
+    href: "/personal/social",
+    label: "Skelbti",
+    icon: <I d="M4 4h16v12H7l-3 3V4ZM8 9h8M8 12.5h5" />,
   },
   {
     href: "/personal/marketing",

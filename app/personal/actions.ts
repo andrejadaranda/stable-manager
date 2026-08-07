@@ -11,7 +11,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requirePersonalContext } from "@/lib/personal/access";
 import { generateRecommendations } from "@/services/personalDashboard/advisor";
 import { refreshSocialCache } from "@/services/personalDashboard/marketing";
-import { upsertGoal, deleteGoal, type GoalPeriod, type GoalUnit } from "@/services/personalDashboard/goals";
+import {
+  upsertGoal,
+  deleteGoal,
+  periodStartKey,
+  type GoalPeriod,
+  type GoalUnit,
+  type GoalCategory,
+} from "@/services/personalDashboard/goals";
 import { saveIntegrationConfig, type Provider } from "@/services/personalDashboard/settings";
 import {
   addFoundingMember,
@@ -118,9 +125,16 @@ export async function saveGoalAction(formData: FormData): Promise<ActionResult> 
     const now = new Date();
 
     const period = String(formData.get("period") ?? "month") as GoalPeriod;
-    if (period !== "month" && period !== "quarter") {
+    if (period !== "week" && period !== "month" && period !== "quarter") {
       return { ok: false, error: "Netinkamas laikotarpis." };
     }
+
+    const rawCategory = String(formData.get("category") ?? "").trim();
+    const category = (["tjk", "longrein", "rinkodara"] as const).includes(
+      rawCategory as GoalCategory,
+    )
+      ? (rawCategory as GoalCategory)
+      : null;
 
     const target = Number(String(formData.get("target") ?? "").replace(",", "."));
     if (!Number.isFinite(target) || target <= 0) {
@@ -131,11 +145,12 @@ export async function saveGoalAction(formData: FormData): Promise<ActionResult> 
       period,
       // The period is always "the one we're in now" — a goal for a month
       // that has already ended isn't something she'd set from this screen.
-      periodStart: period === "month" ? monthBounds(now, tz).startKey : quarterStartKey(now, tz),
+      periodStart: periodStartKey(period, now, tz),
       goalKey: String(formData.get("goalKey") ?? "").trim(),
       label: String(formData.get("label") ?? "").trim() || "Tikslas",
       target,
       unit: (String(formData.get("unit") ?? "count") as GoalUnit) ?? "count",
+      category,
       sortOrder: Number(formData.get("sortOrder") ?? 0) || 0,
     });
 
