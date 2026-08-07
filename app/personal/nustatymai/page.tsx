@@ -6,8 +6,9 @@
 
 import { getIntegrationStatuses } from "@/services/personalDashboard/settings";
 import { getPersonalContext } from "@/lib/personal/access";
-import { ScreenHeader, Section, Panel, Chip, Empty } from "@/components/personal/ui";
+import { ScreenHeader, Section, Panel, Chip } from "@/components/personal/ui";
 import { ActionForm, Field } from "@/components/personal/interactive";
+import { EnablePush } from "@/components/personal/enable-push";
 import { saveSettingsAction } from "@/app/personal/actions";
 
 export const dynamic = "force-dynamic";
@@ -16,29 +17,62 @@ export const metadata = { title: "Nustatymai" };
 export default async function SettingsScreen() {
   const ctx = await getPersonalContext();
   const statuses = await getIntegrationStatuses([
+    "anthropic",
     "instagram",
     "facebook",
     "website",
     "monitoring",
     "longrein",
+    "briefing",
   ]);
   const status = (p: string) => statuses.find((s) => s.provider === p);
+
+  /** Chip label that distinguishes "she pasted it" from "it's in Vercel". */
+  const chip = (p: string, whenSet = "prijungta", whenUnset = "neprijungta") => {
+    const s = status(p);
+    if (!s?.configured) return <Chip tone="neutral">{whenUnset}</Chip>;
+    return (
+      <Chip tone="positive">
+        {s.fromEnv ? "iš Vercel" : `${whenSet} ${s.maskedHint ?? ""}`.trim()}
+      </Chip>
+    );
+  };
 
   return (
     <>
       <ScreenHeader eyebrow="Konfigūracija" title="Nustatymai" />
 
+      {/* ---------- Notifications ---------- */}
+      <Section title="Rytiniai pranešimai">
+        <Panel>
+          <EnablePush />
+        </Panel>
+      </Section>
+
+      {/* ---------- Anthropic ---------- */}
+      <Section title="Asistentė (Claude)" action={chip("anthropic", "įvesta", "neįvesta")}>
+        <Panel>
+          <p className="mb-3 text-[11.5px] leading-relaxed text-ink-500">
+            Be šio rakto „Ką siūlau šiandien“ lieka tuščia. Raktą gauni{" "}
+            <code className="rounded bg-surface-muted px-1">console.anthropic.com</code> →
+            API keys → Create key. Įklijuok čia — veiks iškart, be jokio
+            perkėlimo į Vercel.
+          </p>
+          <ActionForm action={saveSettingsAction} submitLabel="Išsaugoti raktą">
+            <input type="hidden" name="provider" value="anthropic" />
+            <Field
+              label="API raktas"
+              name="apiKey"
+              type="password"
+              placeholder="sk-ant-…"
+              hint="Saugomas tik tavo eilutėje, apsaugotoje RLS. Atgal niekada nerodomas."
+            />
+          </ActionForm>
+        </Panel>
+      </Section>
+
       {/* ---------- Instagram ---------- */}
-      <Section
-        title="Instagram"
-        action={
-          <Chip tone={status("instagram")?.configured ? "positive" : "neutral"}>
-            {status("instagram")?.configured
-              ? `prijungta ${status("instagram")?.maskedHint ?? ""}`
-              : "neprijungta"}
-          </Chip>
-        }
-      >
+      <Section title="Instagram" action={chip("instagram")}>
         <Panel>
           <p className="mb-3 text-[11.5px] leading-relaxed text-ink-500">
             Reikia <strong>Instagram Business</strong> paskyros, susietos su Facebook
@@ -67,14 +101,7 @@ export default async function SettingsScreen() {
       </Section>
 
       {/* ---------- Facebook ---------- */}
-      <Section
-        title="Facebook"
-        action={
-          <Chip tone={status("facebook")?.configured ? "positive" : "neutral"}>
-            {status("facebook")?.configured ? "prijungta" : "neprijungta"}
-          </Chip>
-        }
-      >
+      <Section title="Facebook" action={chip("facebook")}>
         <Panel>
           <ActionForm action={saveSettingsAction} submitLabel="Išsaugoti">
             <input type="hidden" name="provider" value="facebook" />
@@ -121,45 +148,57 @@ export default async function SettingsScreen() {
         </Panel>
       </Section>
 
-      {/* ---------- Monitoring ---------- */}
-      <Section
-        title="Veikimo stebėjimas"
-        action={
-          <Chip tone={status("monitoring")?.configured ? "positive" : "neutral"}>
-            {status("monitoring")?.configured ? "įvesta" : "neprijungta"}
-          </Chip>
-        }
-      >
+      {/* ---------- Gmail briefing ---------- */}
+      <Section title="Pašto santrauka" action={chip("briefing", "įvesta", "neįvesta")}>
         <Panel>
-          <Empty
-            title="Kol kas tik laukas duomenims"
-            detail="Įvesti raktą gali jau dabar, bet Longrein kortelė jo dar nenaudoja — pirma reikia prijungti patį Sentry (ar UptimeRobot) prie projekto. Tai atskiras darbas, aprašytas perdavimo dokumente."
-          />
-          <div className="mt-3">
-            <ActionForm action={saveSettingsAction} submitLabel="Išsaugoti">
-              <input type="hidden" name="provider" value="monitoring" />
-              <Field label="Tiekėjas" name="vendor" placeholder="sentry / uptimerobot" />
-              <Field label="API raktas" name="apiKey" type="password" placeholder="…" />
-            </ActionForm>
-          </div>
+          <p className="mb-3 text-[11.5px] leading-relaxed text-ink-500">
+            Bendra paslaptis, kuria „tjk-daily-inbox-check“ užduotis
+            prisistato siųsdama rytinę santrauką. Sugalvok bet kokį ilgą
+            atsitiktinį tekstą, įrašyk jį čia ir tą patį — užduotyje. Kol
+            čia tuščia, santraukos endpoint&apos;as atsako 404, tarsi jo nebūtų.
+          </p>
+          <ActionForm action={saveSettingsAction} submitLabel="Išsaugoti">
+            <input type="hidden" name="provider" value="briefing" />
+            <Field
+              label="Bendra paslaptis"
+              name="secret"
+              type="password"
+              placeholder="ilgas atsitiktinis tekstas"
+            />
+          </ActionForm>
         </Panel>
       </Section>
 
-      {/* ---------- Env-var-only settings ---------- */}
-      <Section title="Ko čia įvesti negalima">
+      {/* ---------- Monitoring ---------- */}
+      <Section
+        title="Išorinis stebėjimas"
+        action={chip("monitoring", "įvesta", "nebūtina")}
+      >
         <Panel>
-          <ul className="space-y-2.5 text-[12px] leading-relaxed text-ink-600">
-            <li>
-              <strong className="text-ink-800">ANTHROPIC_API_KEY</strong> — asistentės
-              raktas. Gyvena Vercel aplinkos kintamuosiuose, ne duomenų bazėje: juo
-              naudojasi serveris, o ne tavo sesija.
-            </li>
-            <li>
-              <strong className="text-ink-800">PERSONAL_BRIEFING_SECRET</strong> — bendra
-              paslaptis, kuria Gmail užduotis autentifikuojasi siųsdama rytinę
-              santrauką. Taip pat Vercel kintamuosiuose.
-            </li>
-          </ul>
+          <p className="mb-3 text-[11.5px] leading-relaxed text-ink-500">
+            Veikimo procentas jau skaičiuojamas savarankiškai — GitHub Actions
+            kas 5 min. tikrina <code className="rounded bg-surface-muted px-1">/api/health</code>,
+            o rezultatai matomi Longrein ekrane. Papildomo tiekėjo nereikia.
+            Jei vis dėlto norėsi SMS pranešimų apie gedimus, nukreipk
+            BetterStack arba UptimeRobot į tą patį adresą ir įrašyk raktą čia.
+          </p>
+          <ActionForm action={saveSettingsAction} submitLabel="Išsaugoti">
+            <input type="hidden" name="provider" value="monitoring" />
+            <Field label="Tiekėjas" name="vendor" placeholder="betterstack / uptimerobot" />
+            <Field label="API raktas" name="apiKey" type="password" placeholder="…" />
+          </ActionForm>
+        </Panel>
+      </Section>
+
+      {/* ---------- Where values come from ---------- */}
+      <Section title="Iš kur imami raktai">
+        <Panel>
+          <p className="text-[12px] leading-relaxed text-ink-600">
+            Kiekvieną raktą galima nustatyti dviem būdais: Vercel aplinkos
+            kintamuoju arba čia. <strong className="text-ink-800">Laimi tai, ką įvedi čia</strong> —
+            kad tokeną galėtum pasikeisti telefonu, be perdiegimo. Ženkliukas
+            „iš Vercel“ rodo, kad reikšmė ateina iš aplinkos kintamojo.
+          </p>
         </Panel>
       </Section>
 

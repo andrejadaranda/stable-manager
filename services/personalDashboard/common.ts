@@ -9,6 +9,7 @@
 import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requirePersonalContext, type PersonalContext } from "@/lib/personal/access";
+import { logAppError, describeError } from "@/lib/personal/error-log";
 
 export type { PersonalContext };
 
@@ -61,6 +62,11 @@ export async function safe<T>(fn: () => Promise<T>, fallback: T, label: string):
   } catch (err) {
     // Visible in Vercel logs without being visible to her.
     console.error(`[personal-dashboard] ${label} failed:`, err);
+    // …and counted, so the "klaidos per 24 h" card has a real source.
+    // Not awaited: recording a failure must never slow down or break the
+    // fallback path it is describing.
+    const { message, stack } = describeError(err);
+    void logAppError({ scope: "personal", route: label, message, stack });
     return fallback;
   }
 }

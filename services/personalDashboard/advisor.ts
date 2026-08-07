@@ -26,6 +26,7 @@ import { getReengagementList, getOpenTodos, getTodayLessons } from "@/services/p
 import { getFinanceSnapshot } from "@/services/personalDashboard/finance";
 import { getMarketingSnapshot } from "@/services/personalDashboard/marketing";
 import { getLongreinHealth } from "@/services/personalDashboard/longrein";
+import { getIntegrationConfig } from "@/services/personalDashboard/settings";
 
 export type Recommendation = {
   id: string;
@@ -66,7 +67,9 @@ export async function getTodayRecommendations(now = new Date()): Promise<Advisor
           recommendations: [],
           generatedOn: today,
           model: null,
-          status: apiKeyConfigured() ? ("not_generated" as const) : ("not_configured" as const),
+          status: (await getApiKey())
+            ? ("not_generated" as const)
+            : ("not_configured" as const),
         };
       }
 
@@ -87,8 +90,21 @@ export async function getTodayRecommendations(now = new Date()): Promise<Advisor
   );
 }
 
-function apiKeyConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+/**
+ * The Anthropic key, from whichever source has one.
+ *
+ * `ANTHROPIC_API_KEY` on Vercel is checked first, then the key she pastes
+ * into Settings. Both work; the second one exists because she can reach
+ * it from her phone and the first needs a laptop and a redeploy.
+ *
+ * Returns null when neither is set — which is a normal state, not an
+ * error. The dashboard renders an empty advisor card and everything else
+ * on the screen keeps working.
+ */
+async function getApiKey(): Promise<string | null> {
+  const cfg = await getIntegrationConfig("anthropic");
+  const key = cfg?.apiKey;
+  return typeof key === "string" && key.trim().length > 0 ? key.trim() : null;
 }
 
 /**
@@ -110,13 +126,14 @@ export async function generateRecommendations(
     if (existing.status === "ok") return existing;
   }
 
-  if (!apiKeyConfigured()) {
+  const apiKey = await getApiKey();
+  if (!apiKey) {
     return { recommendations: [], generatedOn: today, model: null, status: "not_configured" };
   }
 
   const snapshot = await buildSnapshot(now);
 
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey });
   const model = "claude-opus-5";
 
   let parsed: { recommendations: Recommendation[] } | null = null;

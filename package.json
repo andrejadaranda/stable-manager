@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "npm run test:personal",
     "test:personal": "node --test \"services/personalDashboard/__tests__/*.test.ts\"",
+    "test:routes": "node scripts/smoke-personal.mjs",
     "types:gen": "supabase gen types typescript --linked > lib/types/database.ts",
     "cap:sync": "npx cap sync ios",
     "cap:open": "npx cap open ios",

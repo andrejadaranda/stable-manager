@@ -13,6 +13,12 @@ import { generateRecommendations } from "@/services/personalDashboard/advisor";
 import { refreshSocialCache } from "@/services/personalDashboard/marketing";
 import { upsertGoal, deleteGoal, type GoalPeriod, type GoalUnit } from "@/services/personalDashboard/goals";
 import { saveIntegrationConfig, type Provider } from "@/services/personalDashboard/settings";
+import {
+  addFoundingMember,
+  setFoundingMemberStatus,
+  deleteFoundingMember,
+  type FoundingStatus,
+} from "@/services/personalDashboard/foundingMembers";
 import { getStableTimeZone } from "@/services/personalDashboard/common";
 import { localDateKey, monthBounds, quarterStartKey } from "@/services/personalDashboard/core.pure";
 
@@ -168,7 +174,11 @@ export async function saveSettingsAction(formData: FormData): Promise<ActionResu
       "anthropic",
       "monitoring",
       "longrein",
+      "briefing",
     ];
+    // "push" is deliberately absent: that row holds a generated VAPID
+    // keypair, and letting a form overwrite it would silently orphan
+    // every existing device subscription.
     if (!allowed.includes(provider)) {
       return { ok: false, error: "Nežinoma integracija." };
     }
@@ -197,6 +207,59 @@ export async function saveSettingsAction(formData: FormData): Promise<ActionResu
     await saveIntegrationConfig(provider, config);
     revalidatePath("/personal/nustatymai");
     revalidatePath("/personal/marketing");
+    revalidatePath("/personal/longrein");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: message(err) };
+  }
+}
+
+// -------------------------------------------------------------------
+// Founding Members roster
+// -------------------------------------------------------------------
+// A hand-maintained list, because the Founding 15 are hand-billed and
+// have no representation anywhere in the product schema to derive from.
+
+export async function addFoundingMemberAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const fullName = String(formData.get("fullName") ?? "").trim();
+    if (!fullName) return { ok: false, error: "Įvesk vardą." };
+
+    const rawPrice = String(formData.get("monthlyEur") ?? "").replace(",", ".");
+    const monthlyEur = Number(rawPrice);
+
+    await addFoundingMember({
+      fullName,
+      email: String(formData.get("email") ?? ""),
+      // Default €25 — the Founding Member lifetime price. She can change
+      // it per member, because the lock-in is negotiated individually.
+      monthlyEur: Number.isFinite(monthlyEur) && monthlyEur >= 0 ? monthlyEur : 25,
+      notes: String(formData.get("notes") ?? ""),
+    });
+
+    revalidatePath("/personal/longrein");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: message(err) };
+  }
+}
+
+export async function setFoundingMemberStatusAction(
+  id: string,
+  status: FoundingStatus,
+): Promise<ActionResult> {
+  try {
+    await setFoundingMemberStatus(id, status);
+    revalidatePath("/personal/longrein");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: message(err) };
+  }
+}
+
+export async function deleteFoundingMemberAction(id: string): Promise<ActionResult> {
+  try {
+    await deleteFoundingMember(id);
     revalidatePath("/personal/longrein");
     return { ok: true };
   } catch (err) {

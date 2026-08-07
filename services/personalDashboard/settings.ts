@@ -24,7 +24,7 @@
 // other file in this folder — is enforced by review, same as the rest of
 // the codebase.)
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
 import { requirePersonalContext, safe } from "@/services/personalDashboard/common";
 
 export type Provider =
@@ -33,7 +33,53 @@ export type Provider =
   | "website"
   | "anthropic"
   | "monitoring"
-  | "longrein";
+  | "longrein"
+  // Shared secret the Gmail scheduled task authenticates with.
+  | "briefing"
+  // VAPID keypair for Web Push. Generated on first subscribe if absent.
+  | "push";
+
+// -------------------------------------------------------------------
+// Environment fallbacks
+// -------------------------------------------------------------------
+// Every integration can be configured two ways: an environment variable
+// on Vercel, or a row she pastes in from the Settings screen on her
+// phone.
+//
+// The DB value wins. That ordering is deliberate: changing a Vercel env
+// var needs a redeploy and a laptop, whereas a token she can rotate from
+// her phone at the yard is the difference between an integration that
+// stays working and one that quietly dies the first time Meta expires a
+// token. The env var is the floor, not the ceiling.
+const ENV_KEYS: Partial<Record<Provider, Record<string, string>>> = {
+  instagram: {
+    igUserId: "META_IG_USER_ID",
+    accessToken: "META_INSTAGRAM_ACCESS_TOKEN",
+  },
+  facebook: {
+    pageId: "META_PAGE_ID",
+    accessToken: "META_FB_PAGE_ACCESS_TOKEN",
+  },
+  website: { baseUrl: "PERSONAL_WEBSITE_URL" },
+  anthropic: { apiKey: "ANTHROPIC_API_KEY" },
+  briefing: { secret: "PERSONAL_BRIEFING_SECRET" },
+  push: {
+    publicKey: "VAPID_PUBLIC_KEY",
+    privateKey: "VAPID_PRIVATE_KEY",
+    subject: "VAPID_SUBJECT",
+  },
+};
+
+function envConfig(provider: Provider): Record<string, unknown> {
+  const map = ENV_KEYS[provider];
+  if (!map) return {};
+  const out: Record<string, unknown> = {};
+  for (const [field, envName] of Object.entries(map)) {
+    const value = process.env[envName];
+    if (typeof value === "string" && value.trim().length > 0) out[field] = value.trim();
+  }
+  return out;
+}
 
 export type IntegrationStatus = {
   provider: Provider;
@@ -41,9 +87,17 @@ export type IntegrationStatus = {
   /** e.g. "…F3aQ" — enough to tell two tokens apart, useless if leaked. */
   maskedHint: string | null;
   updatedAt: string | null;
+  /** True when the value comes from a Vercel env var rather than the DB. */
+  fromEnv: boolean;
 };
 
-/** SERVER ONLY. Returns the full config object including secrets. */
+/**
+ * SERVER ONLY. The full config including secrets, with environment
+ * variables merged in underneath the stored values.
+ *
+ * Returns null when neither source has anything, so every caller can keep
+ * using `if (!cfg) return []` to mean "not configured".
+ */
 export async function getIntegrationConfig(
   provider: Provider,
 ): Promise<Record<string, unknown> | null> {
@@ -57,12 +111,76 @@ export async function getIntegrationConfig(
         .eq("auth_user_id", ctx.authUserId)
         .eq("provider", provider)
         .maybeSingle();
-      const cfg = data?.config as Record<string, unknown> | undefined;
-      return cfg && Object.keys(cfg).length > 0 ? cfg : null;
+      return mergeWithEnv(provider, data?.config as Record<string, unknown> | undefined);
     },
-    null,
+    // Fall back to env even when the DB read fails: an unapplied
+    // migration shouldn't disable an integration that env alone can run.
+    Object.keys(envConfig(provider)).length > 0 ? envConfig(provider) : null,
     `getIntegrationConfig(${provider})`,
   );
+}
+
+/**
+ * The same lookup for a caller with no session — cron routes and the
+ * push sender, which run as the platform rather than as her.
+ *
+ * The user id must come from `dashboard_access` (the allowlist), never
+ * from a request body. Callers are responsible for that; this function
+ * is a plain read.
+ */
+export async function getIntegrationConfigForUser(
+  authUserId: string,
+  provider: Provider,
+): Promise<Record<string, unknown> | null> {
+  return safe(
+    async () => {
+      const admin = createSupabaseAdminClient();
+      const { data } = await admin
+        .from("dashboard_integration_settings")
+        .select("config")
+        .eq("auth_user_id", authUserId)
+        .eq("provider", provider)
+        .maybeSingle();
+      return mergeWithEnv(provider, data?.config as Record<string, unknown> | undefined);
+    },
+    Object.keys(envConfig(provider)).length > 0 ? envConfig(provider) : null,
+    `getIntegrationConfigForUser(${provider})`,
+  );
+}
+
+/** Write a config for a user with no session. Used when the push sender
+ *  generates a VAPID keypair on first use. */
+export async function saveIntegrationConfigForUser(
+  authUserId: string,
+  provider: Provider,
+  config: Record<string, unknown>,
+): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
+    .from("dashboard_integration_settings")
+    .select("config")
+    .eq("auth_user_id", authUserId)
+    .eq("provider", provider)
+    .maybeSingle();
+
+  const { error } = await admin.from("dashboard_integration_settings").upsert(
+    {
+      auth_user_id: authUserId,
+      provider,
+      config: { ...((data?.config as Record<string, unknown>) ?? {}), ...config },
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "auth_user_id,provider" },
+  );
+  if (error) throw error;
+}
+
+function mergeWithEnv(
+  provider: Provider,
+  stored: Record<string, unknown> | undefined,
+): Record<string, unknown> | null {
+  const merged = { ...envConfig(provider), ...(stored ?? {}) };
+  return Object.keys(merged).length > 0 ? merged : null;
 }
 
 /** Client-safe. Never includes a secret value. */
@@ -86,21 +204,25 @@ export async function getIntegrationStatuses(
 
       return providers.map((provider) => {
         const row = byProvider.get(provider);
-        const cfg = (row?.config ?? {}) as Record<string, unknown>;
+        const stored = (row?.config ?? {}) as Record<string, unknown>;
+        const env = envConfig(provider);
+        const cfg = { ...env, ...stored };
         const secret = firstSecretValue(cfg);
         return {
           provider,
           configured: Object.keys(cfg).length > 0,
           maskedHint: secret ? `…${secret.slice(-4)}` : null,
           updatedAt: (row?.updated_at as string) ?? null,
+          fromEnv: Object.keys(stored).length === 0 && Object.keys(env).length > 0,
         };
       });
     },
     providers.map((provider) => ({
       provider,
-      configured: false,
+      configured: Object.keys(envConfig(provider)).length > 0,
       maskedHint: null,
       updatedAt: null,
+      fromEnv: Object.keys(envConfig(provider)).length > 0,
     })),
     "getIntegrationStatuses",
   );

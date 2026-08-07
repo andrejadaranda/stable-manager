@@ -56,60 +56,71 @@ negalėtų — jam reikia naujo diegimo.
 
 Be 3.1 ir 3.2 lenta neveiks.
 
-### 3.1 Pritaikyti migraciją (BŪTINA)
+### 3.1 + 3.2 Migracijos ir prieiga (BŪTINA — vienas įklijavimas)
 
-Supabase → SQL Editor → įklijuoti ir paleisti visą
-`database/110_personal_dashboard.sql`. Idempotentiška, saugu kartoti.
+Supabase → SQL Editor → New query. Įklijuok ir paleisk **iš eilės**:
 
-### 3.2 Įsileisti save (BŪTINA)
+1. `database/110_personal_dashboard.sql`
+2. `database/111_personal_dashboard_ops.sql`
+3. `database/APPLY_PERSONAL_DASHBOARD.sql` ← įsileidžia tave
 
-Ta pati SQL konsolė, pakeisk el. paštą savo prisijungimo adresu:
+Trečias failas pabaigoje išspausdina dvi patikros lenteles. Pirmoje visos
+eilutės turi būti `ok`; antroje — lygiai viena eilutė su tavo el. paštu.
+Jei antroji tuščia, el. paštas nesutampa su tuo, kuriuo jungiesi prie
+Longrein.
 
-```sql
-insert into dashboard_access (auth_user_id, label)
-select id, 'Andreja — personal command centre'
-  from auth.users
- where email = 'TAVO@EL.PASTAS'
-on conflict (auth_user_id) do update set enabled = true;
-```
-
-Patikrink, kad grąžino 1 eilutę. Jei 0 — el. paštas nesutampa su
-`auth.users`.
+Viskas idempotentiška — kartoti saugu, nieko esamo nekeičia.
 
 ### 3.3 AI patarėjas (nebūtina, bet tai pagrindinė funkcija)
 
-Vercel → Settings → Environment Variables:
+**Paprasčiausias būdas:** `/personal/nustatymai` → „Asistentė (Claude)" →
+įklijuok raktą iš `console.anthropic.com` → API keys → Create key. Veikia
+iškart, be perdiegimo.
 
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
+Alternatyva (jei kada turėsi prieigą prie Vercel): aplinkos kintamasis
+`ANTHROPIC_API_KEY`. Aplinkos kintamasis naudojamas tik tada, kai
+nustatymuose nieko neįvesta — įvestas raktas visada laimi.
 
-Kol jo nėra, „Ką siūlau šiandien" rodo tvarkingą tuščią būseną. Modelis —
-`claude-opus-5`, viena generacija per dieną (unikalus indeksas
+Modelis — `claude-opus-5`, viena generacija per dieną (unikalus indeksas
 `(auth_user_id, generated_on)`), tad puslapio perkrovimai nekainuoja.
 
 ### 3.4 Instagram / Facebook (nebūtina)
 
 `/personal/nustatymai`. Reikia Instagram **Business** paskyros, susietos su
-Facebook puslapiu, ir ilgalaikio tokeno su `instagram_basic` +
-`instagram_manage_insights`. Kelias: developers.facebook.com → programa →
-Graph API Explorer → pasirink puslapį → generuok → keisk į ilgalaikį.
+Facebook puslapiu.
+
+Kaip gauti tokeną (Meta):
+
+1. `developers.facebook.com` → My Apps → Create App → tipas **Business**
+2. Pridėk produktą **Facebook Login for Business**
+3. Tools → **Graph API Explorer** → pasirink savo programą ir puslapį
+4. Teisės: `instagram_basic`, `instagram_manage_insights`,
+   `pages_read_engagement`, `pages_show_list`
+5. Generate Access Token → nukopijuok
+6. Tools → **Access Token Debugger** → įklijuok → *Extend Access Token*
+   (trumpalaikis galioja 1–2 val., ilgalaikis ~60 d.)
+7. Instagram paskyros ID: Graph API Explorer užklausa
+   `me/accounts?fields=instagram_business_account`
+
+Ilgalaikis tokenas galioja apie 60 dienų, tad kartą per du mėnesius jį
+reikės perklijuoti. Marketing ekranas tada parodys „greičiausiai pasibaigęs
+tokenas" — tai ir yra priminimas.
+
+Alternatyva per aplinkos kintamuosius: `META_IG_USER_ID`,
+`META_INSTAGRAM_ACCESS_TOKEN`, `META_PAGE_ID`, `META_FB_PAGE_ACCESS_TOKEN`.
 
 tjk.lt veikia iš karto — WP REST API viešas, tokeno nereikia.
 
 ### 3.5 Gmail rytinė santrauka (nebūtina)
 
-Vercel aplinkos kintamasis:
-
-```
-PERSONAL_BRIEFING_SECRET=<ilga atsitiktinė eilutė>
-```
+`/personal/nustatymai` → „Pašto santrauka" → sugalvok ilgą atsitiktinį
+tekstą ir įrašyk. (Arba `PERSONAL_BRIEFING_SECRET` Vercel'e.)
 
 Tada `tjk-daily-inbox-check` užduotis turi POST'inti į
 `https://app.longrein.eu/api/personal/briefing`:
 
 ```
-Authorization: Bearer <PERSONAL_BRIEFING_SECRET>
+Authorization: Bearer <ta pati paslaptis>
 Content-Type: application/json
 
 { "briefing_on": "2026-08-07",
@@ -119,12 +130,32 @@ Content-Type: application/json
 
 Kol paslapties nėra, endpoint'as grąžina 404 — jo tarsi nėra.
 
-### 3.6 Longrein planų kainos (nebūtina)
+### 3.6 MRR (nebūtina)
 
-`/personal/nustatymai` → „Longrein planų kainos". Be jų MRR kortelė lieka
-tuščia. Sąmoningai: kodo bazėje nėra patikimo plano→kainos žemėlapio
-(Stripe kainos aplinkos kintamuosiuose, Founding Members apmokestinami
-rankiniu būdu, FREE_MODE įjungtas). Geriau tuščia negu išgalvota.
+Du šaltiniai, geresnis pirmas:
+
+1. **Stripe** — jei nustatytas `STRIPE_SECRET_KEY`, MRR imamas tiesiai iš
+   aktyvių prenumeratų. Visi mokėjimo periodai suvedami į mėnesį (metinis
+   dalinamas iš 12, ketvirtinis iš 3). Skaičiuojamos tik `active` — ne
+   bandomosios ir ne vėluojančios.
+2. **Rankinės kainos** — `/personal/nustatymai` → „Longrein planų kainos".
+   Naudojama, kai Stripe neprijungtas. Kortelė aiškiai pasako, kad tai
+   įvertis.
+
+Jei nėra nei vieno, kortelė lieka tuščia. Geriau tuščia negu išgalvota.
+
+### 3.8 Rytiniai pranešimai į telefoną (rekomenduoju)
+
+`/personal/nustatymai` → „Rytiniai pranešimai" → **Įjungti**.
+
+Svarbu iOS: pranešimai veikia **tik** tada, kai programėlė pridėta į
+pradinį ekraną (žr. 4 skyrių). Safari kortelėje mygtukas tai pasakys.
+
+VAPID raktai sugeneruojami automatiškai per pirmą įjungimą ir įrašomi į
+`dashboard_integration_settings`. Nieko konfigūruoti nereikia. Siuntimą
+vykdo Vercel cron `0 5 * * *` (UTC) — 8:00 Vilniuje vasarą, 7:00 žiemą.
+Siuntimas idempotentiškas per parą: antras kvietimas tą pačią dieną nieko
+nesiunčia.
 
 ### 3.7 Tikslai (nebūtina, bet rekomenduoju)
 
@@ -172,49 +203,79 @@ Sąžininga inventorizacija.
 | Longrein augimas (arklidės, vartotojai, laukiantieji, prenumeratos) | `stables`, `profiles`, `waitlist_signups`, `subscriptions`, `audit_log` |
 | tjk.lt įrašai | WP REST API (patikrinta gyvai) |
 
+| Veikimo laikas ir klaidos | `dashboard_health_checks`, `dashboard_errors` |
+| Founding Members | `founding_members` (sąrašas pildomas ranka Longrein ekrane) |
+
+**Veikimo laiko kortelė** užsipildo maždaug per 5 min. po pirmo deploy:
+GitHub Actions darbas „Uptime probe" kas 5 minutes kviečia `/api/health`,
+kuris atlieka tikrą užklausą į duomenų bazę ir įrašo rezultatą.
+
+Procentas skaičiuojamas ne „kiek įrašų sako ok", o **kiek patikrų atėjo iš
+tiek, kiek turėjo ateiti**. Skirtumas esminis: kai svetainė neveikia, ji
+neįrašo nieko, tad pirmasis būdas visą gedimą rodytų ramų 100 %. Neatėjusi
+patikra ir yra gedimo įrašas.
+
 ### Veikia po papildomos konfigūracijos
 
 | Sritis | Ko reikia |
 |---|---|
-| AI patarėjas | `ANTHROPIC_API_KEY` |
-| Instagram / Facebook metrikos | tokenai nustatymuose |
-| Gmail santrauka | `PERSONAL_BRIEFING_SECRET` + užduoties POST |
-| MRR | planų kainos nustatymuose |
+| AI patarėjas | Claude raktas nustatymuose (arba `ANTHROPIC_API_KEY`) |
+| Instagram / Facebook metrikos | tokenai nustatymuose (arba `META_*`) |
+| Gmail santrauka | paslaptis nustatymuose + užduoties POST |
+| Rytiniai pranešimai | įjungti nustatymuose; iOS — būtina pridėti į pradinį ekraną |
+| MRR iš Stripe | `STRIPE_SECRET_KEY` (kitaip — rankinės kainos) |
 
 ### Neveikia — sąmoningai palikta tuščia
 
 | Sritis | Kodėl |
 |---|---|
-| **Uptime / klaidų dalis** | Kodo bazėje **nėra** nei Sentry, nei APM, nei klaidų lentelės. Nėra iš ko skaičiuoti. Kortelė sako tai atvirai, o ne rodo 99,9 %. |
-| **Push siuntimas** | Service worker'is paruoštas; planuoklio nėra. |
-| **Founding Members skaitiklis** | DB nėra FM lentelės. Vietoj to — tikslas „Naujos Longrein arklidės", kuris skaičiuoja realias arklides. |
 | **Google Analytics** | Neprijungtas. `NEXT_PUBLIC_GA_ID` egzistuoja, bet GA Data API integracijos nėra. |
+| **Klaidų dalis procentais** | Rodomas klaidų **skaičius** per 24 h ir 7 d., ne procentas. Procentui reikėtų užklausų skaitiklio, kurio šioje architektūroje nėra — vardiklio išgalvojimas paverstų skaičių beprasmiu. |
 
 ---
 
 ## 6. Kiti darbai
 
-1. **Push siuntimo planuoklis** — cron, kuris ryte siunčia santrauką per
-   esamą `lib/push/send.ts`. Reikia VAPID raktų (jau numatyti kode).
-2. **Sentry** — prijungti prie Longrein, tada užpildyti uptime kortelę.
-3. **Socialinių metrikų cron** — dabar atnaujinama mygtuku; dienos cron
-   padarytų duomenis šviežius be jos veiksmo.
-4. **GA4 Data API** — tjk.lt lankomumui.
-5. **Planšetės išdėstymas** — dabar optimizuota iPhone; platesniuose
+1. **Socialinių metrikų cron** — dabar atnaujinama mygtuku; dienos cron
+   padarytų duomenis šviežius be jos veiksmo. (Vercel Hobby leidžia 2 cron
+   darbus, abu jau užimti — reikėtų GitHub Actions arba Pro plano.)
+2. **GA4 Data API** — tjk.lt lankomumui.
+3. **Ilgalaikio Meta tokeno automatinis atnaujinimas** — dabar kas ~60 d.
+   reikia perklijuoti ranka.
+4. **Planšetės išdėstymas** — dabar optimizuota iPhone; platesniuose
    ekranuose turinys tiesiog centruojasi ties 560 px.
+5. **Klaidų pranešimo endpoint'as** neturi sesijos reikalavimo (klaidų
+   gaudyklė turi veikti ir tada, kai lūžusi autentikacija). Yra
+   apkarpymas ir greitaeigis limitas, bet skaičius vertintinas kaip
+   signalas, ne kaip auditas.
 
 ---
 
 ## 7. Testai
 
 ```bash
-npm test
+npm test                    # 52 vienetiniai testai (grynoji logika)
+npm run build && npm run test:routes   # 24 maršrutų patikros
 ```
 
 Node įtaisytas testų vykdyklis + natyvus TypeScript tipų nulupimas. Jokių
-naujų priklausomybių. 32 testai dengia „nejojo 2 sav" ribą, tempo
-skaičiavimą, prognozes, laiko juostų / vasaros laiko aritmetiką ir turinio
-spragas.
+naujų priklausomybių. 52 testai dengia „nejojo 2 sav" ribą, tempo
+skaičiavimą, prognozes, laiko juostų / vasaros laiko aritmetiką, turinio
+spragas, veikimo laiko skaičiavimą (įskaitant „spraga = gedimas" ir
+„pirmoji diena nerodo 4 %") ir MRR normalizavimą.
+
+`test:routes` paleidžia **produkcinį build'ą** ir tikrina, ką vienetinis
+testas patikrinti negali: kad visi 7 `/personal` ekranai anonimui grąžina
+404 (ne 403 ir ne 500), kad asmeniniai API endpoint'ai neįsileidžia be
+autentikacijos, kad `/api/health` atsako teisingai, ir kad produkto
+puslapiai (`/login`, `/signup`, `/dashboard`, `/api/keepalive`) nesulūžo.
+
+**Ko šis testas nedaro:** netikrina prisijungusio vartotojo 200 su
+atvaizduotomis kortelėmis. Tam reikėtų tikros Supabase sesijos — arba
+apsimetant ja per service-role raktą, arba sukuriant testinį vartotoją
+produkcinėje bazėje. Nė vieno iš to testų skriptas neturėtų daryti
+savavališkai, tad automatinis tikrinimas apsiriboja „vartai laiko ir niekas
+nelūžta".
 
 **Svarbu:** iki šio pakeitimo repozitorijoje **nebuvo jokio JS testų
 vykdyklio** — tik pgTAP tipo SQL planai `database/tests/`. Todėl „paleisti
@@ -230,20 +291,35 @@ reikalautų DB dublerio — sąmoningai neįtraukta į šią apimtį.
 ## 8. Failų žemėlapis
 
 ```
-database/110_personal_dashboard.sql     visos dashboard_* lentelės, RLS, view
-lib/personal/access.ts                  prieigos vartai (fail-closed)
-lib/personal/integrations.ts            Instagram / Facebook / WP klientai
+database/110_personal_dashboard.sql      dashboard_* lentelės, RLS, view
+database/111_personal_dashboard_ops.sql  push, health checks, klaidos, FM
+database/APPLY_PERSONAL_DASHBOARD.sql    vienas įklijavimas + patikros
+lib/personal/access.ts                   prieigos vartai (fail-closed)
+lib/personal/integrations.ts             Instagram / Facebook / WP klientai
+lib/personal/push.ts                     VAPID raktai + Web Push siuntimas
+lib/personal/error-log.ts                klaidų įrašymas (be asmens duomenų)
 services/personalDashboard/
-  core.pure.ts                          gryna logika (vienintelė testuojama)
-  common.ts                             laiko juosta, safe(), bendra
-  tjk.ts  finance.ts  longrein.ts       ekranų duomenys
+  core.pure.ts                           gryna logika (testuojama)
+  ops.pure.ts                            uptime + MRR aritmetika (testuojama)
+  common.ts                              laiko juosta, safe(), bendra
+  tjk.ts  finance.ts  longrein.ts        ekranų duomenys
   marketing.ts  goals.ts  briefing.ts
-  advisor.ts                            Claude kvietimas + kešavimas
-  settings.ts                           tokenų saugojimas (server-only)
-  __tests__/core.pure.test.ts           32 testai
-app/personal/                           layout, 6 ekranai, nustatymai, actions
-app/personal-offline/                   offline atsarginis puslapis
-app/api/personal/briefing/route.ts      Gmail santraukos priėmimas
-components/personal/                    navigacija, UI primityvai, formos
-public/sw-personal.js                   service worker (sritis /personal/)
+  mrr.ts                                 Stripe MRR
+  foundingMembers.ts                     FM sąrašas
+  advisor.ts                             Claude kvietimas + kešavimas
+  settings.ts                            tokenai + aplinkos kintamųjų sluoksnis
+  __tests__/                             52 testai
+app/personal/                            layout, 6 ekranai, nustatymai, actions
+app/personal/error.tsx                   ekrano klaidų gaudyklė
+app/error.tsx                            viso produkto klaidų gaudyklė
+app/personal-offline/                    offline atsarginis puslapis
+app/api/health/route.ts                  viešas health check (uptime šaltinis)
+app/api/personal/briefing/route.ts       Gmail santraukos priėmimas
+app/api/personal/push/subscribe/route.ts prenumerata / atsisakymas
+app/api/personal/push/daily/route.ts     rytinis siuntimas (Vercel cron)
+components/personal/                     navigacija, UI primityvai, formos
+components/personal/enable-push.tsx      pranešimų įjungimas (iOS būsenos)
+public/sw-personal.js                    service worker (sritis /personal/)
+scripts/smoke-personal.mjs               maršrutų testas
+.github/workflows/health-check.yml       kas 5 min. tikrina /api/health
 ```

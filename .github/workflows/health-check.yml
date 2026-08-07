@@ -1,0 +1,38 @@
+name: Uptime probe
+
+# Synthetic monitoring for the personal dashboard's "Veikimas" card.
+#
+# Every 5 minutes this hits the public /api/health endpoint, which runs a
+# real database query and records the result in dashboard_health_checks.
+# Uptime is then "pings that arrived / pings that should have arrived" —
+# so when the site is down and this job's curl fails, the missing row IS
+# the outage record. Nothing else needs to notice.
+#
+# `|| true` and no `-f`: a failed probe must not fail the job. A failing
+# GitHub Actions job emails a notice on every run, which at this cadence
+# would be ~288 emails a day during an outage — the exact opposite of
+# useful. The signal lives in the database, not in the job status.
+#
+# No secret needed, so this workflow is live from the first push (unlike
+# cron-reminders.yml, which stays disabled until CRON_SECRET exists).
+#
+# GitHub's scheduler is best-effort and drifts under load; runs can be
+# late or skipped entirely. computeUptime() caps at 100% and measures
+# against the data it actually has, so drift shows up as a slightly noisy
+# percentage rather than a false outage. If a stricter number is ever
+# needed, point BetterStack or UptimeRobot at the same endpoint — it is a
+# standard 200/503 health check and needs no further setup.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe /api/health
+        run: |
+          curl -sS --max-time 30 -o /dev/null -w "health: %{http_code} in %{time_total}s\n" \
+            "https://app.longrein.eu/api/health" || true

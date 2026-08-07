@@ -1,12 +1,23 @@
 // Screen 4 — Longrein health. Is the product alive, and is it growing?
 //
-// Honesty note that shows up in the UI as well as here: uptime and error
-// rate have no source in this codebase (no Sentry, no APM, no error
-// table). Rather than render a comforting 99.9%, that card says plainly
-// that it isn't connected and what to connect.
+// Every card here now has a real source:
+//
+//   uptime  → dashboard_health_checks, filled by a 5-minute probe of
+//             /api/health (.github/workflows/health-check.yml). Uptime is
+//             "pings that arrived / pings that should have arrived", so a
+//             gap in the series IS the outage — see migration 111.
+//   errors  → dashboard_errors, written by the error boundaries and by
+//             every degraded read in the dashboard's own services.
+//   MRR     → Stripe when it is configured, her own plan prices when it
+//             is not. The UI says which, because an estimate presented as
+//             a fact is the thing worth avoiding here.
+//   FM      → founding_members, a roster she maintains on this screen.
+//             The Founding 15 are hand-billed and appear nowhere in the
+//             product schema, so there is nothing to derive them from.
 
 import Link from "next/link";
 import { getLongreinHealth } from "@/services/personalDashboard/longrein";
+import { listFoundingMembers } from "@/services/personalDashboard/foundingMembers";
 import { formatEur } from "@/services/personalDashboard/core.pure";
 import {
   ScreenHeader,
@@ -17,12 +28,17 @@ import {
   Row,
   Empty,
 } from "@/components/personal/ui";
+import { ActionForm, Field } from "@/components/personal/interactive";
+import { addFoundingMemberAction } from "@/app/personal/actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Longrein" };
 
 export default async function LongreinScreen() {
-  const health = await getLongreinHealth();
+  const [health, foundingRoster] = await Promise.all([
+    getLongreinHealth(),
+    listFoundingMembers(),
+  ]);
 
   const stableGrowth = delta(health.stables.newLast30, health.stables.newPrev30);
   const waitlistGrowth = delta(health.waitlist.last7, health.waitlist.prev7);
@@ -97,11 +113,20 @@ export default async function LongreinScreen() {
 
         <div className="mt-2.5">
           {health.mrr !== null ? (
-            <Metric label="MRR" value={formatEur(health.mrr)} hint="pagal tavo įvestas plano kainas" tone="saddle" />
+            <Metric
+              label="MRR"
+              value={formatEur(health.mrr)}
+              hint={
+                health.mrrSource === "stripe"
+                  ? "tiesiai iš Stripe — aktyvios prenumeratos"
+                  : "įvertis pagal tavo įvestas plano kainas"
+              }
+              tone="saddle"
+            />
           ) : (
             <Empty
-              title="MRR neskaičiuojamas"
-              detail="Kodo bazėje nėra patikimo plano→kainos žemėlapio: Stripe kainos gyvena aplinkos kintamuosiuose, Founding Members apmokestinami rankiniu būdu, o FREE_MODE šiuo metu įjungtas. Įvesk planų kainas pati — tada čia atsiras tikras skaičius."
+              title="MRR dar be šaltinio"
+              detail="Stripe neprijungtas (STRIPE_SECRET_KEY nenustatytas), o plano kainų dar neįvedei. Įvesk kainas — arba prijunk Stripe ir skaičius atsiras pats."
               action={
                 <Link
                   href="/personal/nustatymai"
@@ -115,44 +140,143 @@ export default async function LongreinScreen() {
         </div>
       </Section>
 
-      {/* ---------- Uptime ---------- */}
+      {/* ---------- Uptime + errors ---------- */}
       <Section title="Veikimas ir klaidos">
         {health.uptime ? (
-          <div className="grid grid-cols-2 gap-2.5">
-            <Metric label="Veikimo laikas" value={`${health.uptime.uptimePct}%`} hint={health.uptime.window} tone="positive" />
-            <Metric label="Klaidų dalis" value={`${health.uptime.errorRate}%`} tone="neutral" />
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-2.5">
+              <Metric
+                label="Veikimas 24 h"
+                value={`${health.uptime.uptimePct}%`}
+                hint={
+                  health.uptime.measuredHours < 23
+                    ? `matuota ${health.uptime.measuredHours} val.`
+                    : `${health.uptime.received}/${health.uptime.expected} patikrų`
+                }
+                tone={health.uptime.uptimePct >= 99 ? "positive" : health.uptime.uptimePct >= 95 ? "warning" : "danger"}
+              />
+              <Metric
+                label="Klaidos 24 h"
+                value={health.errors24h}
+                hint={`${health.errors7d} per 7 d.`}
+                tone={health.errors24h === 0 ? "positive" : health.errors24h < 5 ? "warning" : "danger"}
+              />
+              {health.uptime7d && (
+                <Metric
+                  label="Veikimas 7 d."
+                  value={`${health.uptime7d.uptimePct}%`}
+                  hint={`${health.uptime7d.failed} nesėkmingos patikros`}
+                  tone={health.uptime7d.uptimePct >= 99 ? "positive" : "warning"}
+                />
+              )}
+              <Metric
+                label="Atsakymo laikas"
+                value={
+                  health.uptime.medianLatencyMs === null
+                    ? "—"
+                    : `${health.uptime.medianLatencyMs} ms`
+                }
+                hint="mediana, duomenų bazės užklausa"
+                tone="neutral"
+              />
+            </div>
+            <p className="mt-2 px-1 text-[11px] leading-snug text-ink-400">
+              Kas 5 min. tikrinu <code>/api/health</code> — jis atlieka tikrą
+              užklausą į duomenų bazę. Veikimo procentas = kiek patikrų atėjo iš
+              tiek, kiek turėjo ateiti, todėl neatėjusi patikra ir yra gedimo
+              įrašas. Klaidos — iš programos klaidų gaudyklių.
+            </p>
+          </>
         ) : (
           <Empty
-            title="Stebėjimas neprijungtas"
-            detail="Šioje kodo bazėje nėra nei Sentry, nei APM, nei klaidų lentelės — todėl čia nerodau jokio skaičiaus. Prijungus Sentry (arba UptimeRobot) ir įvedus API raktą nustatymuose, kortelė užsipildys."
-            action={
-              <Link
-                href="/personal/nustatymai"
-                className="inline-block rounded-full border border-ink-200 bg-white px-4 py-2 text-[12.5px] font-semibold text-ink-700"
-              >
-                Prijungti stebėjimą
-              </Link>
-            }
+            title="Stebėjimas ką tik įjungtas"
+            detail="Pirmoji patikra ateis per 5 minutes (GitHub Actions „Uptime probe“). Kai atsiras bent vienas įrašas, čia bus veikimo procentas, atsakymo laikas ir klaidų skaičius."
           />
         )}
       </Section>
 
       {/* ---------- Founding members ---------- */}
-      <Section title="Founding Members">
-        <Panel>
-          <p className="text-[12.5px] leading-relaxed text-ink-600">
-            Atskiros „founding member“ lentelės duomenų bazėje nėra, tad
-            atskiro skaitiklio čia nekuriu. Jei nori sekti FM progresą,
-            susikurk tikslą <Chip tone="brand">Naujos Longrein arklidės</Chip> skiltyje
-            „Tikslai“ — jis skaičiuoja realias naujas arklides ir rodo progresą juostoje.
+      <Section
+        title="Founding Members"
+        action={
+          <Chip tone={health.foundingMembers.active > 0 ? "positive" : "neutral"}>
+            {health.foundingMembers.active}/{health.foundingMembers.total} aktyvūs
+          </Chip>
+        }
+      >
+        <div className="mb-2.5 grid grid-cols-3 gap-2.5">
+          <Metric label="Iš viso" value={health.foundingMembers.total} tone="brand" />
+          <Metric
+            label="Naudoja"
+            value={health.foundingMembers.active}
+            hint={`${health.foundingMembers.committed} pažadėjo`}
+            tone="positive"
+          />
+          <Metric
+            label="Būsimas MRR"
+            value={formatEur(health.foundingMembers.monthlyEur)}
+            hint="po nemokamų metų"
+            tone="saddle"
+          />
+        </div>
+
+        {foundingRoster.length > 0 ? (
+          <Panel padded={false}>
+            {foundingRoster.map((m) => (
+              <Row key={m.id}>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13.5px] font-medium text-ink-900">
+                    {m.fullName}
+                  </span>
+                  {m.email && (
+                    <span className="block truncate text-[11px] text-ink-400">{m.email}</span>
+                  )}
+                </span>
+                <span className="shrink-0 text-[12px] tabular-nums text-ink-500">
+                  {formatEur(m.monthlyEur)}
+                </span>
+                <Chip
+                  tone={
+                    m.status === "active" ? "positive" : m.status === "churned" ? "danger" : "warning"
+                  }
+                >
+                  {m.status === "active" ? "naudoja" : m.status === "churned" ? "išėjo" : "pažadėjo"}
+                </Chip>
+              </Row>
+            ))}
+          </Panel>
+        ) : (
+          <Empty
+            title={
+              health.foundingMembers.tableExists
+                ? "Sąrašas tuščias"
+                : "Lentelė dar nesukurta"
+            }
+            detail={
+              health.foundingMembers.tableExists
+                ? "Founding Members apmokestinami rankiniu būdu, tad produkto duomenų bazėje jų nėra iš ko išvesti. Suvesk juos čia — skaičius bus tikras."
+                : "Pritaikyk migraciją 111_personal_dashboard_ops.sql — tada šis sąrašas pradės veikti."
+            }
+          />
+        )}
+
+        <Panel className="mt-2.5">
+          <p className="mb-3 text-[11.5px] leading-relaxed text-ink-500">
+            Pridėk žmogų, kai jis sutinka. Kai jis susikuria arklidę — pažymėk
+            „naudoja“.
           </p>
-          <Link
-            href="/personal/tikslai"
-            className="mt-3 inline-block rounded-full border border-ink-200 bg-white px-4 py-2 text-[12.5px] font-semibold text-ink-700"
-          >
-            Į tikslus
-          </Link>
+          <ActionForm action={addFoundingMemberAction} submitLabel="Pridėti">
+            <Field label="Vardas" name="fullName" placeholder="Vardenė Pavardenė" />
+            <Field label="El. paštas" name="email" placeholder="vardas@pastas.lt" />
+            <Field
+              label="Mėnesio kaina (€)"
+              name="monthlyEur"
+              inputMode="decimal"
+              placeholder="25"
+              hint="Founding Member kaina užrakinta visam laikui — numatytoji 25 €."
+            />
+            <Field label="Pastaba" name="notes" placeholder="pvz. iš Kauno klubo" />
+          </ActionForm>
         </Panel>
       </Section>
     </>

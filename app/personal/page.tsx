@@ -108,7 +108,15 @@ export default async function TodayScreen() {
         ) : advice.status === "not_configured" ? (
           <Empty
             title="Asistentė dar neįjungta"
-            detail="Trūksta ANTHROPIC_API_KEY aplinkos kintamojo Vercel projekte. Kai jį pridėsi, kiekvieną rytą čia atsiras 3–5 pasiūlymai."
+            detail="Trūksta Claude API rakto. Įklijuok jį nustatymuose — telefonu, be jokio perkėlimo į Vercel — ir kiekvieną rytą čia atsiras 3–5 pasiūlymai."
+            action={
+              <Link
+                href="/personal/nustatymai"
+                className="inline-block rounded-full border border-ink-200 bg-white px-4 py-2 text-[12.5px] font-semibold text-ink-700"
+              >
+                Įvesti raktą
+              </Link>
+            }
           />
         ) : advice.status === "refused" ? (
           <Empty title="Šiandien patarimų nėra" detail="Užklausa buvo atmesta. Pabandyk vėliau." />

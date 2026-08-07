@@ -163,10 +163,16 @@ export async function refreshSocialCache(): Promise<{
     getIntegrationConfig("website"),
   ]);
 
+  // 50 posts comfortably covers 30 days at any realistic posting cadence
+  // (the Marketing screen's windows are 7 and 14 days, and the content-gap
+  // detector looks back a month). Fetching more would only add per-media
+  // insight calls for posts nothing on screen can reach.
+  const LIMIT = 50;
+
   const [instagram, facebook, website] = await Promise.all([
-    igCfg ? fetchInstagramPosts(igCfg) : Promise.resolve([]),
-    fbCfg ? fetchFacebookPosts(fbCfg) : Promise.resolve([]),
-    fetchWebsitePosts(webCfg ?? {}),
+    igCfg ? fetchInstagramPosts({ ...igCfg, limit: LIMIT }) : Promise.resolve([]),
+    fbCfg ? fetchFacebookPosts({ ...fbCfg, limit: LIMIT }) : Promise.resolve([]),
+    fetchWebsitePosts({ ...(webCfg ?? {}), limit: 20 }),
   ]);
 
   // Configured but returned nothing = almost always an expired token.
