@@ -39,3 +39,8 @@ next-env.d.ts
 .vscode/
 .idea/
 .cursor/
+
+# Playwright
+e2e/.auth/
+playwright-report/
+test-results/

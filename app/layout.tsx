@@ -7,6 +7,8 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { PageviewBeacon } from "@/components/analytics/pageview-beacon";
 // @ts-ignore — installed on Vercel; may be absent in the local sandbox.
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -70,20 +72,31 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Resolved per request from the NEXT_LOCALE cookie, falling back to
+  // Accept-Language — see i18n/request.ts. Feeding it to <html lang> is
+  // not cosmetic: it decides which voice a screen reader uses and how
+  // Safari offers to translate the page.
+  const locale = await getLocale();
+  const messages = await getMessages();
   // GA4 measurement ID. Set NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX in Vercel env
   // (both projects) once the GA4 web stream exists. Until then the gtag
   // scripts don't render, so there's zero overhead and no broken pixel.
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className="min-h-screen">
-        {children}
+        {/* Only the messages for the active locale are serialised to the
+            client, so adding a language doesn't grow the bundle for
+            everyone else. */}
+        <NextIntlClientProvider messages={messages}>
+          {children}
+        </NextIntlClientProvider>
         <CookieBanner />
         {/* PWA install nudge for iOS Safari + Android Chrome visitors.
             Auto-hidden when already running in standalone mode. */}

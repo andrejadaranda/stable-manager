@@ -1,0 +1,22 @@
+{
+  "common": {
+    "language": "Language",
+    "email": "Email",
+    "password": "Password",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "auth": {
+    "login": {
+      "heading": "Welcome back",
+      "subheading": "Sign in to your stable.",
+      "emailPlaceholder": "you@stable.com",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "forgotPassword": "Forgot your password?",
+      "resetLink": "Reset it →",
+      "newYard": "New yard?",
+      "signupLink": "Create an account →"
+    }
+  }
+}

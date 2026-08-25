@@ -11,7 +11,7 @@ import {
   type LessonChange,
 } from "@/services/lessons";
 import { createSessionFromLesson } from "@/services/sessions";
-import { addPayment } from "@/services/payments";
+import { addPayment, getClientAvailableCredit } from "@/services/payments";
 import { createClient } from "@/services/clients";
 import { createPackage } from "@/services/packages";
 import { getSession, requireRole } from "@/lib/auth/session";
@@ -671,6 +671,77 @@ export async function markLessonPaidAction(
     if (message === "FORBIDDEN")
       return { error: "Only owners can record payments.", success: false };
     return { error: `Could not mark paid: ${message || "unknown error"}.`, success: false };
+  }
+
+  revalidatePath("/dashboard/calendar");
+  return { error: null, success: true };
+}
+
+// How much credit the lesson's client can spend — read by the edit dialog to
+// show the "Use credit" option. Plain getter (owner-gated in the service).
+export async function getClientCreditForLessonAction(clientId: string): Promise<number> {
+  if (!clientId) return 0;
+  try {
+    return await getClientAvailableCredit(clientId);
+  } catch {
+    return 0;
+  }
+}
+
+// Settle a lesson from the client's existing account credit (an earlier
+// overpayment). Records a payment of method 'credit' — the lesson flips to
+// paid, but it is NOT counted as new cash (excluded from total_paid), so it
+// simply draws down the credit the client already has.
+export async function payLessonWithCreditAction(
+  _prev: UpdateLessonState,
+  formData: FormData,
+): Promise<UpdateLessonState> {
+  const lessonId = String(formData.get("lesson_id") ?? "");
+  if (!lessonId) return { error: "Missing lesson id.", success: false };
+
+  try {
+    const session = await getSession();
+    requireRole(session, "owner");
+
+    const supabase = createSupabaseServerClient();
+    const { data: lesson, error: lerr } = await supabase
+      .from("lessons")
+      .select("id, client_id, price, package_id")
+      .eq("id", lessonId)
+      .maybeSingle();
+    if (lerr || !lesson) return { error: "Lesson not found.", success: false };
+    const l = lesson as { id: string; client_id: string; price: number; package_id: string | null };
+    if (l.package_id) return { error: "This lesson is covered by a package.", success: false };
+    if (Number(l.price) <= 0) return { error: "Lesson price is 0 — nothing to pay.", success: false };
+
+    const { data: prevPays } = await supabase
+      .from("payments").select("amount").eq("lesson_id", l.id);
+    const alreadyPaid = ((prevPays ?? []) as Array<{ amount: number }>)
+      .reduce((s, p) => s + Number(p.amount), 0);
+    const owed = Math.max(0, Number(l.price) - alreadyPaid);
+    if (owed <= 0) {
+      revalidatePath("/dashboard/calendar");
+      return { error: null, success: true };
+    }
+
+    const available = await getClientAvailableCredit(l.client_id);
+    const apply = Math.min(owed, Math.round(available * 100) / 100);
+    if (apply <= 0) {
+      return { error: "This client has no credit to apply.", success: false };
+    }
+
+    await addPayment({
+      clientId: l.client_id,
+      amount:   apply,
+      method:   "credit",
+      lessonId: l.id,
+      notes:    "Paid from account credit",
+    });
+  } catch (err: any) {
+    const message = err?.message ?? "";
+    if (message === "FORBIDDEN")
+      return { error: "Only owners can record payments.", success: false };
+    return { error: `Could not apply credit: ${message || "unknown error"}.`, success: false };
   }
 
   revalidatePath("/dashboard/calendar");

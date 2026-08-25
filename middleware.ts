@@ -160,6 +160,11 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+// "monitoring" is Sentry's tunnel route (tunnelRoute in next.config.js).
+// The browser POSTs an error envelope there, and it must not go through
+// this middleware: refreshing a Supabase session on every crash report is
+// pure waste, and an unauthenticated visitor's error would be redirected
+// to /login instead of being delivered.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/public).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/public|monitoring).*)"],
 };

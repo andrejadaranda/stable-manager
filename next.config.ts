@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
+import createNextIntlPlugin from "next-intl/plugin";
+
+// Mirrors next.config.js — see i18n/config.ts for why routing stays
+// un-prefixed.
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 // Security headers applied to every response from app.longrein.eu.
 // Lighthouse "Best Practices" score and OWASP baseline both check these.
@@ -36,7 +42,15 @@ const nextConfig: NextConfig = {
   // which is now deleted — Next loads .ts in preference to .js).
   reactStrictMode: true,
   // typedRoutes disabled — see matching comment in next.config.js.
-  // experimental: { typedRoutes: true },
+  // Runs instrumentation.ts (Sentry server + edge init). Stable in Next
+  // 15, so the flag goes away when this file becomes the canonical one.
+  experimental: {
+    instrumentationHook: true,
+    // See next.config.js — @apm-js-collab/tracing-hooks is ESM-only and
+    // Next 14's webpack can't bundle it. Renamed to
+    // serverExternalPackages in Next 15.
+    serverComponentsExternalPackages: ["@sentry/nextjs", "@sentry/node"],
+  },
   images: {
     remotePatterns: [
       // Allow Supabase Storage public URLs
@@ -77,4 +91,16 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Mirrors the Sentry wrapping in next.config.js — see the longer comment
+// there for why the tunnel route exists and why a missing auth token is
+// not a build failure. Next 14 reads the .js file, so this is currently
+// type-checking only; keep the two identical.
+export default withSentryConfig(withNextIntl(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  tunnelRoute: "/monitoring",
+  webpack: { treeshake: { removeDebugLogging: true } },
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+});

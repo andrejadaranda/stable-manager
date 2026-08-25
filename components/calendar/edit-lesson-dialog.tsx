@@ -15,6 +15,8 @@ import {
   deleteLessonAction,
   markLessonPaidAction,
   markLessonUnpaidAction,
+  payLessonWithCreditAction,
+  getClientCreditForLessonAction,
   fetchLessonChangesAction,
   sellPackageForLessonAction,
   type UpdateLessonState,
@@ -76,6 +78,19 @@ export function EditLessonDialog({
   const [unpaidState, unpaidAction] = useFormState<UpdateLessonState, FormData>(
     markLessonUnpaidAction, updateLessonInitialState,
   );
+  const [creditState, creditAction] = useFormState<UpdateLessonState, FormData>(
+    payLessonWithCreditAction, updateLessonInitialState,
+  );
+  // How much account credit this lesson's client has to spend — drives the
+  // "Use credit" option. Refetched whenever a payment action lands.
+  const [availableCredit, setAvailableCredit] = useState(0);
+  const lessonClientId = lesson.client?.id ?? "";
+  useEffect(() => {
+    let active = true;
+    if (!lessonClientId) { setAvailableCredit(0); return; }
+    getClientCreditForLessonAction(lessonClientId).then((c) => { if (active) setAvailableCredit(c); });
+    return () => { active = false; };
+  }, [lessonClientId, paidState.success, unpaidState.success, creditState.success]);
   const [deleteState, deleteAction] = useFormState<UpdateLessonState, FormData>(
     deleteLessonAction, updateLessonInitialState,
   );
@@ -274,8 +289,10 @@ export function EditLessonDialog({
                 hasPayments={lesson.paid_amount > 0}
                 owed={Math.max(0, Number(lesson.price) - lesson.paid_amount)}
                 priceIsZero={Number(lesson.price) <= 0}
+                availableCredit={availableCredit}
                 paidAction={paidAction}
                 unpaidAction={unpaidAction}
+                creditAction={creditAction}
               />
             )}
           </div>
@@ -623,8 +640,10 @@ function PaidQuickActions({
   hasPayments,
   owed,
   priceIsZero,
+  availableCredit,
   paidAction,
   unpaidAction,
+  creditAction,
 }: {
   lessonId: string;
   /** True only when payments already cover the full lesson price. */
@@ -634,8 +653,11 @@ function PaidQuickActions({
   /** Remaining balance on this lesson (price − already paid). */
   owed: number;
   priceIsZero: boolean;
+  /** Client's spendable account credit (from earlier overpayments). */
+  availableCredit: number;
   paidAction: (formData: FormData) => void;
   unpaidAction: (formData: FormData) => void;
+  creditAction: (formData: FormData) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [method, setMethod] = useState<"cash" | "card" | "transfer">("cash");
@@ -643,6 +665,15 @@ function PaidQuickActions({
   // exactly what was received; more than `owed` becomes account credit.
   const [amount, setAmount] = useState("");
   if (priceIsZero) return null;
+
+  // Credit that can be applied to this lesson right now.
+  const creditToApply = Math.min(owed, availableCredit);
+
+  function handleUseCredit() {
+    const fd = new FormData();
+    fd.set("lesson_id", lessonId);
+    startTransition(() => creditAction(fd));
+  }
 
   const received = amount.trim() ? Number(amount) : owed;
   const surplus = Number.isFinite(received) ? Math.round((received - owed) * 100) / 100 : 0;
@@ -722,6 +753,18 @@ function PaidQuickActions({
           {pending ? "Marking…" : "Mark paid"}
         </button>
       </div>
+      {/* Pay from the client's existing credit (earlier overpayment). */}
+      {creditToApply > 0.001 && (
+        <button
+          type="button"
+          onClick={handleUseCredit}
+          disabled={pending}
+          className="h-8 px-3 rounded-lg text-[11.5px] font-semibold bg-violet-600 text-white hover:bg-violet-700 active:bg-violet-800 disabled:opacity-50 transition-colors"
+        >
+          {pending ? "Applying…" : `Use credit (€${creditToApply.toFixed(2)})`}
+        </button>
+      )}
+
       {/* Overpayment hint — what turns into carry-forward credit. */}
       {surplus > 0.001 && (
         <p className="text-[11px] text-brand-700">

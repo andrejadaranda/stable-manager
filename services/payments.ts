@@ -14,7 +14,9 @@ import {
 export type AddPaymentInput = {
   clientId: string;
   amount: number;
-  method?: "cash" | "card" | "transfer" | "other";
+  /** "credit" = applying the client's existing account credit to an item —
+   *  NOT new cash, so it's excluded from total_paid in the balance views. */
+  method?: "cash" | "card" | "transfer" | "other" | "credit";
   lessonId?: string | null;
   /** Settle a specific boarding month — links the payment so the month
    *  flips to paid in horse_boarding_summary automatically. */
@@ -367,6 +369,37 @@ export async function getClientBalance(clientId: string) {
   });
   if (error) throw error;
   return Number(data ?? 0);
+}
+
+// How much unallocated account credit the client has to spend on future
+// items. Credit = money received but not tied to any lesson/charge (an
+// overpayment surplus is stored as such a lesson-less payment) MINUS credit
+// already applied (method='credit' payments). Owner only.
+export async function getClientAvailableCredit(clientId: string): Promise<number> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("amount, method, lesson_id, client_charge_id, boarding_charge_id, lesson_participant_id, package_id")
+    .eq("client_id", clientId);
+  if (error) throw error;
+
+  let unallocated = 0;   // real cash received, not tied to any item
+  let creditUsed  = 0;   // credit already applied to lessons/charges
+  for (const p of (data ?? []) as Array<{
+    amount: number; method: string;
+    lesson_id: string | null; client_charge_id: string | null;
+    boarding_charge_id: string | null; lesson_participant_id: string | null;
+    package_id: string | null;
+  }>) {
+    if (p.method === "credit") { creditUsed += Number(p.amount); continue; }
+    const linked =
+      p.lesson_id || p.client_charge_id || p.boarding_charge_id ||
+      p.lesson_participant_id || p.package_id;
+    if (!linked) unallocated += Number(p.amount);
+  }
+  return Math.max(0, Math.round((unallocated - creditUsed) * 100) / 100);
 }
 
 // Full account summary view (charged, paid, balance).

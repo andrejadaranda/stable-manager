@@ -1,0 +1,22 @@
+{
+  "common": {
+    "language": "Kalba",
+    "email": "El. paštas",
+    "password": "Slaptažodis",
+    "cancel": "Atšaukti",
+    "save": "Išsaugoti"
+  },
+  "auth": {
+    "login": {
+      "heading": "Sveiki sugrįžę",
+      "subheading": "Prisijunkite prie savo žirgyno.",
+      "emailPlaceholder": "jus@zirgynas.lt",
+      "submit": "Prisijungti",
+      "submitting": "Jungiamasi…",
+      "forgotPassword": "Pamiršote slaptažodį?",
+      "resetLink": "Atkurti →",
+      "newYard": "Naujas žirgynas?",
+      "signupLink": "Sukurti paskyrą →"
+    }
+  }
+}

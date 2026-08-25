@@ -35,9 +35,29 @@ const SECURITY_HEADERS = [
   },
 ];
 
+const { withSentryConfig } = require("@sentry/nextjs");
+const createNextIntlPlugin = require("next-intl/plugin");
+
+// Points next-intl at the request config that resolves the locale. We use
+// it WITHOUT locale-prefixed routing — see the long note in i18n/config.ts
+// for why that matters here.
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Runs instrumentation.ts, which is where Sentry's server and edge SDKs
+  // get initialised. Stable in Next 15 — delete the flag (not the file)
+  // at that upgrade.
+  experimental: {
+    instrumentationHook: true,
+    // Sentry's Node SDK reaches for @apm-js-collab/tracing-hooks, which is
+    // ESM-only. Next 14's webpack can't bundle that and compiles the whole
+    // build "with warnings" unless the package is left external and
+    // required at runtime instead. Next 15 renames this to
+    // serverExternalPackages.
+    serverComponentsExternalPackages: ["@sentry/nextjs", "@sentry/node"],
+  },
   // typedRoutes was enabled but kept breaking the build on dynamic
   // href={string} patterns in shared components (FilterChip, sidebar,
   // settings layout, etc). The experimental flag costs us prod deploys
@@ -84,4 +104,39 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+// Sentry wraps the config to compile the SDK in and (when a build-time
+// auth token exists) upload source maps so stack traces name our files
+// instead of chunk hashes.
+//
+// Without SENTRY_AUTH_TOKEN the plugin skips the upload and the build
+// still succeeds — that is the state of every local build and of prod
+// until the token is added in Vercel.
+module.exports = withSentryConfig(withNextIntl(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Only narrate the build in CI. Locally the plugin is chatty about the
+  // missing auth token on every single `next build`.
+  silent: !process.env.CI,
+
+  // Route browser events through app.longrein.eu/monitoring instead of
+  // straight to Sentry's ingest domain. Two reasons, both load-bearing:
+  //
+  //   1. The CSP in SECURITY_HEADERS has a tight connect-src. Tunnelling
+  //      keeps the request same-origin, so 'self' already allows it and
+  //      no third-party host has to be added to the policy.
+  //   2. Ad blockers block requests to *.sentry.io by name. Without the
+  //      tunnel a meaningful share of real users' errors never arrive.
+  //
+  // middleware.ts must keep excluding this path — see the matcher there.
+  tunnelRoute: "/monitoring",
+
+  // Strip Sentry's own console logging out of the client bundle.
+  // (Was `disableLogger: true`, deprecated in @sentry/nextjs 10.)
+  webpack: { treeshake: { removeDebugLogging: true } },
+
+  // Don't leave source maps sitting in the deployed output after they've
+  // been uploaded; they'd let anyone read our un-minified source.
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+});

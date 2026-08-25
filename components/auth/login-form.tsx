@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import { loginAction, type ActionState } from "@/lib/auth/actions";
 import { Field, Input, Button } from "@/components/ui";
 import { ResendConfirmationForm } from "@/components/auth/resend-confirmation";
@@ -10,29 +11,31 @@ const initial: ActionState = { error: null };
 export function LoginForm() {
   const [state, formAction] = useFormState(loginAction, initial);
   const isUnconfirmed = state.code === "unconfirmed";
+  const t = useTranslations("auth.login");
+  const tCommon = useTranslations("common");
 
   return (
     <div className="flex flex-col gap-4">
       <form action={formAction} className="flex flex-col gap-4">
         <div className="mb-1">
           <h1 className="text-xl font-semibold tracking-tightest text-ink-900">
-            Welcome back
+            {t("heading")}
           </h1>
-          <p className="text-sm text-ink-500 mt-1">Sign in to your stable.</p>
+          <p className="text-sm text-ink-500 mt-1">{t("subheading")}</p>
         </div>
 
-        <Field label="Email" required>
+        <Field label={tCommon("email")} required>
           <Input
             name="email"
             type="email"
             autoComplete="email"
             required
             defaultValue={state.email ?? ""}
-            placeholder="you@stable.com"
+            placeholder={t("emailPlaceholder")}
           />
         </Field>
 
-        <Field label="Password" required>
+        <Field label={tCommon("password")} required>
           <Input
             name="password"
             type="password"
@@ -41,7 +44,7 @@ export function LoginForm() {
           />
         </Field>
 
-        <Submit label="Sign in" />
+        <Submit label={t("submit")} pendingLabel={t("submitting")} />
 
         {state.error && (
           <p
@@ -70,7 +73,7 @@ export function LoginForm() {
   );
 }
 
-function Submit({ label }: { label: string }) {
+function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
     <Button
@@ -80,7 +83,7 @@ function Submit({ label }: { label: string }) {
       size="lg"
       className="mt-1 w-full"
     >
-      {pending ? "Signing in…" : label}
+      {pending ? pendingLabel : label}
     </Button>
   );
 }
