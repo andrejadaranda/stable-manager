@@ -26,6 +26,7 @@ export const FEATURE_KEYS = [
   "chat",
   "recurring_lessons",
   "welfare_hard_limits",
+  "agreement_warning",
 ] as const;
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -44,6 +45,7 @@ export const DEFAULT_FEATURES: StableFeatures = {
   chat:                false,  // Deprioritized — Founding Members use WhatsApp; flag OFF by default 2026-05-02.
   recurring_lessons:   true,
   welfare_hard_limits: true,
+  agreement_warning:   false,  // Opt-in — off so existing stables see no change.
 };
 
 /** Display metadata for the Settings → Features toggle list. */
@@ -116,6 +118,12 @@ export const FEATURE_META: Record<
     description:
       "Block lesson booking when daily/weekly horse limit hit (with override + audit). Off to make limits soft warnings only.",
     group: "Welfare",
+  },
+  agreement_warning: {
+    label: "Warn on unsigned agreement",
+    description:
+      "Show a red reminder when you open a lesson for a client who has no signed agreement on file. Off to hide the reminder.",
+    group: "Communication",
   },
 };
 

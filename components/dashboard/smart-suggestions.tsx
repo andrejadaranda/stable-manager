@@ -21,6 +21,7 @@ const KIND_LABEL: Record<Suggestion["kind"], string> = {
   busy_day:        "Calendar",
   health_overdue:  "Health",
   health_due_soon: "Health",
+  client_lapsed:   "Clients",
 };
 
 export function SmartSuggestions({ items }: { items: Suggestion[] }) {

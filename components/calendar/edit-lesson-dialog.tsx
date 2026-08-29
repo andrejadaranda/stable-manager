@@ -17,6 +17,7 @@ import {
   markLessonUnpaidAction,
   payLessonWithCreditAction,
   getClientCreditForLessonAction,
+  getLessonAgreementWarningAction,
   fetchLessonChangesAction,
   sellPackageForLessonAction,
   type UpdateLessonState,
@@ -91,6 +92,16 @@ export function EditLessonDialog({
     getClientCreditForLessonAction(lessonClientId).then((c) => { if (active) setAvailableCredit(c); });
     return () => { active = false; };
   }, [lessonClientId, paidState.success, unpaidState.success, creditState.success]);
+  // Whether to warn that this client hasn't signed the service agreement.
+  // The server action already gates on the owner's setting + zero agreements,
+  // so the dialog just renders the banner when it comes back true.
+  const [warnUnsignedAgreement, setWarnUnsignedAgreement] = useState(false);
+  useEffect(() => {
+    let active = true;
+    if (!lessonClientId) { setWarnUnsignedAgreement(false); return; }
+    getLessonAgreementWarningAction(lessonClientId).then((w) => { if (active) setWarnUnsignedAgreement(w); });
+    return () => { active = false; };
+  }, [lessonClientId]);
   const [deleteState, deleteAction] = useFormState<UpdateLessonState, FormData>(
     deleteLessonAction, updateLessonInitialState,
   );
@@ -244,6 +255,25 @@ export function EditLessonDialog({
         {/* Scrollable body */}
         <form action={editAction} id="edit-lesson-form" className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3.5 min-h-0">
           <input type="hidden" name="lesson_id" value={lesson.id} />
+
+          {warnUnsignedAgreement && lesson.client?.id && (
+            <div className="rounded-xl border border-alert-300 bg-alert-50 px-3.5 py-2.5 flex items-start gap-2.5">
+              <span aria-hidden className="text-alert-600 text-base leading-none mt-0.5">⚠️</span>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-alert-800">No signed agreement on file</p>
+                <p className="text-[12px] text-alert-700 mt-0.5">
+                  {lesson.client.full_name ?? "This client"} hasn’t signed the service agreement.{" "}
+                  <Link
+                    href={`/dashboard/clients/${lesson.client.id}`}
+                    onClick={onClose}
+                    className="font-semibold underline hover:text-alert-800"
+                  >
+                    Open profile to record it →
+                  </Link>
+                </p>
+              </div>
+            </div>
+          )}
           {/* service_id encoding: same as packageIdValue — empty string
               leaves it unchanged, "__none__" detaches, otherwise the id. */}
           <input
@@ -398,7 +428,9 @@ export function EditLessonDialog({
             </label>
           )}
 
-          {arenas.length > 0 && (
+          {/* Arena picker only when there's a real choice — a stable with a
+              single arena doesn't need to pick it every time. */}
+          {arenas.length > 1 && (
             <label className="flex flex-col gap-1.5 text-sm">
               <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Arena</span>
               <select

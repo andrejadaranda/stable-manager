@@ -12,6 +12,7 @@ import {
 } from "@/services/lessons";
 import { createSessionFromLesson } from "@/services/sessions";
 import { addPayment, getClientAvailableCredit } from "@/services/payments";
+import { getStableFeatures, isFeatureEnabled } from "@/services/features";
 import { createClient } from "@/services/clients";
 import { createPackage } from "@/services/packages";
 import { getSession, requireRole } from "@/lib/auth/session";
@@ -685,6 +686,28 @@ export async function getClientCreditForLessonAction(clientId: string): Promise<
     return await getClientAvailableCredit(clientId);
   } catch {
     return 0;
+  }
+}
+
+// Should the edit-lesson dialog warn that this client has no signed agreement?
+// True only when the owner has turned the "Warn on unsigned agreement" feature
+// on AND the client has zero client_agreements rows on file. Any failure returns
+// false so a hiccup never nags spuriously. Owner/employee context (RLS scopes
+// the agreements read to the stable).
+export async function getLessonAgreementWarningAction(clientId: string): Promise<boolean> {
+  if (!clientId) return false;
+  try {
+    const features = await getStableFeatures();
+    if (!isFeatureEnabled(features, "agreement_warning")) return false;
+    const supabase = createSupabaseServerClient();
+    const { count, error } = await supabase
+      .from("client_agreements")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", clientId);
+    if (error) return false;
+    return (count ?? 0) === 0;
+  } catch {
+    return false;
   }
 }
 

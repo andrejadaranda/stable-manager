@@ -16,7 +16,7 @@ import { listStableHealthAlerts } from "./horseHealth";
 
 export type Suggestion = {
   id:        string;
-  kind:      "welfare_risk" | "horse_resting" | "client_balance" | "package_expiring" | "busy_day" | "health_overdue" | "health_due_soon";
+  kind:      "welfare_risk" | "horse_resting" | "client_balance" | "package_expiring" | "busy_day" | "health_overdue" | "health_due_soon" | "client_lapsed";
   title:     string;
   body:      string;
   href:      string;
@@ -163,5 +163,82 @@ export async function getSmartSuggestions(): Promise<Suggestion[]> {
     /* If health table or RLS isn't set up, silently skip. */
   }
 
-  return out.slice(0, 4);
+  // Rule 6: clients who have quietly lapsed — last lesson 14–60 days ago and
+  // nothing on the calendar since. A gentle "reach out" nudge, not an alarm:
+  // clients gone longer than 60 days are treated as churned, not lapsing, so
+  // the nudge stays about people worth a quick message. Best-effort.
+  try {
+    const now = Date.now();
+    const cutoff  = now - 14 * 86_400_000;   // "recent" boundary
+    const windowStart = now - 60 * 86_400_000; // don't nag about long-churned
+    const nowIso = new Date(now).toISOString();
+
+    // Attendance = booking client (lessons.client_id) + group participants
+    // (a child who actually rode). Both count as "visited".
+    const [lessRes, partRes] = await Promise.all([
+      supabase
+        .from("lessons")
+        .select("client_id, starts_at")
+        .neq("status", "cancelled")
+        .gte("starts_at", new Date(windowStart).toISOString())
+        .not("client_id", "is", null),
+      supabase
+        .from("lesson_participants")
+        .select("client_id, lesson:lessons!lesson_participants_lesson_id_fkey(starts_at, status)")
+        .eq("status", "confirmed"),
+    ]);
+
+    // client_id -> { latest: ms of most recent lesson, hasFuture }
+    const seen = new Map<string, { latest: number; hasFuture: boolean }>();
+    const note = (clientId: string | null, startsAt: string | null) => {
+      if (!clientId || !startsAt) return;
+      const t = new Date(startsAt).getTime();
+      if (Number.isNaN(t) || t < windowStart) return;
+      const cur = seen.get(clientId) ?? { latest: 0, hasFuture: false };
+      cur.latest = Math.max(cur.latest, t);
+      if (t > now) cur.hasFuture = true;
+      seen.set(clientId, cur);
+    };
+    for (const l of (lessRes.data ?? []) as Array<{ client_id: string | null; starts_at: string | null }>) {
+      note(l.client_id, l.starts_at);
+    }
+    for (const p of (partRes.data ?? []) as Array<{ client_id: string | null; lesson: { starts_at: string; status: string } | { starts_at: string; status: string }[] | null }>) {
+      const les = Array.isArray(p.lesson) ? p.lesson[0] : p.lesson;
+      if (les && les.status !== "cancelled") note(p.client_id, les.starts_at);
+    }
+
+    const lapsedIds = [...seen.entries()]
+      .filter(([, v]) => !v.hasFuture && v.latest < cutoff)
+      .sort((a, b) => a[1].latest - b[1].latest) // longest-lapsed first
+      .map(([id]) => id);
+
+    if (lapsedIds.length > 0) {
+      const { data: names } = await supabase
+        .from("clients")
+        .select("id, full_name")
+        .in("id", lapsedIds.slice(0, 12));
+      const nameById = new Map((names ?? []).map((c) => [(c as { id: string }).id, (c as { full_name: string }).full_name]));
+      const ordered = lapsedIds.map((id) => nameById.get(id)).filter(Boolean) as string[];
+      if (ordered.length > 0) {
+        const daysSince = (ms: number) => Math.floor((now - ms) / 86_400_000);
+        const firstDays = daysSince(seen.get(lapsedIds[0])!.latest);
+        out.push({
+          id:    "clients_lapsed",
+          kind:  "client_lapsed",
+          title: ordered.length === 1
+            ? `${ordered[0]} hasn't been in for ${firstDays} days`
+            : `${ordered.length} clients haven't been in for 2+ weeks`,
+          body:  ordered.length === 1
+            ? "No lesson booked since. A quick message often brings them back."
+            : ordered.slice(0, 4).join(", ") + (ordered.length > 4 ? "…" : ""),
+          href:  "/dashboard/clients",
+          tone:  "info",
+        });
+      }
+    }
+  } catch {
+    /* lapsed-client nudge is best-effort — never break the widget. */
+  }
+
+  return out.slice(0, 5);
 }
