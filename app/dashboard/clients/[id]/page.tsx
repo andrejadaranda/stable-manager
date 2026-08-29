@@ -4,7 +4,7 @@ import { requirePageRole } from "@/lib/auth/redirects";
 import { getClient, getClientOnboarding, type SkillLevel } from "@/services/clients";
 import { ONBOARDING_ENABLED } from "@/lib/config/onboarding";
 import { getClientLessons, type ClientLessonRow } from "@/services/lessons";
-import { getClientBalance, listClientOwedItems } from "@/services/payments";
+import { getClientBalance, listClientOwedItems, getClientLedger, getClientAvailableCredit } from "@/services/payments";
 import { listClientPackages } from "@/services/packages";
 import { listChargesForClient } from "@/services/boarding";
 import { listClientAgreements } from "@/services/agreements";
@@ -17,6 +17,8 @@ import { ClientBoardingSection } from "@/components/clients/client-boarding-sect
 import { AgreementsPanel } from "@/components/clients/agreements-panel";
 import { ChargesPanel } from "@/components/clients/charges-panel";
 import { OwesBreakdown } from "@/components/clients/owes-breakdown";
+import { PaymentHistoryPanel } from "@/components/clients/payment-history-panel";
+import { ClientBackButton } from "@/components/clients/client-back-button";
 import { GenerateBillButton } from "@/components/finance/generate-bill-button";
 import { InviteToAppButton } from "@/components/clients/invite-to-app-button";
 import { OnboardingInviteButton } from "@/components/clients/onboarding-invite-button";
@@ -61,12 +63,18 @@ export default async function ClientDetailPage({
   // to render "Invite to app" vs "Resend invite".
   let balance: number | null = null;
   let owedItems: Awaited<ReturnType<typeof listClientOwedItems>> = [];
+  let ledger: Awaited<ReturnType<typeof getClientLedger>> = [];
+  let availableCredit = 0;
   let hasPendingInvite = false;
   if (session.role === "owner") {
     balance = await getClientBalance(params.id);
     if (balance !== null && balance < 0) {
       owedItems = await listClientOwedItems(params.id);
     }
+    [ledger, availableCredit] = await Promise.all([
+      getClientLedger(params.id).catch(() => []),
+      getClientAvailableCredit(params.id).catch(() => 0),
+    ]);
     const pending = await getPendingInviteForClient(params.id).catch(() => null);
     hasPendingInvite = pending !== null;
   }
@@ -96,12 +104,7 @@ export default async function ClientDetailPage({
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
-      <Link
-        href="/dashboard/clients"
-        className="text-sm text-ink-500 hover:text-ink-900 w-fit inline-flex items-center gap-1"
-      >
-        <span aria-hidden>←</span> Clients
-      </Link>
+      <ClientBackButton />
 
       {/* Magazine hero */}
       <header className="relative bg-white rounded-3xl shadow-soft overflow-hidden">
@@ -278,6 +281,10 @@ export default async function ClientDetailPage({
               </button>
             </form>
           </section>
+
+          {/* Dated payments & credit history — "who paid what, when, and
+              where credit was added or deducted". */}
+          <PaymentHistoryPanel entries={ledger} availableCredit={availableCredit} />
 
           <GenerateBillButton clientId={client.id} />
 

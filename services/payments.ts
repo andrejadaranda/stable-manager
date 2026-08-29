@@ -402,6 +402,68 @@ export async function getClientAvailableCredit(clientId: string): Promise<number
   return Math.max(0, Math.round((unallocated - creditUsed) * 100) / 100);
 }
 
+// Dated money history for a client — every payment, whether it was cash in,
+// credit added (an overpayment), or credit used on a later item. Gives the
+// owner a plain "who paid what, when, and where it was deducted" statement.
+// Owner only.
+export type LedgerEntry = {
+  id: string;
+  date: string;            // ISO paid_at
+  amount: number;
+  method: string;
+  kind: "payment" | "credit_added" | "credit_used";
+  label: string;
+};
+export async function getClientLedger(clientId: string): Promise<LedgerEntry[]> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("payments")
+    .select(`
+      id, amount, method, paid_at,
+      lesson_id, client_charge_id, boarding_charge_id, lesson_participant_id, package_id,
+      lesson:lessons(starts_at)
+    `)
+    .eq("client_id", clientId)
+    .order("paid_at", { ascending: false });
+  if (error) throw error;
+
+  const fmt = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "Europe/Vilnius" }) : "";
+
+  return ((data ?? []) as Array<{
+    id: string; amount: number; method: string; paid_at: string;
+    lesson_id: string | null; client_charge_id: string | null; boarding_charge_id: string | null;
+    lesson_participant_id: string | null; package_id: string | null;
+    lesson: { starts_at: string } | { starts_at: string }[] | null;
+  }>).map((p) => {
+    const les = Array.isArray(p.lesson) ? p.lesson[0] : p.lesson;
+    let kind: LedgerEntry["kind"];
+    let label: string;
+    if (p.method === "credit") {
+      kind = "credit_used";
+      label = les ? `Credit used · lesson ${fmt(les.starts_at)}` : "Credit used";
+    } else {
+      const linked =
+        p.lesson_id || p.client_charge_id || p.boarding_charge_id || p.lesson_participant_id || p.package_id;
+      if (!linked) {
+        kind = "credit_added";
+        label = "Credit added (overpayment)";
+      } else {
+        kind = "payment";
+        label = les
+          ? `Lesson · ${fmt(les.starts_at)}`
+          : p.package_id ? "Package"
+          : p.boarding_charge_id ? "Boarding"
+          : p.client_charge_id ? "Charge"
+          : "Payment";
+      }
+    }
+    return { id: p.id, date: p.paid_at, amount: Number(p.amount), method: p.method, kind, label };
+  });
+}
+
 // Full account summary view (charged, paid, balance).
 // Same access rules as getClientBalance.
 export async function getClientAccountSummary(clientId: string) {
