@@ -2,6 +2,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { FREE_MODE } from "@/lib/config/freeMode";
+import { isNativeUserAgent } from "@/lib/native/server";
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: request.headers } });
@@ -136,8 +137,14 @@ export async function middleware(request: NextRequest) {
         // /api/stripe/checkout/personal and redirects to Stripe Checkout.
         const isPersonal = stableJoinPre?.account_type === "personal";
 
+        // Inside the native iOS/Android shell we must NOT send the user
+        // into any Stripe Checkout flow (Apple 3.1.1). Route every gated
+        // native user to the billing page, which renders a compliant
+        // "manage your plan on the web" notice instead of a purchase CTA.
+        const native = isNativeUserAgent(request.headers.get("user-agent"));
+
         const url = request.nextUrl.clone();
-        url.pathname = isPersonal
+        url.pathname = (isPersonal && !native)
           ? "/dashboard/personal-checkout"
           : "/dashboard/settings/billing";
         // Reason hint for the billing UI so it can show the right copy:

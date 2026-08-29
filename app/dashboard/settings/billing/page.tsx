@@ -10,6 +10,7 @@
 // All state-changing actions route through Stripe's hosted Billing Portal —
 // we never build cancel/update-card/change-plan forms ourselves.
 
+import { headers } from "next/headers";
 import { requirePageRole } from "@/lib/auth/redirects";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { syncSubscriptionFromCheckoutSession } from "@/lib/stripe/sync";
@@ -17,6 +18,7 @@ import { getSession } from "@/lib/auth/session";
 import { Card, CardHeader, Badge } from "@/components/ui";
 import { BillingActions } from "./BillingActions";
 import { FREE_MODE } from "@/lib/config/freeMode";
+import { isNativeUserAgent } from "@/lib/native/server";
 
 type SubscriptionRow = {
   status:                 "trialing" | "active" | "past_due" | "cancelled" | "unpaid" | "paused";
@@ -34,6 +36,37 @@ export default async function BillingSettingsPage({
 }) {
   await requirePageRole("owner");
   const params = (await searchParams) ?? {};
+
+  // Inside the native App Store shell we must not show any purchase CTA or
+  // link out to Stripe Checkout (Apple Guideline 3.1.1). Short-circuit to a
+  // neutral notice: subscriptions are bought and managed on the website. This
+  // is the standard "reader / multiplatform" posture (Slack, Notion, etc.).
+  const isNativeApp = isNativeUserAgent((await headers()).get("user-agent"));
+  if (isNativeApp) {
+    return (
+      <div className="flex flex-col gap-6">
+        <Card padded={false}>
+          <CardHeader
+            title="Plan"
+            subtitle="Your Longrein subscription."
+            action={<Badge tone="neutral" dot>Managed on the web</Badge>}
+          />
+          <div className="p-6 flex flex-col gap-4">
+            <p className="text-sm text-ink-700 leading-relaxed">
+              Your subscription and payment details are managed on the Longrein
+              website. Sign in at <strong>longrein.eu</strong> from any browser
+              to start, change, or cancel your plan, and to view invoices.
+            </p>
+            <p className="text-sm text-ink-500 leading-relaxed">
+              Everything you’ve set up here stays exactly as it is — this only
+              affects where billing is handled. Questions? Write to{" "}
+              <strong>hello@longrein.eu</strong>.
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   // FREE_MODE (early access): the whole app is free, billing is paused.
   // Short-circuit the entire subscribe/trial/Stripe UI with a simple notice
@@ -279,28 +312,6 @@ export default async function BillingSettingsPage({
           <p className="text-sm text-ink-500">
             All invoices and payment history live in the Stripe billing portal.
             Click "Manage subscription" above to access them.
-          </p>
-        </div>
-      </Card>
-
-      <Card padded={false}>
-        <CardHeader
-          title="Founding Members"
-          subtitle="For the first 15 stables."
-        />
-        <div className="p-6 flex flex-col gap-3 text-sm text-ink-700 leading-relaxed">
-          <p>
-            Founding Members pay <strong>€25 per month, locked for life</strong> after a
-            one-time <strong>€299 onboarding</strong> with the founder — 12 months
-            free before the first charge.
-          </p>
-          <p className="text-ink-500">
-            Founding Member onboarding is handled personally — not through this
-            page. Reply to your welcome email or write to{" "}
-            <a className="text-brand-700 underline" href="mailto:hello@longrein.eu">
-              hello@longrein.eu
-            </a>{" "}
-            to ask about a seat.
           </p>
         </div>
       </Card>

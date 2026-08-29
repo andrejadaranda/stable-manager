@@ -7,9 +7,11 @@
 
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { getSession } from "@/lib/auth/session";
 import { PersonalCheckoutLauncher } from "@/components/billing/personal-checkout-launcher";
 import { FREE_MODE } from "@/lib/config/freeMode";
+import { isNativeUserAgent } from "@/lib/native/server";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,25 @@ export default async function PersonalCheckoutPage() {
   if (!session) redirect("/login");
   if (session.role !== "owner" || session.accountType !== "personal") {
     redirect("/dashboard");
+  }
+
+  // Native App Store shell: never fire Stripe Checkout (Apple 3.1.1). Show a
+  // neutral "manage on the web" notice instead of the payment launcher.
+  const isNativeApp = isNativeUserAgent((await headers()).get("user-agent"));
+  if (isNativeApp) {
+    return (
+      <div className="max-w-md mx-auto mt-20 bg-white rounded-2xl shadow-soft p-8 text-center">
+        <h1 className="font-display text-2xl text-navy-900">Manage your plan on the web</h1>
+        <p className="text-sm text-ink-600 mt-3 leading-relaxed">
+          Your account is ready. Subscriptions are set up on the Longrein
+          website — sign in at <strong>longrein.eu</strong> from any browser to
+          add a payment method. Everything else in the app works as normal.
+        </p>
+        <p className="text-[11.5px] text-ink-500 mt-6">
+          Questions? Email <strong>hello@longrein.eu</strong>.
+        </p>
+      </div>
+    );
   }
 
   return (

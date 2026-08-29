@@ -29,14 +29,24 @@ const config: CapacitorConfig = {
     iosScheme:          "https",
     // Allow nav to legal pages on the marketing site so Privacy +
     // Terms links don't fall out of the app shell.
+    //
+    // Stripe checkout/billing is deliberately NOT allow-listed: Apple
+    // rejects apps that sell a digital subscription in-app or link out
+    // to an external purchase (Guideline 3.1.1 / 3.1.3). Inside the app
+    // the billing surfaces show a "manage your plan on the web" notice
+    // instead — see lib/native/server.ts + the billing page's native
+    // branch. Subscriptions are sold only on the website.
     allowNavigation:    [
       "app.longrein.eu",
       "longrein.eu",
       "*.longrein.eu",
-      "checkout.stripe.com",
-      "billing.stripe.com",
     ],
   },
+  // Marker appended to the iOS/Android webview User-Agent so the server
+  // (middleware + billing page) can tell it's rendering inside the App
+  // Store shell and hide purchase CTAs. Must contain NATIVE_UA_MARKER
+  // ("LongreinApp") from lib/native/server.ts.
+  appendUserAgent: "LongreinApp/native",
   // webDir is required by Capacitor even when server.url is set —
   // used as the offline fallback. We bundle a thin "Connecting…"
   // splash so users see something during cold start without network.
