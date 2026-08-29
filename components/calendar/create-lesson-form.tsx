@@ -355,7 +355,7 @@ export function CreateLessonForm({
           w-full max-w-md
           bg-surface rounded-2xl shadow-lift
           flex flex-col
-          max-h-[calc(100vh-2rem)]
+          max-h-[calc(100dvh-2rem)]
           overflow-hidden
           my-auto
         "

@@ -40,8 +40,10 @@ export type CreatePackageInput = {
    *  (paid in full); pass a smaller value to log a PARTIAL package payment.
    *  Ignored when recordPayment is false. */
   paidAmount?: number;
-  /** Optional payment method override; defaults to cash. */
-  paymentMethod?: "cash" | "card" | "transfer" | "other";
+  /** Optional payment method override; defaults to cash. "credit" pays the
+   *  package from the client's existing account credit (excluded from
+   *  total_paid, so it draws down credit rather than counting as new cash). */
+  paymentMethod?: "cash" | "card" | "transfer" | "other" | "credit";
 };
 
 export type PackageSummaryRow = {
@@ -162,6 +164,12 @@ export async function deletePackage(packageId: string) {
   const session = await getSession();
   requireRole(session, "owner");
   const supabase = createSupabaseServerClient();
+  // Clear dependents first so foreign keys never block the delete (that was
+  // the "package won't delete" bug): remove the package's upfront payment and
+  // detach any lessons it covered (they revert to normal, re-priceable
+  // lessons). RLS keeps this scoped to the owner's stable.
+  await supabase.from("payments").delete().eq("package_id", packageId);
+  await supabase.from("lessons").update({ package_id: null }).eq("package_id", packageId);
   const { error } = await supabase
     .from("lesson_packages")
     .delete()

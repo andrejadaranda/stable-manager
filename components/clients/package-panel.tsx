@@ -32,10 +32,13 @@ export function PackagePanel({
   clientId,
   packages,
   isOwner,
+  availableCredit = 0,
 }: {
   clientId: string;
   packages: PackageSummaryRow[];
   isOwner: boolean;
+  /** Client's spendable credit — lets the package be paid from credit. */
+  availableCredit?: number;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -111,6 +114,7 @@ export function PackagePanel({
       {open && (
         <NewPackageDialog
           clientId={clientId}
+          availableCredit={availableCredit}
           onClose={() => setOpen(false)}
         />
       )}
@@ -317,16 +321,19 @@ function DeleteSubmit({ small }: { small?: boolean }) {
 
 function NewPackageDialog({
   clientId,
+  availableCredit = 0,
   onClose,
 }: {
   clientId: string;
+  /** Client's spendable credit — enables paying the package from credit. */
+  availableCredit?: number;
   onClose: () => void;
 }) {
   const [state, action] = useFormState<PackageActionState, FormData>(
     createPackageAction, initialState,
   );
   const [recordPayment, setRecordPayment] = useState(true);
-  const [method, setMethod] = useState<"cash" | "card" | "transfer" | "other">("cash");
+  const [method, setMethod] = useState<"cash" | "card" | "transfer" | "other" | "credit">("cash");
 
   useEffect(() => {
     if (state.success) onClose();
@@ -447,7 +454,13 @@ function NewPackageDialog({
                   <option value="card">Card</option>
                   <option value="transfer">Transfer</option>
                   <option value="other">Other</option>
+                  {availableCredit > 0 && (
+                    <option value="credit">From credit (€{availableCredit.toFixed(2)})</option>
+                  )}
                 </select>
+                {method === "credit" && (
+                  <span className="text-[11px] text-violet-700">draws down the client’s credit</span>
+                )}
               </div>
             )}
           </div>

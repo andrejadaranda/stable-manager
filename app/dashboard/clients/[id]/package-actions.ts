@@ -6,6 +6,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createPackage, deletePackage, addPackagePayment } from "@/services/packages";
+import { getClientAvailableCredit } from "@/services/payments";
 
 export type PackageActionState = {
   error: string | null;
@@ -48,9 +49,21 @@ export async function createPackageAction(
   }
 
   const method =
-    methodRaw === "card" || methodRaw === "transfer" || methodRaw === "other"
+    methodRaw === "card" || methodRaw === "transfer" || methodRaw === "other" || methodRaw === "credit"
       ? methodRaw
       : "cash";
+
+  // Paying from account credit: draw down what's available (up to the price).
+  // If the client has no credit, that's a mistake worth flagging, not a
+  // silent €0 payment.
+  let paidAmount: number | undefined;
+  if (method === "credit") {
+    const available = await getClientAvailableCredit(clientId).catch(() => 0);
+    if (available <= 0) {
+      return { ...initial, error: "This client has no credit to pay the package from." };
+    }
+    paidAmount = Math.min(price, Math.round(available * 100) / 100);
+  }
 
   try {
     await createPackage({
@@ -61,6 +74,7 @@ export async function createPackageAction(
       notes: notes || null,
       recordPayment: recordRaw !== "false",
       paymentMethod: method,
+      paidAmount,
     });
   } catch (err: any) {
     const code = err?.message ?? "";

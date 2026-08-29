@@ -335,6 +335,7 @@ export default async function ClientDetailPage({
             clientId={client.id}
             packages={packages}
             isOwner={session.role === "owner"}
+            availableCredit={availableCredit}
           />
 
           {boardingCharges.length > 0 && (

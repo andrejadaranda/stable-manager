@@ -180,9 +180,12 @@ export function EditLessonDialog({
   useFocusTrap(containerRef);
 
   const error = editState.error || cancelState.error || paidState.error || unpaidState.error;
-  const isPaid = lesson.payment_status === "paid";
   const isPackage = lesson.payment_status === "package";
   const isPartial = lesson.payment_status === "partial";
+  const priceIsZero = Number(lesson.price) <= 0;
+  // A €0 lesson isn't "Paid" — there was nothing to pay. Only treat it as paid
+  // when it actually has a price.
+  const isPaid = lesson.payment_status === "paid" && !priceIsZero;
 
   return (
     <div
@@ -199,7 +202,7 @@ export function EditLessonDialog({
           w-full max-w-md
           bg-surface rounded-2xl shadow-lift
           flex flex-col
-          max-h-[calc(100vh-2rem)]
+          max-h-[calc(100dvh-2rem)]
           overflow-hidden
           my-auto
         "
@@ -272,14 +275,16 @@ export function EditLessonDialog({
               </p>
               <p className={`text-sm font-medium mt-0.5 ${
                 isPackage  ? "text-brand-700" :
+                priceIsZero ? "text-ink-500" :
                 isPaid     ? "text-emerald-700" :
                 isPartial  ? "text-amber-700" :
                             "text-ink-700"
               }`}>
-                {isPackage  ? `Covered by package${pkgPos && pkgTotal ? ` · lesson ${pkgPos} of ${pkgTotal}` : ""}`
-                 : isPaid    ? `Paid · €${Number(lesson.price).toFixed(2)}`
-                 : isPartial ? `Partial · €${lesson.paid_amount.toFixed(2)} of €${Number(lesson.price).toFixed(2)}`
-                 :             `Unpaid · €${Number(lesson.price).toFixed(2)}`}
+                {isPackage   ? `Covered by package${pkgPos && pkgTotal ? ` · lesson ${pkgPos} of ${pkgTotal}` : ""}`
+                 : priceIsZero ? "No charge"
+                 : isPaid     ? `Paid · €${Number(lesson.price).toFixed(2)}`
+                 : isPartial  ? `Partial · €${lesson.paid_amount.toFixed(2)} of €${Number(lesson.price).toFixed(2)}`
+                 :              `Unpaid · €${Number(lesson.price).toFixed(2)}`}
               </p>
             </div>
             {!isPackage && (
