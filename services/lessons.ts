@@ -1094,6 +1094,13 @@ export type ClientLessonRow = {
   price: number;
   horse:   { id: string; name: string } | null;
   trainer: { id: string; full_name: string | null } | null;
+  /** What THIS client owes for this lesson — their participant share on a
+   *  group lesson, or the lesson price otherwise. */
+  billedPrice: number;
+  /** Paid so far against this client's share. */
+  paid: number;
+  /** Quick payment badge: none = no charge; the rest compare paid vs billed. */
+  payState: "none" | "paid" | "partial" | "unpaid";
 };
 
 export async function getClientLessons(
@@ -1109,20 +1116,27 @@ export async function getClientLessons(
   // A client can appear on a lesson two ways: as the booking client
   // (lessons.client_id) OR as a group-lesson participant (a child rider).
   // Include both so a child's profile shows the group lessons they're in.
+  // Pull the participant id + price too so a group row shows THIS child's
+  // share and whether that share is paid, not the whole club total.
   const { data: partRows } = await supabase
     .from("lesson_participants")
-    .select("lesson_id")
+    .select("id, lesson_id, price")
     .eq("client_id", clientId)
     .eq("status", "confirmed");
-  const partIds = Array.from(new Set((partRows ?? []).map((r) => (r as { lesson_id: string }).lesson_id)));
+  const partByLesson = new Map<string, { id: string; price: number }>();
+  for (const r of (partRows ?? []) as Array<{ id: string; lesson_id: string; price: number | null }>) {
+    partByLesson.set(r.lesson_id, { id: r.id, price: Number(r.price) || 0 });
+  }
+  const partIds = Array.from(partByLesson.keys());
 
   let q = supabase
     .from("lessons")
     .select(
       `
-      id, starts_at, ends_at, status, price,
+      id, starts_at, ends_at, status, price, lesson_type,
       horse:horses!lessons_horse_id_fkey(id, name),
-      trainer:profiles(id, full_name)
+      trainer:profiles(id, full_name),
+      payments(amount, lesson_participant_id)
       `,
     );
 
@@ -1138,7 +1152,31 @@ export async function getClientLessons(
 
   const { data, error } = await q.limit(opts.limit ?? 10);
   if (error) throw error;
-  return (data ?? []) as unknown as ClientLessonRow[];
+
+  return ((data ?? []) as unknown as Array<{
+    id: string; starts_at: string; ends_at: string; status: ClientLessonRow["status"];
+    price: number | null; lesson_type: string | null;
+    horse: ClientLessonRow["horse"]; trainer: ClientLessonRow["trainer"];
+    payments: Array<{ amount: number | string; lesson_participant_id: string | null }> | null;
+  }>).map((l) => {
+    const part = l.lesson_type === "group" ? partByLesson.get(l.id) : undefined;
+    // Group row → this child's share + payments tagged with their participant
+    // id. Individual row → the lesson price + its non-participant payments.
+    const billedPrice = part ? part.price : Number(l.price) || 0;
+    const paid = (l.payments ?? []).reduce((s, p) => {
+      const matches = part ? p.lesson_participant_id === part.id : !p.lesson_participant_id;
+      return matches ? s + (Number(p.amount) || 0) : s;
+    }, 0);
+    const payState: ClientLessonRow["payState"] =
+      billedPrice <= 0            ? "none" :
+      paid >= billedPrice - 0.001 ? "paid" :
+      paid > 0                    ? "partial" : "unpaid";
+    return {
+      id: l.id, starts_at: l.starts_at, ends_at: l.ends_at, status: l.status,
+      price: Number(l.price) || 0, horse: l.horse, trainer: l.trainer,
+      billedPrice, paid, payState,
+    };
+  });
 }
 
 // Recent lessons for a single horse — used by the horse detail page.

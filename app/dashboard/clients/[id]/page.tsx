@@ -4,7 +4,7 @@ import { requirePageRole } from "@/lib/auth/redirects";
 import { getClient, getClientOnboarding, type SkillLevel } from "@/services/clients";
 import { ONBOARDING_ENABLED } from "@/lib/config/onboarding";
 import { getClientLessons, type ClientLessonRow } from "@/services/lessons";
-import { getClientBalance, listClientOwedItems, getClientLedger, getClientAvailableCredit } from "@/services/payments";
+import { getClientBalance, listClientOwedItems, getClientStatement, getClientAvailableCredit } from "@/services/payments";
 import { listClientPackages } from "@/services/packages";
 import { listChargesForClient } from "@/services/boarding";
 import { listClientAgreements } from "@/services/agreements";
@@ -63,7 +63,7 @@ export default async function ClientDetailPage({
   // to render "Invite to app" vs "Resend invite".
   let balance: number | null = null;
   let owedItems: Awaited<ReturnType<typeof listClientOwedItems>> = [];
-  let ledger: Awaited<ReturnType<typeof getClientLedger>> = [];
+  let ledger: Awaited<ReturnType<typeof getClientStatement>> = [];
   let availableCredit = 0;
   let hasPendingInvite = false;
   if (session.role === "owner") {
@@ -72,7 +72,7 @@ export default async function ClientDetailPage({
       owedItems = await listClientOwedItems(params.id);
     }
     [ledger, availableCredit] = await Promise.all([
-      getClientLedger(params.id).catch(() => []),
+      getClientStatement(params.id).catch(() => []),
       getClientAvailableCredit(params.id).catch(() => 0),
     ]);
     const pending = await getPendingInviteForClient(params.id).catch(() => null);
@@ -430,6 +430,21 @@ function LessonList({
               <div className="text-[13px] text-ink-500 mt-0.5 truncate">
                 with {l.trainer?.full_name ?? "—"}
               </div>
+              {l.status !== "cancelled" && (
+                <div className="text-[12px] mt-1 truncate">
+                  {l.payState === "none" ? (
+                    <span className="text-ink-400">No charge</span>
+                  ) : l.payState === "paid" ? (
+                    <span className="text-brand-700 font-semibold">Paid · €{l.billedPrice.toFixed(2)}</span>
+                  ) : l.payState === "partial" ? (
+                    <span className="text-saddle-700 font-semibold">
+                      Part-paid · €{l.paid.toFixed(2)} of €{l.billedPrice.toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="text-alert-700 font-semibold">Unpaid · €{l.billedPrice.toFixed(2)}</span>
+                  )}
+                </div>
+              )}
             </div>
             <span className={`shrink-0 text-[11px] font-bold uppercase tracking-[0.06em] px-2.5 py-1.5 rounded-full ${tag.cls}`}>
               {tag.label}

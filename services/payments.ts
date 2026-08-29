@@ -464,6 +464,232 @@ export async function getClientLedger(clientId: string): Promise<LedgerEntry[]> 
   });
 }
 
+// =================================================================
+// FULL CLIENT STATEMENT — every event on one chronological timeline:
+// each thing charged (lessons, group shares, misc charges, boarding)
+// AND each payment / credit movement, with a running balance that
+// matches client_balance exactly. This is the "visa eiga labai aiški"
+// view: when a lesson happened, what it cost, when it was paid, and
+// when credit was used and on what.
+//
+// Running balance convention (mirrors the balance views: paid_real −
+// charged, credit excluded):
+//   * charge        → balance −amount (they owe more)
+//   * payment       → balance +amount (real cash reduces what's owed)
+//   * credit_added  → balance +amount (overpayment surplus = real cash in)
+//   * credit_used   → balance  ±0     (a marker that a charge was settled
+//                     FROM existing credit — not new cash, so no net move;
+//                     it only draws down the separate credit pool)
+// A positive final balance means the client is in credit; negative = owes.
+// Owner only.
+// =================================================================
+export type StatementEntry = {
+  id: string;
+  date: string;                 // ISO, for sort + display
+  direction: "charge" | "payment" | "credit_added" | "credit_used";
+  amount: number;               // positive magnitude in EUR
+  label: string;
+  sub: string | null;
+  /** Signed effect on the running balance (see convention above). */
+  delta: number;
+  /** Running balance AFTER this event (oldest→newest accumulation). */
+  balanceAfter: number;
+};
+
+export async function getClientStatement(clientId: string): Promise<StatementEntry[]> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+
+  const fmtDay = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "Europe/Vilnius" }) : "";
+
+  const [lessonsRes, partsRes, chargesRes, boardingRes, paymentsRes] = await Promise.all([
+    // Individual (non-group) delivered lessons with a price.
+    supabase
+      .from("lessons")
+      .select("id, starts_at, price, status, lesson_type, horse:horses(name)")
+      .eq("client_id", clientId)
+      .in("status", ["completed", "no_show"])
+      .gt("price", 0),
+    // Group participation shares billed to this client.
+    supabase
+      .from("lesson_participants")
+      .select("id, price, status, lesson:lessons!lesson_participants_lesson_id_fkey(starts_at, status, lesson_type, horse:horses!lessons_horse_id_fkey(name))")
+      .eq("client_id", clientId)
+      .eq("status", "confirmed"),
+    // Misc charges (farrier, vet, equipment, …).
+    supabase
+      .from("client_charge_summary")
+      .select("id, kind, custom_label, incurred_on, amount, notes")
+      .eq("client_id", clientId),
+    // Boarding periods.
+    supabase
+      .from("horse_boarding_summary")
+      .select("id, period_start, period_label, amount")
+      .eq("owner_client_id", clientId),
+    // Every payment / credit movement.
+    supabase
+      .from("payments")
+      .select(`
+        id, amount, method, paid_at,
+        lesson_id, client_charge_id, boarding_charge_id, lesson_participant_id, package_id,
+        lesson:lessons(starts_at)
+      `)
+      .eq("client_id", clientId),
+  ]);
+
+  if (lessonsRes.error)  throw lessonsRes.error;
+  if (partsRes.error)    throw partsRes.error;
+  if (chargesRes.error)  throw chargesRes.error;
+  if (boardingRes.error) throw boardingRes.error;
+  if (paymentsRes.error) throw paymentsRes.error;
+
+  const norm = <T>(r: T | T[] | null): T | null => (Array.isArray(r) ? r[0] ?? null : r);
+
+  type Raw = Omit<StatementEntry, "balanceAfter">;
+  const raw: Raw[] = [];
+
+  // ---- charges: individual lessons ----
+  for (const l of (lessonsRes.data ?? []) as Array<{
+    id: string; starts_at: string; price: number | string; status: string;
+    lesson_type: string | null; horse: { name: string } | { name: string }[] | null;
+  }>) {
+    if (l.lesson_type === "group") continue; // group shares handled below
+    const amount = Number(l.price);
+    if (amount <= 0) continue;
+    const horse = norm(l.horse)?.name ?? null;
+    raw.push({
+      id: `les-${l.id}`,
+      date: l.starts_at,
+      direction: "charge",
+      amount,
+      label: l.status === "no_show" ? "Lesson (no-show)" : "Lesson",
+      sub: horse ? `${horse} · ${fmtDay(l.starts_at)}` : fmtDay(l.starts_at),
+      delta: -amount,
+    });
+  }
+
+  // ---- charges: group participation shares ----
+  for (const p of (partsRes.data ?? []) as Array<{
+    id: string; price: number | string;
+    lesson: { starts_at: string; status: string; lesson_type: string | null; horse: { name: string } | { name: string }[] | null } | Array<{ starts_at: string; status: string; lesson_type: string | null; horse: { name: string } | { name: string }[] | null }> | null;
+  }>) {
+    const les = norm(p.lesson);
+    if (!les) continue;
+    if (les.lesson_type !== "group") continue;
+    if (les.status !== "completed" && les.status !== "no_show") continue;
+    const amount = Number(p.price);
+    if (amount <= 0) continue;
+    const horse = norm(les.horse)?.name ?? null;
+    raw.push({
+      id: `part-${p.id}`,
+      date: les.starts_at,
+      direction: "charge",
+      amount,
+      label: "Group lesson (your share)",
+      sub: horse ? `${horse} · ${fmtDay(les.starts_at)}` : fmtDay(les.starts_at),
+      delta: -amount,
+    });
+  }
+
+  // ---- charges: misc ----
+  for (const c of (chargesRes.data ?? []) as Array<{
+    id: string; kind: string; custom_label: string | null; incurred_on: string; amount: number | string; notes: string | null;
+  }>) {
+    const amount = Number(c.amount);
+    if (amount <= 0) continue;
+    raw.push({
+      id: `chg-${c.id}`,
+      date: c.incurred_on,
+      direction: "charge",
+      amount,
+      label: c.custom_label?.trim() || CHARGE_KIND_LABELS[c.kind] || "Charge",
+      sub: c.notes ?? fmtDay(c.incurred_on),
+      delta: -amount,
+    });
+  }
+
+  // ---- charges: boarding ----
+  for (const b of (boardingRes.data ?? []) as Array<{
+    id: string; period_start: string; period_label: string | null; amount: number | string;
+  }>) {
+    const amount = Number(b.amount);
+    if (amount <= 0) continue;
+    raw.push({
+      id: `brd-${b.id}`,
+      date: b.period_start,
+      direction: "charge",
+      amount,
+      label: `Boarding · ${b.period_label ?? b.period_start.slice(0, 7)}`,
+      sub: null,
+      delta: -amount,
+    });
+  }
+
+  // ---- payments / credit movements ----
+  for (const p of (paymentsRes.data ?? []) as Array<{
+    id: string; amount: number | string; method: string; paid_at: string;
+    lesson_id: string | null; client_charge_id: string | null; boarding_charge_id: string | null;
+    lesson_participant_id: string | null; package_id: string | null;
+    lesson: { starts_at: string } | { starts_at: string }[] | null;
+  }>) {
+    const amount = Number(p.amount);
+    const les = norm(p.lesson);
+    if (p.method === "credit") {
+      // Settles a charge from existing credit — no net balance move.
+      raw.push({
+        id: `pay-${p.id}`,
+        date: p.paid_at,
+        direction: "credit_used",
+        amount,
+        label: les ? `Paid with credit · lesson ${fmtDay(les.starts_at)}` : "Paid with credit",
+        sub: null,
+        delta: 0,
+      });
+      continue;
+    }
+    const linked = p.lesson_id || p.client_charge_id || p.boarding_charge_id || p.lesson_participant_id || p.package_id;
+    if (!linked) {
+      raw.push({
+        id: `pay-${p.id}`,
+        date: p.paid_at,
+        direction: "credit_added",
+        amount,
+        label: "Overpayment → credit",
+        sub: null,
+        delta: amount,
+      });
+    } else {
+      raw.push({
+        id: `pay-${p.id}`,
+        date: p.paid_at,
+        direction: "payment",
+        amount,
+        label: les
+          ? `Paid · lesson ${fmtDay(les.starts_at)}`
+          : p.package_id ? "Paid · package"
+          : p.boarding_charge_id ? "Paid · boarding"
+          : p.client_charge_id ? "Paid · charge"
+          : "Paid",
+        sub: null,
+        delta: amount,
+      });
+    }
+  }
+
+  // Oldest first, accumulate the running balance, then hand back newest
+  // first so the panel reads top-down (latest event + current balance up top).
+  raw.sort((a, b) => a.date.localeCompare(b.date));
+  let running = 0;
+  const withBalance: StatementEntry[] = raw.map((e) => {
+    running = Math.round((running + e.delta) * 100) / 100;
+    return { ...e, balanceAfter: running };
+  });
+  withBalance.reverse();
+  return withBalance;
+}
+
 // Full account summary view (charged, paid, balance).
 // Same access rules as getClientBalance.
 export async function getClientAccountSummary(clientId: string) {
