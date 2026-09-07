@@ -61,6 +61,12 @@ export async function listHorses(opts?: {
    * The calendar's "pick a horse" dropdown uses this. Other surfaces
    * (Horses index, settings) leave it off and see all horses. */
   lessonsOnly?: boolean;
+  /** When true, drop horses that have already LEFT the stable — i.e. a
+   *  boarding_end_date (departure) in the past. Used by the farrier/vet
+   *  picker so a departed horse isn't offered for a new visit (it stays
+   *  visible on the visits it was already part of). Horses with no
+   *  departure date, or a future one, are kept. */
+  excludeDeparted?: boolean;
 }): Promise<HorseRow[]> {
   const session = await getSession();
   requireRole(session, "owner", "employee");
@@ -71,6 +77,10 @@ export async function listHorses(opts?: {
   if (opts?.lessonsOnly) {
     // Postgres OR: stable-owned, or client-owned-and-opted-in.
     q = q.or("owner_client_id.is.null,available_for_lessons.is.true");
+  }
+  if (opts?.excludeDeparted) {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Vilnius" });
+    q = q.or(`boarding_end_date.is.null,boarding_end_date.gte.${today}`);
   }
   const { data, error } = await q;
   if (error) throw error;

@@ -17,11 +17,24 @@ import { toFriendlyError } from "@/lib/errors/friendly";
 
 export type FarrierActionResult = { ok: boolean; error: string | null };
 
+// The form sends a wall-clock "YYYY-MM-DDTHH:mm" the owner typed in their own
+// (Vilnius) time. This runs as a SERVER action, where the runtime clock is UTC
+// — so `new Date(y,m,d,hh,mm)` would read the wall-clock as UTC and store it
+// 2–3h off (type 10:00 → saved 10:00Z → shown 13:00). Interpret the input as
+// Europe/Vilnius instead, DST-correct, by measuring the zone's offset at that
+// instant and subtracting it.
+const APP_TZ = "Europe/Vilnius";
 function localToISO(local: string): string {
   const [date, time] = local.split("T");
   const [y, m, d] = date.split("-").map(Number);
   const [hh, mm] = (time ?? "00:00").split(":").map(Number);
-  return new Date(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0).toISOString();
+  const utcGuess = Date.UTC(y, (m ?? 1) - 1, d ?? 1, hh ?? 0, mm ?? 0, 0, 0);
+  // How far Vilnius is from UTC at that instant (ms). Comparing the same
+  // instant rendered in the zone vs in UTC cancels the server's own zone.
+  const inZone = new Date(new Date(utcGuess).toLocaleString("en-US", { timeZone: APP_TZ })).getTime();
+  const inUTC  = new Date(new Date(utcGuess).toLocaleString("en-US", { timeZone: "UTC" })).getTime();
+  const offset = inZone - inUTC;
+  return new Date(utcGuess - offset).toISOString();
 }
 
 function parseHorses(formData: FormData): FarrierHorseInput[] {

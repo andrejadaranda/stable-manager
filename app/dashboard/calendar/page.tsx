@@ -94,9 +94,11 @@ export default async function CalendarPage({
     listServices({ activeOnly: true }),
     listArenas({ activeOnly: true }).catch(() => []),
     getFarrierVisitsForCalendar(start.toISOString(), end.toISOString()).catch(() => []),
-    // ALL horses (incl. inactive/retired private boarders) — any horse can
-    // need a farrier/vet, so the visit form must not hide them.
-    listHorses({}).catch(() => []),
+    // Horses currently at the stable (incl. inactive/retired private boarders
+    // — any present horse can need a farrier/vet) but NOT ones that have
+    // already departed. A departed horse stays on its past visits; it just
+    // isn't offered for new ones.
+    listHorses({ excludeDeparted: true }).catch(() => []),
   ]);
   const blocks = await listAvailabilityBlocks(start.toISOString(), end.toISOString()).catch(() => []);
 
