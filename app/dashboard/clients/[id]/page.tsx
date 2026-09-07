@@ -6,7 +6,7 @@ import { ONBOARDING_ENABLED } from "@/lib/config/onboarding";
 import { getClientLessons, type ClientLessonRow } from "@/services/lessons";
 import { getClientBalance, listClientOwedItems, getClientStatement, getClientAvailableCredit } from "@/services/payments";
 import { listClientPackages } from "@/services/packages";
-import { listChargesForClient } from "@/services/boarding";
+import { listChargesForClient, ensureBoardingForCurrentMonth } from "@/services/boarding";
 import { listClientAgreements } from "@/services/agreements";
 import { listClientCharges } from "@/services/clientCharges";
 import { fmtTime } from "@/lib/utils/dates";
@@ -47,6 +47,12 @@ export default async function ClientDetailPage({
 
   const client = await getClient(params.id);
   if (!client) notFound();
+
+  // Make sure THIS month's boarding charges exist before we read them, so a
+  // boarder's current-month fee shows as owed on their profile without the
+  // owner having to open the Boarding page first. Owner-only + idempotent +
+  // best-effort inside; a no-op for employees.
+  await ensureBoardingForCurrentMonth().catch(() => {});
 
   const [upcoming, recent, packages, boardingCharges, agreements, miscCharges] = await Promise.all([
     getClientLessons(params.id, { direction: "upcoming", limit: 10 }),

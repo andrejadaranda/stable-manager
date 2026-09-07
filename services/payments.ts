@@ -246,6 +246,9 @@ export async function listClientOwedItems(clientId: string): Promise<OwedItem[]>
       .select("id, kind, custom_label, incurred_on, amount, paid_amount, payment_status, notes")
       .eq("client_id", clientId)
       .neq("payment_status", "paid")
+      // Future-dated charges (e.g. a farrier visit booked for next week) aren't
+      // owed yet — they surface once their date arrives. Matches client_balance.
+      .lte("incurred_on", new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Vilnius" }))
       .order("incurred_on", { ascending: true }),
 
     supabase
@@ -504,13 +507,16 @@ export async function getClientStatement(clientId: string): Promise<StatementEnt
   const fmtDay = (iso: string | null) =>
     iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "Europe/Vilnius" }) : "";
 
-  const [lessonsRes, partsRes, chargesRes, boardingRes, paymentsRes] = await Promise.all([
-    // Individual (non-group) delivered lessons with a price.
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Vilnius" });
+  const [lessonsRes, partsRes, chargesRes, boardingRes, paymentsRes, packagesRes] = await Promise.all([
+    // Individual (non-group) delivered lessons with a price, NOT covered by a
+    // package (package-covered lessons are billed via the package, not again).
     supabase
       .from("lessons")
       .select("id, starts_at, price, status, lesson_type, horse:horses(name)")
       .eq("client_id", clientId)
       .in("status", ["completed", "no_show"])
+      .is("package_id", null)
       .gt("price", 0),
     // Group participation shares billed to this client.
     supabase
@@ -518,11 +524,13 @@ export async function getClientStatement(clientId: string): Promise<StatementEnt
       .select("id, price, status, lesson:lessons!lesson_participants_lesson_id_fkey(starts_at, status, lesson_type, horse:horses!lessons_horse_id_fkey(name))")
       .eq("client_id", clientId)
       .eq("status", "confirmed"),
-    // Misc charges (farrier, vet, equipment, …).
+    // Misc charges (farrier, vet, equipment, …). Future-dated ones aren't owed
+    // yet — excluded so the statement's running balance matches client_balance.
     supabase
       .from("client_charge_summary")
       .select("id, kind, custom_label, incurred_on, amount, notes")
-      .eq("client_id", clientId),
+      .eq("client_id", clientId)
+      .lte("incurred_on", today),
     // Boarding periods.
     supabase
       .from("horse_boarding_summary")
@@ -537,6 +545,11 @@ export async function getClientStatement(clientId: string): Promise<StatementEnt
         lesson:lessons(starts_at)
       `)
       .eq("client_id", clientId),
+    // Packages bought — each is a charge (prepaid value the client owes for).
+    supabase
+      .from("lesson_packages")
+      .select("id, total_lessons, price, purchased_at")
+      .eq("client_id", clientId),
   ]);
 
   if (lessonsRes.error)  throw lessonsRes.error;
@@ -544,6 +557,7 @@ export async function getClientStatement(clientId: string): Promise<StatementEnt
   if (chargesRes.error)  throw chargesRes.error;
   if (boardingRes.error) throw boardingRes.error;
   if (paymentsRes.error) throw paymentsRes.error;
+  if (packagesRes.error) throw packagesRes.error;
 
   const norm = <T>(r: T | T[] | null): T | null => (Array.isArray(r) ? r[0] ?? null : r);
 
@@ -623,6 +637,23 @@ export async function getClientStatement(clientId: string): Promise<StatementEnt
       amount,
       label: `Boarding · ${b.period_label ?? b.period_start.slice(0, 7)}`,
       sub: null,
+      delta: -amount,
+    });
+  }
+
+  // ---- charges: packages bought ----
+  for (const pk of (packagesRes.data ?? []) as Array<{
+    id: string; total_lessons: number; price: number | string; purchased_at: string;
+  }>) {
+    const amount = Number(pk.price);
+    if (amount <= 0) continue;
+    raw.push({
+      id: `pkg-${pk.id}`,
+      date: pk.purchased_at,
+      direction: "charge",
+      amount,
+      label: `Package · ${pk.total_lessons} lessons`,
+      sub: fmtDay(pk.purchased_at),
       delta: -amount,
     });
   }

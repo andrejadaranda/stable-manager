@@ -34,8 +34,8 @@ export function GenerateBillButton({ clientId }: { clientId: string }) {
       <div>
         <h3 className="font-serif font-semibold text-[16px] text-ink-900">This month&apos;s bill</h3>
         <p className="text-[12.5px] text-ink-500 mt-0.5 leading-relaxed">
-          Everything for this person this month — lessons, boarding, farrier/vet — as a <b>faktūra</b>{" "}
-          (delivered) plus an <b>išankstinė / proforma</b> (upcoming, not yet delivered).
+          Everything for this person this month — lessons, boarding, farrier/vet — as an <b>invoice</b>{" "}
+          (delivered) plus a <b>proforma</b> (upcoming, not yet delivered).
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export function GenerateBillButton({ clientId }: { clientId: string }) {
         <div className="flex flex-col gap-1.5 text-[13px]">
           {state.result.invoiceId && (
             <div className="flex items-center justify-between gap-2 rounded-lg bg-brand-50 px-3 py-2">
-              <span className="text-brand-800 font-medium">Faktūra · €{state.result.invoiceTotal.toFixed(2)}</span>
+              <span className="text-brand-800 font-medium">Invoice · €{state.result.invoiceTotal.toFixed(2)}</span>
               <Link href={`/dashboard/finance/invoices/${state.result.invoiceId}`} className="text-brand-700 font-semibold underline">Open</Link>
             </div>
           )}
