@@ -23,8 +23,10 @@ export async function createHorseAction(
 
   if (!name) return { error: "Name is required.", success: false };
 
-  const daily  = dailyRaw  === "" ? 4  : Number(dailyRaw);
-  const weekly = weeklyRaw === "" ? 20 : Number(weeklyRaw);
+  const daily  = dailyRaw  === "" ? 4 : Number(dailyRaw);
+  // Welfare default: a new horse is capped at 7 lessons per week out of the
+  // box (owners can raise or lower it per horse afterwards).
+  const weekly = weeklyRaw === "" ? 7 : Number(weeklyRaw);
   if (!Number.isFinite(daily)  || daily  < 0) return { error: "Daily limit must be a non-negative number.",  success: false };
   if (!Number.isFinite(weekly) || weekly < 0) return { error: "Weekly limit must be a non-negative number.", success: false };
 

@@ -205,14 +205,14 @@ function CreateHorseDialog({
               </Field>
               <Field
                 label="Max lessons / week"
-                hint="Weekly workload cap. Welfare board flags horses over this. Typical: 15–20. Use 0 = no limit."
+                hint="Weekly workload cap for welfare — a new horse starts at 7/week. The welfare board flags horses over this. Raise or lower it any time. Use 0 = no limit."
               >
                 <Input
                   name="weekly_lesson_limit"
                   type="number"
                   min="0"
                   step="1"
-                  defaultValue="20"
+                  defaultValue="7"
                 />
               </Field>
             </div>

@@ -167,7 +167,7 @@ export async function createHorse(input: {
       breed: input.breed ?? null,
       date_of_birth: input.dateOfBirth ?? null,
       daily_lesson_limit: input.dailyLessonLimit ?? 4,
-      weekly_lesson_limit: input.weeklyLessonLimit ?? 20,
+      weekly_lesson_limit: input.weeklyLessonLimit ?? 7,
       active: input.active ?? true,
       notes: input.notes ?? null,
       owner_client_id: input.ownerClientId ?? null,
