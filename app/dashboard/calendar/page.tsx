@@ -31,10 +31,13 @@ export default async function CalendarPage({
   const ref = searchParams.date ? new Date(searchParams.date) : new Date();
   const refDate = fmtISODate(ref);
 
-  // ── WEEK view is the default landing (Andrėja's choice 2026-06-27 —
-  //    "noriu matyt pirma savaites view"). Month is one tap away via the
-  //    toggle (?view=month). Only show month when explicitly asked. ──
-  const showMonth = searchParams.view === "month";
+  // ── MONTH view is the default landing (Andrėja 2026-09-26 — "month view
+  //    turetu buti default"). Week is one tap away via the toggle (?view=week)
+  //    or by tapping a day in the month grid (which links to ?date=…). So we
+  //    show week only when a specific day/week is requested, or view=week. ──
+  const showMonth =
+    searchParams.view === "month" ||
+    (searchParams.view !== "week" && !searchParams.date);
 
   if (showMonth) {
     const monthFirst = new Date(ref.getFullYear(), ref.getMonth(), 1);
