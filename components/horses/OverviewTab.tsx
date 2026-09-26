@@ -10,6 +10,7 @@
 
 import Link from "next/link";
 import type { HorseProfileSummary } from "@/services/horseProfile";
+import type { HorseCareVisit } from "@/services/farrierVisits.pure";
 
 const SEX_LABEL: Record<string, string> = {
   mare: "Mare", gelding: "Gelding", stallion: "Stallion", colt: "Colt", filly: "Filly",
@@ -42,10 +43,11 @@ function nextLabel(iso: string | null | undefined): string | null {
   });
 }
 
-export function OverviewTab({ horse }: { horse: HorseProfileSummary }) {
+export function OverviewTab({ horse, careVisits = [] }: { horse: HorseProfileSummary; careVisits?: HorseCareVisit[] }) {
   return (
     <div className="flex flex-col gap-4">
       <IdentityCard horse={horse} />
+      <CareGlance careVisits={careVisits} horseId={horse.id} />
       <ActivityGlance horse={horse} />
       {horse.notes && horse.notes.trim() !== "" && (
         <section className="bg-white rounded-2xl border border-ink-100 shadow-soft p-5">
@@ -56,6 +58,71 @@ export function OverviewTab({ horse }: { horse: HorseProfileSummary }) {
         </section>
       )}
     </div>
+  );
+}
+
+/** At-a-glance "when was the farrier / vet last here" so the owner never has
+ *  to scroll the calendar to find it. Farrier cycle heuristic: gently flag
+ *  "due soon" past 6 weeks and "overdue" past 8 weeks since the last shoeing. */
+function daysSince(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 3600 * 1000));
+}
+function CareGlance({ careVisits, horseId }: { careVisits: HorseCareVisit[]; horseId: string }) {
+  const lastFarrier = careVisits.find((v) => v.kind === "farrier") ?? null;
+  const lastVet     = careVisits.find((v) => v.kind === "vet") ?? null;
+  if (!lastFarrier && !lastVet) return null;
+
+  const fd = lastFarrier ? daysSince(lastFarrier.starts_at) : null;
+  const farrierFlag =
+    fd == null ? null : fd >= 56 ? { label: "Overdue", cls: "text-alert-700 bg-alert-100" }
+    : fd >= 42 ? { label: "Due soon", cls: "text-saddle-700 bg-saddle-100" }
+    : null;
+
+  const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Vilnius" });
+
+  return (
+    <Link
+      href={`/dashboard/horses/${horseId}?tab=health`}
+      className="block bg-white rounded-2xl border border-ink-100 shadow-soft p-5 hover:border-brand-200 transition-colors"
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-neutral-500">Care</h3>
+        <span className="text-[11px] text-brand-700 font-medium">Open health ↗</span>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-surface-muted/60 p-3.5">
+          <p className="text-[11px] uppercase tracking-wide text-ink-400 font-semibold mb-1">Last farrier</p>
+          {lastFarrier ? (
+            <>
+              <p className="text-[15px] font-semibold text-ink-900">{fmt(lastFarrier.starts_at)}</p>
+              <p className="text-[12px] text-ink-500 mt-0.5">
+                {fd} day{fd === 1 ? "" : "s"} ago{lastFarrier.farrier_name ? ` · ${lastFarrier.farrier_name}` : ""}
+              </p>
+              {farrierFlag && (
+                <span className={`inline-block mt-2 text-[10px] font-bold uppercase tracking-[0.06em] px-2 py-1 rounded-full ${farrierFlag.cls}`}>
+                  {farrierFlag.label}
+                </span>
+              )}
+            </>
+          ) : (
+            <p className="text-[13px] text-ink-400 italic">No farrier visit yet</p>
+          )}
+        </div>
+        <div className="rounded-xl bg-surface-muted/60 p-3.5">
+          <p className="text-[11px] uppercase tracking-wide text-ink-400 font-semibold mb-1">Last vet</p>
+          {lastVet ? (
+            <>
+              <p className="text-[15px] font-semibold text-ink-900">{fmt(lastVet.starts_at)}</p>
+              <p className="text-[12px] text-ink-500 mt-0.5">
+                {daysSince(lastVet.starts_at)} days ago{lastVet.farrier_name ? ` · ${lastVet.farrier_name}` : ""}
+              </p>
+            </>
+          ) : (
+            <p className="text-[13px] text-ink-400 italic">No vet visit yet</p>
+          )}
+        </div>
+      </div>
+    </Link>
   );
 }
 

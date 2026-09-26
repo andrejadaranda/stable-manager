@@ -147,7 +147,7 @@ export function Sidebar({
       <aside
         className={`
           fixed md:sticky md:top-0 inset-y-0 left-0 z-40
-          w-72 md:w-64 h-screen
+          w-72 md:w-64 h-screen h-[100dvh]
           bg-surface/90 backdrop-blur-md md:bg-transparent
           border-r border-navy-100/40
           flex flex-col

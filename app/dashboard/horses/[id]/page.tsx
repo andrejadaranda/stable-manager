@@ -86,7 +86,7 @@ export default async function HorseDetailPage({
   if (tab === "overview") {
     // Identity-first: the heavy activity charts live on the Sessions tab
     // ("Training load"), so Overview needs no extra queries here.
-    tabContent = <OverviewTab horse={horse} />;
+    tabContent = <OverviewTab horse={horse} careVisits={careVisits} />;
   } else if (tab === "sessions") {
     const [sessions, clients] = await Promise.all([
       listSessions({ horseId: params.id, limit: 100 }),
