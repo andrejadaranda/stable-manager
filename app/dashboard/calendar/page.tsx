@@ -12,6 +12,7 @@ import { startOfWeek, addDays, fmtISODate } from "@/lib/utils/dates";
 import { CalendarShell } from "@/components/calendar/calendar-shell";
 import { MonthView } from "@/components/calendar/month-view";
 import { CalendarViewToggle } from "@/components/calendar/view-toggle";
+import { CalendarSearchButton } from "@/components/calendar/calendar-search-button";
 import { TimeOffPanel } from "@/components/calendar/time-off-panel";
 import { FarrierPanel } from "@/components/calendar/farrier-panel";
 import { EmptyState } from "@/components/ui";
@@ -55,7 +56,10 @@ export default async function CalendarPage({
     const next = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
     return (
       <div className="flex flex-col gap-5">
-        <CalendarViewToggle view="month" weekDate={refDate} monthDate={refDate} basePath="/dashboard/calendar" />
+        <div className="flex items-center justify-between gap-3">
+          <CalendarViewToggle view="month" weekDate={refDate} monthDate={refDate} basePath="/dashboard/calendar" />
+          <CalendarSearchButton />
+        </div>
         <MonthView
           lessons={mLessons}
           farrierVisits={mFarrier ?? []}
@@ -129,7 +133,10 @@ export default async function CalendarPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <CalendarViewToggle view="week" weekDate={refDate} monthDate={refDate} basePath="/dashboard/calendar" />
+      <div className="flex items-center justify-between gap-3">
+        <CalendarViewToggle view="week" weekDate={refDate} monthDate={refDate} basePath="/dashboard/calendar" />
+        <CalendarSearchButton />
+      </div>
       <CalendarShell
         lessons={lessons}
         weekStart={start}
