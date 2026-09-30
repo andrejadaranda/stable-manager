@@ -23,6 +23,7 @@ import {
   markParticipantPaidAction,
   markParticipantUnpaidAction,
 } from "@/app/dashboard/calendar/participants-actions";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 type PayMethod = "cash" | "card" | "transfer";
 
@@ -455,19 +456,16 @@ export function LessonParticipantsPanel({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {addMode === "existing" ? (
-              <label className="flex flex-col gap-1 text-[11px] text-ink-600">
+              <div className="flex flex-col gap-1 text-[11px] text-ink-600">
                 Rider
-                <select
+                <SearchableSelect
                   value={addClientId}
-                  onChange={(e) => setAddClientId(e.target.value)}
-                  className="h-8 rounded-md border border-ink-200 bg-white text-[12px] px-1.5"
-                >
-                  <option value="">Pick a rider…</option>
-                  {availableClients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.full_name}</option>
-                  ))}
-                </select>
-              </label>
+                  onChange={setAddClientId}
+                  options={availableClients.map((c) => ({ id: c.id, label: c.full_name }))}
+                  placeholder="Pick a rider…"
+                  searchPlaceholder="Search riders…"
+                />
+              </div>
             ) : (
               <label className="flex flex-col gap-1 text-[11px] text-ink-600">
                 Child name

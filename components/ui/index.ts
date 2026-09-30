@@ -8,6 +8,7 @@ export {
   type LessonStatus,
 } from "./Badge";
 export { Field, Input, Select, Textarea } from "./Field";
+export { SearchableSelect, type SearchOption } from "./SearchableSelect";
 export { PageHeader } from "./PageHeader";
 export { StatCard } from "./StatCard";
 export { EmptyState } from "./EmptyState";

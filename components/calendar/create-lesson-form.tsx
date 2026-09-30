@@ -20,6 +20,7 @@ import {
   type CreateLessonState,
 } from "@/app/dashboard/calendar/actions";
 import { useFocusTrap } from "@/lib/utils/useFocusTrap";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import type { PackageSummaryRow } from "@/services/packages";
 import type { ServiceRow } from "@/services/services";
 import { parseIntake } from "@/lib/intake/parse";
@@ -458,17 +459,14 @@ export function CreateLessonForm({
                   </button>
                 </div>
                 {payerMode === "existing" ? (
-                  <>
-                    <select
-                      value={payerClientId}
-                      onChange={(e) => setPayerClientId(e.target.value)}
-                      className="rounded-lg border border-ink-200 bg-white text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-                    >
-                      <option value="" disabled>Select parent…</option>
-                      {clients.map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-                    </select>
-                    <input type="hidden" name="payer_client_id" value={payerClientId} />
-                  </>
+                  <SearchableSelect
+                    name="payer_client_id"
+                    value={payerClientId}
+                    onChange={setPayerClientId}
+                    options={clients.map((c) => ({ id: c.id, label: c.full_name }))}
+                    placeholder="Select parent…"
+                    searchPlaceholder="Search clients…"
+                  />
                 ) : (
                   <>
                     <input
@@ -499,14 +497,15 @@ export function CreateLessonForm({
                   <div key={c.key} className="rounded-xl border border-ink-200 bg-white px-3 py-2.5 flex flex-col gap-2">
                     <div className="flex items-center gap-2">
                       {c.mode === "existing" ? (
-                        <select
-                          value={c.existingClientId}
-                          onChange={(e) => updateChild(c.key, { existingClientId: e.target.value })}
-                          className="flex-1 min-w-0 rounded-lg border border-ink-200 bg-white text-sm px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-                        >
-                          <option value="" disabled>Select child…</option>
-                          {clients.map((x) => <option key={x.id} value={x.id}>{x.full_name}</option>)}
-                        </select>
+                        <div className="flex-1 min-w-0">
+                          <SearchableSelect
+                            value={c.existingClientId}
+                            onChange={(v) => updateChild(c.key, { existingClientId: v })}
+                            options={clients.map((x) => ({ id: x.id, label: x.full_name }))}
+                            placeholder="Select child…"
+                            searchPlaceholder="Search clients…"
+                          />
+                        </div>
                       ) : (
                         <input
                           value={c.name}
@@ -554,7 +553,7 @@ export function CreateLessonForm({
           {/* Existing-client picker. Required UNLESS the quick-add form
               below is open — server handles either path. */}
           {lessonType === "private" && !addingClient && (
-            <Select
+            <SearchableSelect
               label="Client"
               name="client_id"
               required
@@ -562,6 +561,7 @@ export function CreateLessonForm({
               onChange={setClientId}
               options={clients.map((c) => ({ id: c.id, label: c.full_name }))}
               placeholder="Select…"
+              searchPlaceholder="Search clients…"
             />
           )}
 
