@@ -207,8 +207,17 @@ export async function getSmartSuggestions(): Promise<Suggestion[]> {
       if (les && les.status !== "cancelled") note(p.client_id, les.starts_at);
     }
 
+    // Clients the owner has explicitly dismissed from the lapsed list (one-off
+    // tourists, trials) must not nudge on the dashboard either — same source
+    // of truth as the Clients → Lapsed filter.
+    const { data: dismissedRows } = await supabase
+      .from("clients")
+      .select("id")
+      .not("reactivation_dismissed_at", "is", null);
+    const dismissed = new Set((dismissedRows ?? []).map((r) => (r as { id: string }).id));
+
     const lapsedIds = [...seen.entries()]
-      .filter(([, v]) => !v.hasFuture && v.latest < cutoff)
+      .filter(([id, v]) => !v.hasFuture && v.latest < cutoff && !dismissed.has(id))
       .sort((a, b) => a[1].latest - b[1].latest) // longest-lapsed first
       .map(([id]) => id);
 
@@ -231,7 +240,7 @@ export async function getSmartSuggestions(): Promise<Suggestion[]> {
           body:  ordered.length === 1
             ? "No lesson booked since. A quick message often brings them back."
             : ordered.slice(0, 4).join(", ") + (ordered.length > 4 ? "…" : ""),
-          href:  "/dashboard/clients",
+          href:  "/dashboard/clients?filter=lapsed",
           tone:  "info",
         });
       }

@@ -482,3 +482,108 @@ export async function getOwnClient() {
   if (error) throw error;
   return data;
 }
+
+// ── Lapsed clients ("haven't been in for 2+ weeks") ─────────────────────
+// A client whose most recent lesson was 14–60 days ago with nothing booked
+// since, and who hasn't been dismissed from the reactivation list. Attendance
+// counts both booking clients (lessons.client_id) and group participants
+// (a child who actually rode). Owner-only. Powers the Clients "Lapsed" filter
+// and the Overview nudge.
+export type LapsedClient = {
+  id: string;
+  full_name: string;
+  lastLessonAt: string;   // ISO
+  daysSince: number;
+};
+
+export async function listLapsedClients(): Promise<LapsedClient[]> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+
+  const now = Date.now();
+  const cutoff = now - 14 * 86_400_000;      // seen more recently than this = active
+  const windowStart = now - 60 * 86_400_000; // older than this = churned, not "lapsing"
+  const nowIso = new Date(now).toISOString();
+  const windowIso = new Date(windowStart).toISOString();
+
+  const [lessRes, partRes] = await Promise.all([
+    supabase.from("lessons").select("client_id, starts_at")
+      .neq("status", "cancelled").gte("starts_at", windowIso).not("client_id", "is", null),
+    supabase.from("lesson_participants")
+      .select("client_id, lesson:lessons!lesson_participants_lesson_id_fkey(starts_at, status)")
+      .eq("status", "confirmed"),
+  ]);
+
+  const seen = new Map<string, { latest: number; hasFuture: boolean }>();
+  const note = (cid: string | null, startsAt: string | null) => {
+    if (!cid || !startsAt) return;
+    const t = new Date(startsAt).getTime();
+    if (Number.isNaN(t) || t < windowStart) return;
+    const cur = seen.get(cid) ?? { latest: 0, hasFuture: false };
+    cur.latest = Math.max(cur.latest, t);
+    if (t > now) cur.hasFuture = true;
+    seen.set(cid, cur);
+  };
+  for (const l of (lessRes.data ?? []) as Array<{ client_id: string | null; starts_at: string | null }>) note(l.client_id, l.starts_at);
+  for (const p of (partRes.data ?? []) as Array<{ client_id: string | null; lesson: { starts_at: string; status: string } | { starts_at: string; status: string }[] | null }>) {
+    const les = Array.isArray(p.lesson) ? p.lesson[0] : p.lesson;
+    if (les && les.status !== "cancelled") note(p.client_id, les.starts_at);
+  }
+  void nowIso;
+
+  const lapsedIds = [...seen.entries()]
+    .filter(([, v]) => !v.hasFuture && v.latest < cutoff)
+    .sort((a, b) => a[1].latest - b[1].latest)
+    .map(([id]) => id);
+  if (lapsedIds.length === 0) return [];
+
+  // Names, and honour the "don't show" dismissal.
+  const { data: rows } = await supabase
+    .from("clients")
+    .select("id, full_name, reactivation_dismissed_at")
+    .in("id", lapsedIds);
+  const nameById = new Map<string, string>();
+  const dismissed = new Set<string>();
+  for (const r of (rows ?? []) as Array<{ id: string; full_name: string; reactivation_dismissed_at: string | null }>) {
+    nameById.set(r.id, r.full_name);
+    if (r.reactivation_dismissed_at) dismissed.add(r.id);
+  }
+
+  return lapsedIds
+    .filter((id) => nameById.has(id) && !dismissed.has(id))
+    .map((id) => {
+      const latest = seen.get(id)!.latest;
+      return {
+        id,
+        full_name: nameById.get(id)!,
+        lastLessonAt: new Date(latest).toISOString(),
+        daysSince: Math.floor((now - latest) / 86_400_000),
+      };
+    });
+}
+
+/** IDs of clients dismissed from the reactivation list — so the Overview nudge
+ *  can exclude them too. Owner-only. */
+export async function getReactivationDismissedIds(): Promise<Set<string>> {
+  const session = await getSession();
+  requireRole(session, "owner", "employee");
+  const supabase = createSupabaseServerClient();
+  const { data } = await supabase
+    .from("clients")
+    .select("id")
+    .not("reactivation_dismissed_at", "is", null);
+  return new Set(((data ?? []) as Array<{ id: string }>).map((r) => r.id));
+}
+
+/** Toggle a client's "don't show in the lapsed list" flag. Owner-only. */
+export async function setClientReactivationDismissed(clientId: string, dismissed: boolean): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({ reactivation_dismissed_at: dismissed ? new Date().toISOString() : null })
+    .eq("id", clientId);
+  if (error) throw error;
+}

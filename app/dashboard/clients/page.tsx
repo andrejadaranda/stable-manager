@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { requireBusinessAccount } from "@/lib/auth/redirects";
-import { listClientsWithUpcomingCount } from "@/services/clients";
+import { listClientsWithUpcomingCount, listLapsedClients } from "@/services/clients";
 import { ClientListWithSearch } from "@/components/clients/client-list-search";
+import { LapsedClientsList } from "@/components/clients/lapsed-clients-list";
 import { CreateClientPanel } from "@/components/clients/create-client-form";
 import { PageHeader } from "@/components/ui";
 
-type Filter = "all" | "riders" | "owners";
+type Filter = "all" | "riders" | "owners" | "lapsed";
 
 type Sort = "name" | "recent" | "owes";
 
@@ -19,9 +20,15 @@ export default async function ClientsPage({
 
   const all = await listClientsWithUpcomingCount();
 
+  // Lapsed list is owner-only (it's a reactivation/relationship tool, and
+  // employees never see the "haven't been in" roster). Loaded once for both
+  // the chip count and the list itself; best-effort so it never breaks the page.
+  const lapsed = isOwner ? await listLapsedClients().catch(() => []) : [];
+
   const filter: Filter =
     searchParams.filter === "riders" ? "riders" :
     searchParams.filter === "owners" ? "owners" :
+    searchParams.filter === "lapsed" && isOwner ? "lapsed" :
     "all";
 
   // "owes" sort is owner-only — employees never see balances.
@@ -72,31 +79,41 @@ export default async function ClientsPage({
         actions={<CreateClientPanel />}
       />
 
-      {/* Filter chips — riders vs horse-owners split */}
+      {/* Filter chips — riders vs horse-owners split, plus the lapsed
+          ("haven't been in 2+ weeks") reactivation view for owners. */}
       <div className="flex items-center gap-2 flex-wrap">
         <FilterChip href={qs({ filter: "all" })}    label="All"          count={counts.all}    active={filter === "all"} />
         <FilterChip href={qs({ filter: "riders" })} label="Riders"       count={counts.riders} active={filter === "riders"} />
         <FilterChip href={qs({ filter: "owners" })} label="Horse owners" count={counts.owners} active={filter === "owners"} />
+        {isOwner && (
+          <FilterChip href={qs({ filter: "lapsed" })} label="Lapsed" count={lapsed.length} active={filter === "lapsed"} />
+        )}
       </div>
 
-      {/* Sort row — "Owes" floats clients who owe the most to the top,
-          owner-only since it exposes balances. */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] uppercase tracking-[0.12em] text-ink-400 mr-1 font-bold">Sort</span>
-        <div className="inline-flex bg-surface-sunken rounded-full p-[3px]">
-          <SortChip href={qs({ sort: "name" })}   label="Name"   active={sort === "name"} />
-          <SortChip href={qs({ sort: "recent" })} label="Recent" active={sort === "recent"} />
-          {isOwner && (
-            <SortChip href={qs({ sort: "owes" })} label="Owes" active={sort === "owes"} />
-          )}
-        </div>
-      </div>
+      {filter === "lapsed" ? (
+        <LapsedClientsList clients={lapsed} />
+      ) : (
+        <>
+          {/* Sort row — "Owes" floats clients who owe the most to the top,
+              owner-only since it exposes balances. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] uppercase tracking-[0.12em] text-ink-400 mr-1 font-bold">Sort</span>
+            <div className="inline-flex bg-surface-sunken rounded-full p-[3px]">
+              <SortChip href={qs({ sort: "name" })}   label="Name"   active={sort === "name"} />
+              <SortChip href={qs({ sort: "recent" })} label="Recent" active={sort === "recent"} />
+              {isOwner && (
+                <SortChip href={qs({ sort: "owes" })} label="Owes" active={sort === "owes"} />
+              )}
+            </div>
+          </div>
 
-      <ClientListWithSearch
-        clients={sorted}
-        showInviteButton={isOwner}
-        showBalance={isOwner}
-      />
+          <ClientListWithSearch
+            clients={sorted}
+            showInviteButton={isOwner}
+            showBalance={isOwner}
+          />
+        </>
+      )}
     </div>
   );
 }
