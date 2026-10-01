@@ -296,3 +296,126 @@ export async function deletePushedPersonalEvent(userId: string, googleCalendarId
     /* best-effort */
   }
 }
+
+// ---------- Longrein lessons -> Google ----------
+
+type LessonRow = {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  lesson_type: string | null;
+  max_participants: number | null;
+  client_name: string | null;
+  horse_name: string | null;
+  service_name: string | null;
+};
+
+function lessonTitle(l: LessonRow): string {
+  const isGroup = l.lesson_type === "group" || (l.max_participants ?? 1) > 1;
+  if (isGroup) return l.service_name ? `Training · ${l.service_name}` : "Group training";
+  const who = l.client_name ?? l.horse_name ?? "Training";
+  return `🐴 ${who}`;
+}
+
+/**
+ * Push the stable's lessons/trainings to the connected owner's Google
+ * write-target calendar. Respects the push_lessons toggle. Creates, updates,
+ * and (on cancel) deletes the Google mirror, mapping ids in
+ * calendar_event_mappings so re-import never duplicates and edits propagate.
+ * Window: 7 days back to 120 days ahead — enough for the live schedule without
+ * flooding Google with historical lessons.
+ */
+export async function pushLessonsForUser(userId: string): Promise<number> {
+  const admin = createSupabaseAdminClient();
+  const conn = await getConnectionAdmin(userId);
+  if (!conn || conn.status !== "connected" || !conn.write_calendar_id) return 0;
+
+  // Honor the master + per-type push toggles.
+  const { data: toggles } = await admin
+    .from("google_calendar_connections")
+    .select("sync_enabled, push_lessons")
+    .eq("id", conn.id)
+    .maybeSingle();
+  const t = toggles as { sync_enabled: boolean; push_lessons: boolean } | null;
+  if (t && (t.sync_enabled === false || t.push_lessons === false)) return 0;
+
+  const from = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const to = new Date(Date.now() + 120 * 86_400_000).toISOString();
+
+  const { data: lessons } = await admin
+    .from("lessons")
+    .select("id, starts_at, ends_at, status, lesson_type, max_participants, client:clients(full_name), horse:horses(name), service:services(name)")
+    .eq("stable_id", conn.stable_id)
+    .gte("starts_at", from)
+    .lt("starts_at", to);
+
+  const rows: LessonRow[] = ((lessons ?? []) as Array<Record<string, unknown>>).map((l) => {
+    const pick = (v: unknown): string | null => {
+      const o = Array.isArray(v) ? v[0] : v;
+      return (o as { full_name?: string; name?: string } | null)?.full_name ?? (o as { name?: string } | null)?.name ?? null;
+    };
+    return {
+      id: l.id as string,
+      starts_at: l.starts_at as string,
+      ends_at: l.ends_at as string,
+      status: l.status as string,
+      lesson_type: (l.lesson_type as string) ?? null,
+      max_participants: (l.max_participants as number) ?? null,
+      client_name: pick(l.client),
+      horse_name: pick(l.horse),
+      service_name: pick(l.service),
+    };
+  });
+  if (rows.length === 0) return 0;
+
+  // Existing mappings for these lessons.
+  const ids = rows.map((r) => r.id);
+  const { data: maps } = await admin
+    .from("calendar_event_mappings")
+    .select("longrein_event_id, google_calendar_id, google_event_id")
+    .eq("user_id", userId)
+    .eq("longrein_kind", "lesson")
+    .in("longrein_event_id", ids);
+  const mapById = new Map(((maps ?? []) as Array<{ longrein_event_id: string; google_calendar_id: string; google_event_id: string }>).map((m) => [m.longrein_event_id, m]));
+
+  let token: string;
+  try {
+    token = await getValidAccessToken(conn);
+  } catch {
+    return 0;
+  }
+
+  let n = 0;
+  for (const l of rows) {
+    const existing = mapById.get(l.id);
+    try {
+      if (l.status === "cancelled") {
+        // Remove the Google mirror if we had one.
+        if (existing) {
+          await deleteEvent(token, existing.google_calendar_id, existing.google_event_id).catch(() => {});
+          await admin.from("calendar_event_mappings").delete().eq("user_id", userId).eq("longrein_kind", "lesson").eq("longrein_event_id", l.id);
+        }
+        continue;
+      }
+      const write = toGoogleWrite(
+        { title: lessonTitle(l), notes: null, location: null, starts_at: l.starts_at, ends_at: l.ends_at, all_day: false, recurrence: null },
+        l.id,
+        "lesson",
+      );
+      if (existing) {
+        await patchEvent(token, existing.google_calendar_id, existing.google_event_id, write);
+      } else {
+        const created = await insertEvent(token, conn.write_calendar_id, write);
+        await admin.from("calendar_event_mappings").upsert(
+          { user_id: userId, stable_id: conn.stable_id, provider: "google", longrein_kind: "lesson", longrein_event_id: l.id, google_calendar_id: conn.write_calendar_id, google_event_id: created.id, google_updated_at: created.updated ?? null, last_synced_at: new Date().toISOString() },
+          { onConflict: "user_id,longrein_kind,longrein_event_id,provider" },
+        );
+        n += 1;
+      }
+    } catch {
+      /* skip this lesson; next reconcile retries */
+    }
+  }
+  return n;
+}

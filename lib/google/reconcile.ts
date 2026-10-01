@@ -7,7 +7,7 @@
 // All best-effort and per-user isolated so one bad account can't stall others.
 
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
-import { importAllForUser, pushPersonalEvent } from "@/lib/google/sync";
+import { importAllForUser, pushPersonalEvent, pushLessonsForUser } from "@/lib/google/sync";
 import { ensureWatchChannels } from "@/lib/google/channels";
 
 export type GoogleReconcileResult = { users: number; imported: number; pushed: number; errors: number };
@@ -42,6 +42,8 @@ export async function runGoogleReconcile(): Promise<GoogleReconcileResult> {
           await pushPersonalEvent(c.user_id, p.id).catch(() => {});
           tally.pushed += 1;
         }
+        // Push lessons/trainings to the owner's Google write-target calendar.
+        tally.pushed += await pushLessonsForUser(c.user_id).catch(() => 0);
       }
     } catch {
       tally.errors += 1;
@@ -50,8 +52,11 @@ export async function runGoogleReconcile(): Promise<GoogleReconcileResult> {
   return tally;
 }
 
-/** Manual "Sync now" for a single user (triggered from Settings). */
+/** Manual "Sync now" for a single user (triggered from Settings). Imports
+ *  Google events and pushes Longrein lessons out to Google immediately. */
 export async function syncNowForUser(userId: string): Promise<number> {
   await ensureWatchChannels(userId).catch(() => {});
-  return importAllForUser(userId);
+  const imported = await importAllForUser(userId);
+  await pushLessonsForUser(userId).catch(() => 0);
+  return imported;
 }
