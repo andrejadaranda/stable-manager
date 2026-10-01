@@ -141,6 +141,24 @@ export async function updatePersonalEvent(id: string, input: Partial<PersonalEve
   if (error) throw error;
 }
 
+/** Google linkage for a personal event — used by actions to propagate a
+ *  delete to Google before removing the local row. */
+export async function getPersonalEventSyncRef(id: string): Promise<{
+  source: "longrein" | "google";
+  sync_to_google: boolean;
+  google_calendar_id: string | null;
+  google_event_id: string | null;
+} | null> {
+  await getSession();
+  const supabase = createSupabaseServerClient();
+  const { data } = await supabase
+    .from("calendar_personal_events")
+    .select("source, sync_to_google, google_calendar_id, google_event_id")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as { source: "longrein" | "google"; sync_to_google: boolean; google_calendar_id: string | null; google_event_id: string | null }) ?? null;
+}
+
 export async function deletePersonalEvent(id: string): Promise<void> {
   await getSession();
   const supabase = createSupabaseServerClient();

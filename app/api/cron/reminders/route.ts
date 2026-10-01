@@ -32,6 +32,7 @@ import { sendOwnerWeeklyNudgeEmail } from "@/lib/email/owner-weekly-nudge";
 import { sendSMS, toE164Lithuania } from "@/lib/sms/send";
 import { sendPushToUser, pushConfigured, type PushPayload } from "@/lib/push/send";
 import { syncAllExternalCalendars } from "@/services/external-calendar";
+import { runGoogleReconcile } from "@/lib/google/reconcile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -268,6 +269,17 @@ export async function GET(req: Request) {
     externalCalResults = { error: err?.message ?? "external calendar sync failed" };
   }
 
+  // ---- Google Calendar two-way reconcile ----------------------------
+  // Renews watch channels nearing expiry, runs an incremental import of each
+  // connected user's read calendars (also the fallback for dropped push
+  // notifications), and retries pending Longrein->Google pushes. Best-effort.
+  let googleResults: Awaited<ReturnType<typeof runGoogleReconcile>> | { error: string };
+  try {
+    googleResults = await runGoogleReconcile();
+  } catch (err: any) {
+    googleResults = { error: err?.message ?? "google reconcile failed" };
+  }
+
   return NextResponse.json({
     ok: true,
     ...results,
@@ -279,6 +291,7 @@ export async function GET(req: Request) {
     morningDigest: morningDigestResults,
     autoComplete: autoCompleteResults,
     externalCal: externalCalResults,
+    google: googleResults,
     window: { from: winFrom.toISOString(), to: winTo.toISOString() },
   });
 }

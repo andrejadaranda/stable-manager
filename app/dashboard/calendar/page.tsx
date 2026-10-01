@@ -9,6 +9,7 @@ import { listArenas } from "@/services/arenas";
 import { getFarrierVisitsForCalendar } from "@/services/farrierVisits";
 import { listAvailabilityBlocks } from "@/services/availability";
 import { listPersonalEventsForCalendar } from "@/services/personalEvents";
+import { isGoogleConnected } from "@/services/googleCalendar";
 import { startOfWeek, addDays, fmtISODate } from "@/lib/utils/dates";
 import { CalendarShell } from "@/components/calendar/calendar-shell";
 import { MonthView } from "@/components/calendar/month-view";
@@ -57,6 +58,7 @@ export default async function CalendarPage({
       listArenas({ activeOnly: true }).catch(() => []),
       listActivePackagesForStable().catch(() => ({})),
     ]);
+    const mGoogleConnected = await isGoogleConnected().catch(() => false);
     const prev = new Date(ref.getFullYear(), ref.getMonth() - 1, 1);
     const next = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
     return (
@@ -70,6 +72,7 @@ export default async function CalendarPage({
           farrierVisits={mFarrier ?? []}
           blocks={mBlocks ?? []}
           personalEvents={mEvents ?? []}
+          googleConnected={mGoogleConnected}
           gridStart={gridStart}
           monthIndex={ref.getMonth()}
           monthLabel={monthFirst.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
@@ -95,7 +98,7 @@ export default async function CalendarPage({
   // Horse list is filtered to lesson-eligible: stable-owned or
   // client-owned-and-opted-in. Boarding-only horses are hidden so the
   // calendar dropdown stays clean.
-  const [lessons, clients, horses, trainers, activePackages, services, arenas, farrierVisits, personalEvents, allHorses] = await Promise.all([
+  const [lessons, clients, horses, trainers, activePackages, services, arenas, farrierVisits, personalEvents, googleConnected, allHorses] = await Promise.all([
     getCalendar(start.toISOString(), end.toISOString()),
     listClients({ activeOnly: true }),
     listHorses({ activeOnly: true, lessonsOnly: true }),
@@ -105,6 +108,7 @@ export default async function CalendarPage({
     listArenas({ activeOnly: true }).catch(() => []),
     getFarrierVisitsForCalendar(start.toISOString(), end.toISOString()).catch(() => []),
     listPersonalEventsForCalendar(start.toISOString(), end.toISOString()).catch(() => []),
+    isGoogleConnected().catch(() => false),
     // Horses currently at the stable (incl. inactive/retired private boarders
     // — any present horse can need a farrier/vet) but NOT ones that have
     // already departed. A departed horse stays on its past visits; it just
@@ -157,6 +161,7 @@ export default async function CalendarPage({
         farrierVisits={farrierVisits ?? []}
         blocks={blocks ?? []}
         personalEvents={personalEvents ?? []}
+        googleConnected={googleConnected ?? false}
         editable
       />
 

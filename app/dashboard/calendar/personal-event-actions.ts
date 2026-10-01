@@ -11,9 +11,23 @@ import {
   createPersonalEvent,
   updatePersonalEvent,
   deletePersonalEvent,
+  getPersonalEventSyncRef,
   type PersonalEventType,
 } from "@/services/personalEvents";
+import { getSession } from "@/lib/auth/session";
+import { pushPersonalEvent, deletePushedPersonalEvent } from "@/lib/google/sync";
 import { toFriendlyError } from "@/lib/errors/friendly";
+
+// Fire a best-effort Google push without blocking the user on Google latency
+// failures — the row is already saved; push errors just set sync_status.
+async function tryPush(eventId: string) {
+  try {
+    const s = await getSession();
+    await pushPersonalEvent(s.userId, eventId);
+  } catch {
+    /* best-effort — reconciliation cron will retry */
+  }
+}
 
 export type PersonalEventResult = { ok: boolean; error: string | null };
 
@@ -81,8 +95,9 @@ export async function createPersonalEventAction(fd: FormData): Promise<PersonalE
   const title = String(fd.get("title") ?? "").trim();
   if (!title) return { ok: false, error: "Add a title." };
   try {
+    const syncToGoogle = String(fd.get("sync_to_google") ?? "") === "true";
     const { starts_at, ends_at, all_day } = readTimes(fd);
-    await createPersonalEvent({
+    const { id } = await createPersonalEvent({
       title,
       event_type: readType(fd),
       starts_at,
@@ -91,8 +106,9 @@ export async function createPersonalEventAction(fd: FormData): Promise<PersonalE
       notes: String(fd.get("notes") ?? "") || null,
       location: String(fd.get("location") ?? "") || null,
       recurrence: readRecurrence(fd),
-      sync_to_google: String(fd.get("sync_to_google") ?? "") === "true",
+      sync_to_google: syncToGoogle,
     });
+    if (syncToGoogle) await tryPush(id);
     revalidateAll();
     return { ok: true, error: null };
   } catch (err) {
@@ -106,6 +122,7 @@ export async function updatePersonalEventAction(fd: FormData): Promise<PersonalE
   const title = String(fd.get("title") ?? "").trim();
   if (!title) return { ok: false, error: "Add a title." };
   try {
+    const syncToGoogle = String(fd.get("sync_to_google") ?? "") === "true";
     const { starts_at, ends_at, all_day } = readTimes(fd);
     await updatePersonalEvent(id, {
       title,
@@ -116,8 +133,9 @@ export async function updatePersonalEventAction(fd: FormData): Promise<PersonalE
       notes: String(fd.get("notes") ?? "") || null,
       location: String(fd.get("location") ?? "") || null,
       recurrence: readRecurrence(fd),
-      sync_to_google: String(fd.get("sync_to_google") ?? "") === "true",
+      sync_to_google: syncToGoogle,
     });
+    if (syncToGoogle) await tryPush(id);
     revalidateAll();
     return { ok: true, error: null };
   } catch (err) {
@@ -129,6 +147,14 @@ export async function deletePersonalEventAction(fd: FormData): Promise<PersonalE
   const id = String(fd.get("id") ?? "");
   if (!id) return { ok: false, error: "Missing event." };
   try {
+    // If this event is mirrored to Google, remove the Google copy first.
+    const ref = await getPersonalEventSyncRef(id).catch(() => null);
+    if (ref && ref.source === "longrein" && ref.google_calendar_id && ref.google_event_id) {
+      try {
+        const s = await getSession();
+        await deletePushedPersonalEvent(s.userId, ref.google_calendar_id, ref.google_event_id);
+      } catch { /* best-effort */ }
+    }
     await deletePersonalEvent(id);
     revalidateAll();
     return { ok: true, error: null };
