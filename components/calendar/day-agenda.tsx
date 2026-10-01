@@ -21,6 +21,8 @@ import type { CalendarLesson } from "@/services/lessons";
 import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
 import { VISIT_KIND_COLOR, VISIT_KIND_LABEL } from "@/services/farrierVisits.pure";
 import type { AvailabilityBlock } from "@/services/availability.pure";
+import type { CalendarPersonalEvent } from "@/services/calendarEvents.pure";
+import { eventHex, isOvernight } from "@/services/calendarEvents.pure";
 import { fmtTime } from "@/lib/utils/dates";
 import { STATUS_LABEL, STATUS_STYLE, HOUR_START, HOUR_END, lessonTitle } from "./grid-utils";
 import { PaymentDot, VISIT_CHIP_STYLE } from "./week-grid";
@@ -105,7 +107,9 @@ export function DayAgenda({
   lessons,
   farrierVisits = [],
   blocks = [],
+  events = [],
   onLessonClick,
+  onEventClick,
   onCreate,
   onSlotCreate,
   editable,
@@ -120,7 +124,10 @@ export function DayAgenda({
   farrierVisits?: CalendarFarrierVisit[];
   /** Block-out (time off) red cards for the selected day. Optional. */
   blocks?: AvailabilityBlock[];
+  /** Personal + Google events touching the selected day. Optional. */
+  events?: CalendarPersonalEvent[];
   onLessonClick: (l: CalendarLesson) => void;
+  onEventClick?: (ev: CalendarPersonalEvent) => void;
   onCreate: () => void;
   /** Tapping a free-gap row opens the create form prefilled to that
    *  slot. Optional — when omitted (read-only client calendar) gap
@@ -192,6 +199,11 @@ export function DayAgenda({
             they never get lost between gap rows. Read-only. */}
         {farrierVisits.map((v) => (
           <CareVisitCard key={`care-${v.id}`} visit={v} />
+        ))}
+
+        {/* Personal + Google events — pinned above the lesson flow. */}
+        {events.map((ev) => (
+          <EventCard key={`ev-${ev.id}`} event={ev} onClick={() => onEventClick?.(ev)} />
         ))}
         {!hasLessons ? (
           <>
@@ -346,6 +358,40 @@ function CareVisitCard({ visit }: { visit: CalendarFarrierVisit }) {
         </span>
       </div>
     </div>
+  );
+}
+
+// Personal / Google event card — colored by the event's accent hex.
+function EventCard({ event, onClick }: { event: CalendarPersonalEvent; onClick: () => void }) {
+  const hex = eventHex(event);
+  const overnight = isOvernight(event);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="relative text-left rounded-2xl shadow-soft hover:shadow-lift transition-shadow border-l-[3px]"
+      style={{ background: `${hex}14`, borderLeftColor: hex }}
+    >
+      <div className="px-4 py-3 flex items-center gap-3">
+        <div className="flex flex-col tabular-nums shrink-0 w-16">
+          <span className="text-sm font-semibold" style={{ color: hex }}>
+            {event.all_day ? "All day" : fmtTime(event.starts_at)}
+          </span>
+          {!event.all_day && (
+            <span className="text-[11px]" style={{ color: hex, opacity: 0.8 }}>{fmtTime(event.ends_at)}</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate" style={{ color: hex }}>
+            {overnight && <span className="mr-1" aria-hidden>🌙</span>}{event.title}
+          </p>
+          <p className="text-xs truncate" style={{ color: hex, opacity: 0.75 }}>
+            {event.source === "google" ? `Google${event.calendar_name ? ` · ${event.calendar_name}` : ""}` : "Personal"}
+            {overnight ? " · overnight" : ""}
+          </p>
+        </div>
+      </div>
+    </button>
   );
 }
 

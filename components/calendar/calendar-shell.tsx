@@ -20,15 +20,18 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { addDays, fmtISODate } from "@/lib/utils/dates";
+import { addDays, fmtISODate, fmtTime } from "@/lib/utils/dates";
 import type { CalendarLesson } from "@/services/lessons";
 import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
 import type { AvailabilityBlock } from "@/services/availability.pure";
+import type { CalendarPersonalEvent, EventSegment } from "@/services/calendarEvents.pure";
+import { segmentEvent } from "@/services/calendarEvents.pure";
 import type { PackageSummaryRow } from "@/services/packages";
 import type { ServiceRow } from "@/services/services";
 import { CreateLessonForm } from "./create-lesson-form";
 import { QuickAddBar } from "./quick-add-bar";
 import { EditLessonDialog } from "./edit-lesson-dialog";
+import { PersonalEventDialog } from "./personal-event-dialog";
 import { WeekGrid } from "./week-grid";
 import { DayGrid } from "./day-grid";
 import { DayAgenda } from "./day-agenda";
@@ -55,11 +58,18 @@ export function CalendarShell({
   activePackagesByClient = {},
   farrierVisits = [],
   blocks = [],
+  personalEvents = [],
+  googleConnected = false,
   editable = true,
 }: {
   lessons: CalendarLesson[];
   weekStart: Date;
   basePath: string;
+  /** Personal + Google-imported events for the current user. Optional. */
+  personalEvents?: CalendarPersonalEvent[];
+  /** Whether the user has a Google account connected (controls the
+   *  "Sync to Google" toggle in the event dialog). */
+  googleConnected?: boolean;
   /** Farrier/vet care visits rendered as read-only colored chips in the
    *  grid (migration 66/67). Optional — omitted callers see no change. */
   farrierVisits?: CalendarFarrierVisit[];
@@ -105,6 +115,24 @@ export function CalendarShell({
   const [createPrefill, setCreatePrefill] = useState<
     { clientId?: string; horseId?: string; serviceId?: string; price?: number | null } | null
   >(null);
+
+  // Personal / Google event dialog state. `eventSlot` opens a blank create
+  // dialog seeded from a clicked time; `selectedEvent` opens edit (Longrein)
+  // or view (Google).
+  const [eventSlot, setEventSlot] = useState<Slot | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarPersonalEvent | null>(null);
+
+  // Source filter — All / Longrein (lessons+farrier+blocks) / Personal /
+  // Google. Lets the owner isolate "what does my partner have today".
+  const [sourceFilter, setSourceFilter] = useState<"all" | "longrein" | "personal" | "google">("all");
+  const showLongrein = sourceFilter === "all" || sourceFilter === "longrein";
+  const showPersonal = sourceFilter === "all" || sourceFilter === "personal";
+  const showGoogle = sourceFilter === "all" || sourceFilter === "google";
+
+  function handleEventClick(ev: CalendarPersonalEvent) {
+    if (!editable) return;
+    setSelectedEvent(ev);
+  }
 
   // Optimistic overrides: lessonId → new starts/ends. Cleared after
   // server reconciliation via router.refresh(). Server-truth re-arrives
@@ -216,6 +244,64 @@ export function CalendarShell({
     }
     return m;
   }, [blocks]);
+
+  // Personal + Google events, filtered by source and split into per-day
+  // segments (an overnight shift 22:00→06:00 yields a segment on each day).
+  const filteredEvents = useMemo(() => {
+    return personalEvents.filter((ev) =>
+      ev.source === "google" ? showGoogle : showPersonal,
+    );
+  }, [personalEvents, showGoogle, showPersonal]);
+
+  const eventsByDay = useMemo(() => {
+    const m = new Map<string, EventSegment[]>();
+    for (const ev of filteredEvents) {
+      for (const seg of segmentEvent(ev)) {
+        const arr = m.get(seg.dayKey) ?? [];
+        arr.push(seg);
+        m.set(seg.dayKey, arr);
+      }
+    }
+    return m;
+  }, [filteredEvents]);
+
+  // Full events (not segments) that touch a given day — for the mobile
+  // agenda, which renders whole-event cards rather than positioned bands.
+  const eventsForDay = (key: string): CalendarPersonalEvent[] => {
+    const segs = eventsByDay.get(key) ?? [];
+    const seen = new Set<string>();
+    const out: CalendarPersonalEvent[] = [];
+    for (const s of segs) {
+      if (seen.has(s.event.id)) continue;
+      seen.add(s.event.id);
+      out.push(s.event);
+    }
+    return out.sort((a, b) => +new Date(a.starts_at) - +new Date(b.starts_at));
+  };
+
+  // Empty maps when a source is filtered out (keeps grids simple).
+  const EMPTY_LESSONS = useMemo(() => new Map<string, CalendarLesson[]>(), []);
+  const EMPTY_FARRIER = useMemo(() => new Map<string, CalendarFarrierVisit[]>(), []);
+  const EMPTY_BLOCKS = useMemo(() => new Map<string, AvailabilityBlock[]>(), []);
+
+  // Schedule conflicts — a lesson overlapping a personal/Google event means
+  // someone is double-booked (classic case: a lesson booked during a
+  // partner's night shift). We surface it; we never auto-move anything.
+  const conflicts = useMemo(() => {
+    const out: { lesson: CalendarLesson; event: CalendarPersonalEvent }[] = [];
+    if (!showLongrein) return out;
+    for (const l of visibleLessons) {
+      if (l.status === "cancelled") continue;
+      const ls = +new Date(l.starts_at);
+      const le = +new Date(l.ends_at);
+      for (const ev of personalEvents) {
+        const es = +new Date(ev.starts_at);
+        const ee = +new Date(ev.ends_at);
+        if (ls < ee && es < le) out.push({ lesson: l, event: ev });
+      }
+    }
+    return out;
+  }, [visibleLessons, personalEvents, showLongrein]);
 
   /** Drag-and-drop reschedule. The week grid passes a snapped local
    *  start string ("YYYY-MM-DDTHH:mm"); we preserve duration and submit. */
@@ -352,6 +438,54 @@ export function CalendarShell({
         </div>
       )}
 
+      {/* Source filter + quick "+ Event" — one unified calendar, toggle
+          which layers show. "Personal"/"Google" isolate a partner's shifts
+          etc. The "+ Event" button creates a personal event in 2 taps. */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="inline-flex bg-surface-sunken rounded-full p-[3px]">
+          {([
+            ["all", "All"],
+            ["longrein", "Longrein"],
+            ["personal", "Personal"],
+            ["google", "Google"],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSourceFilter(key)}
+              className={`inline-flex items-center px-3.5 py-[6px] rounded-full text-[13px] font-semibold transition-colors ${
+                sourceFilter === key ? "bg-brand-700 text-white shadow-sm" : "text-ink-500 hover:text-ink-800"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {editable && (
+          <button
+            type="button"
+            onClick={() => setEventSlot(seedSlotForDay(dayKey))}
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-[13px] font-medium bg-white text-ink-700 ring-1 ring-ink-200 hover:bg-ink-50 transition-colors"
+          >
+            + Event
+          </button>
+        )}
+      </div>
+
+      {/* Schedule-conflict warnings — lesson overlapping a personal/Google
+          event. Informational only; the owner decides what to move. */}
+      {conflicts.length > 0 && (
+        <div role="alert" className="rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[13px] px-4 py-3 flex flex-col gap-1">
+          <span className="font-semibold inline-flex items-center gap-1.5">⚠️ Schedule conflict{conflicts.length > 1 ? `s (${conflicts.length})` : ""}</span>
+          {conflicts.slice(0, 4).map(({ lesson, event }, i) => (
+            <span key={`${lesson.id}-${event.id}-${i}`} className="text-[12.5px] text-amber-800">
+              Lesson {lessonConflictLabel(lesson)} overlaps “{event.title}”{event.source === "google" ? " (Google)" : ""}.
+            </span>
+          ))}
+          {conflicts.length > 4 && <span className="text-[12px] text-amber-700">…and {conflicts.length - 4} more.</span>}
+        </div>
+      )}
+
       {/* Drag-error toast (banner) — clears on next successful reschedule */}
       {dropError && (
         <div
@@ -376,10 +510,12 @@ export function CalendarShell({
             days={days}
             weekKeys={weekKeys}
             todayKey={todayKey}
-            byDay={byDay}
-            farrierByDay={farrierByDay}
-            blocksByDay={blocksByDay}
+            byDay={showLongrein ? byDay : EMPTY_LESSONS}
+            farrierByDay={showLongrein ? farrierByDay : EMPTY_FARRIER}
+            blocksByDay={showLongrein ? blocksByDay : EMPTY_BLOCKS}
+            eventsByDay={eventsByDay}
             onLessonClick={handleLessonClick}
+            onEventClick={handleEventClick}
             onSlotClick={handleCreateAt}
             onDayHeaderClick={handleExpandDay}
             onLessonDrop={editable ? handleLessonDrop : undefined}
@@ -390,10 +526,12 @@ export function CalendarShell({
             day={days[Math.max(0, weekKeys.indexOf(dayKey))] ?? days[0]}
             dayKey={dayKey}
             todayKey={todayKey}
-            lessons={byDay.get(dayKey) ?? []}
-            farrierVisits={farrierByDay.get(dayKey) ?? []}
-            blocks={blocksByDay.get(dayKey) ?? []}
+            lessons={showLongrein ? (byDay.get(dayKey) ?? []) : []}
+            farrierVisits={showLongrein ? (farrierByDay.get(dayKey) ?? []) : []}
+            blocks={showLongrein ? (blocksByDay.get(dayKey) ?? []) : []}
+            eventSegments={eventsByDay.get(dayKey) ?? []}
             onLessonClick={handleLessonClick}
+            onEventClick={handleEventClick}
             onSlotClick={handleCreateAt}
             onLessonDrop={editable ? handleLessonDrop : undefined}
             onBack={() => setView("week")}
@@ -419,10 +557,12 @@ export function CalendarShell({
           todayKey={todayKey}
           selectedKey={dayKey}
           onSelectDay={setDayKey}
-          lessons={byDay.get(dayKey) ?? []}
-          farrierVisits={farrierByDay.get(dayKey) ?? []}
-          blocks={blocksByDay.get(dayKey) ?? []}
+          lessons={showLongrein ? (byDay.get(dayKey) ?? []) : []}
+          farrierVisits={showLongrein ? (farrierByDay.get(dayKey) ?? []) : []}
+          blocks={showLongrein ? (blocksByDay.get(dayKey) ?? []) : []}
+          events={eventsForDay(dayKey)}
           onLessonClick={handleLessonClick}
+          onEventClick={handleEventClick}
           onCreate={() => {
             // Mobile FAB: open form prefilled to selected day at next
             // 15-min mark in the future (or 09:00 if the day is in the past).
@@ -445,6 +585,23 @@ export function CalendarShell({
           onClose={() => { setSlot(null); setCreatePrefill(null); }}
           initial={slot.startsLocal ? slot : undefined}
           prefill={createPrefill ?? undefined}
+        />
+      )}
+
+      {/* Personal event create / edit / view dialog ------------------ */}
+      {editable && eventSlot && (
+        <PersonalEventDialog
+          onClose={() => setEventSlot(null)}
+          initial={eventSlot}
+          googleConnected={googleConnected}
+        />
+      )}
+      {editable && selectedEvent && (
+        <PersonalEventDialog
+          key={selectedEvent.id}
+          onClose={() => setSelectedEvent(null)}
+          event={selectedEvent}
+          googleConnected={googleConnected}
         />
       )}
 
@@ -700,6 +857,12 @@ function seedSlotForDay(dayKey: string): Slot {
 function toLocalInput(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function lessonConflictLabel(l: CalendarLesson): string {
+  const who = l.client?.full_name ?? l.horse?.name ?? "lesson";
+  const day = new Date(l.starts_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/Vilnius" });
+  return `${who} · ${day} ${fmtTime(l.starts_at)}–${fmtTime(l.ends_at)}`;
 }
 
 function parseLocal(local: string): Date {

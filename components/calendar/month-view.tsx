@@ -13,9 +13,12 @@ import type { CalendarLesson } from "@/services/lessons";
 import type { CalendarFarrierVisit } from "@/services/farrierVisits.pure";
 import { VISIT_KIND_COLOR } from "@/services/farrierVisits.pure";
 import type { AvailabilityBlock } from "@/services/availability.pure";
+import type { CalendarPersonalEvent } from "@/services/calendarEvents.pure";
+import { eventHex, isOvernight, segmentEvent } from "@/services/calendarEvents.pure";
 import type { ServiceRow } from "@/services/services";
 import type { PackageSummaryRow } from "@/services/packages";
 import { EditLessonDialog } from "./edit-lesson-dialog";
+import { PersonalEventDialog } from "./personal-event-dialog";
 import { lessonTitle } from "./grid-utils";
 
 const STATUS_COLOR: Record<CalendarLesson["status"], string> = {
@@ -33,6 +36,8 @@ export function MonthView({
   lessons,
   farrierVisits,
   blocks = [],
+  personalEvents = [],
+  googleConnected = false,
   gridStart,
   monthIndex,
   monthLabel,
@@ -49,6 +54,8 @@ export function MonthView({
   lessons: CalendarLesson[];
   farrierVisits: CalendarFarrierVisit[];
   blocks?: AvailabilityBlock[];
+  personalEvents?: CalendarPersonalEvent[];
+  googleConnected?: boolean;
   gridStart: Date;
   /** 0-11 month the grid is "about" — days outside it are dimmed. */
   monthIndex: number;
@@ -64,9 +71,20 @@ export function MonthView({
   editable?: boolean;
 }) {
   const [selected, setSelected] = useState<CalendarLesson | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarPersonalEvent | null>(null);
 
   const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
   const todayKey = fmtISODate(new Date());
+
+  // Personal + Google events per day (segmented so overnight shows on both).
+  const eventsByDay = new Map<string, CalendarPersonalEvent[]>();
+  for (const ev of personalEvents) {
+    for (const seg of segmentEvent(ev)) {
+      const arr = eventsByDay.get(seg.dayKey);
+      if (arr) { if (!arr.some((e) => e.id === ev.id)) arr.push(ev); }
+      else eventsByDay.set(seg.dayKey, [ev]);
+    }
+  }
 
   const blocksByDay = new Map<string, AvailabilityBlock[]>();
   for (const bl of blocks) {
@@ -124,6 +142,7 @@ export function MonthView({
           const inMonth = day.getMonth() === monthIndex;
           const dayLessons = (lessonsByDay.get(key) ?? []).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
           const dayCare = careByDay.get(key) ?? [];
+          const dayEvents = eventsByDay.get(key) ?? [];
           const dayBlocks = blocksByDay.get(key) ?? [];
           const hasAllDayBlock = dayBlocks.some((b) => b.all_day);
           const isToday = key === todayKey;
@@ -172,6 +191,21 @@ export function MonthView({
                     {v.kind === "vet" ? "Vet" : "Farrier"}{v.farrier_name ? ` · ${v.farrier_name}` : ""}
                   </span>
                 ))}
+                {dayEvents.map((ev) => {
+                  const hex = eventHex(ev);
+                  return editable ? (
+                    <button key={`ev-${ev.id}`} type="button" onClick={() => setSelectedEvent(ev)}
+                      className="text-left text-[10.5px] leading-tight truncate px-1 py-0.5 rounded hover:ring-1 hover:ring-inset"
+                      style={{ background: `${hex}1A`, color: hex }} title={ev.title}>
+                      {isOvernight(ev) ? "🌙 " : ""}{ev.all_day ? "" : `${time(ev.starts_at)} `}{ev.title}
+                    </button>
+                  ) : (
+                    <span key={`ev-${ev.id}`} className="text-[10.5px] leading-tight truncate px-1 py-0.5 rounded"
+                      style={{ background: `${hex}1A`, color: hex }}>
+                      {isOvernight(ev) ? "🌙 " : ""}{ev.all_day ? "" : `${time(ev.starts_at)} `}{ev.title}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           );
@@ -189,6 +223,16 @@ export function MonthView({
           horses={horses}
           arenas={arenas}
           onClose={() => setSelected(null)}
+        />
+      )}
+
+      {/* Personal / Google event dialog (edit or Google view) */}
+      {editable && selectedEvent && (
+        <PersonalEventDialog
+          key={selectedEvent.id}
+          event={selectedEvent}
+          googleConnected={googleConnected}
+          onClose={() => setSelectedEvent(null)}
         />
       )}
     </div>

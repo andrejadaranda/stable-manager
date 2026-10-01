@@ -28,6 +28,8 @@ import type { CalendarLesson, LessonPaymentStatus } from "@/services/lessons";
 import type { CalendarFarrierVisit, CareVisitKind } from "@/services/farrierVisits.pure";
 import { VISIT_KIND_COLOR, VISIT_KIND_LABEL } from "@/services/farrierVisits.pure";
 import type { AvailabilityBlock } from "@/services/availability.pure";
+import type { CalendarPersonalEvent, EventSegment } from "@/services/calendarEvents.pure";
+import { eventHex } from "@/services/calendarEvents.pure";
 import {
   HOUR_START,
   HOUR_END,
@@ -73,7 +75,9 @@ export function WeekGrid({
   byDay,
   farrierByDay,
   blocksByDay,
+  eventsByDay,
   onLessonClick,
+  onEventClick,
   onSlotClick,
   onDayHeaderClick,
   onLessonDrop,
@@ -88,7 +92,11 @@ export function WeekGrid({
   farrierByDay?: Map<string, CalendarFarrierVisit[]>;
   /** Block-out (time off) per day — red overlays. Optional. */
   blocksByDay?: Map<string, AvailabilityBlock[]>;
+  /** Personal + Google events per day, already split into per-day
+   *  segments (overnight shifts appear on both days). Optional. */
+  eventsByDay?: Map<string, EventSegment[]>;
   onLessonClick: (l: CalendarLesson) => void;
+  onEventClick?: (ev: CalendarPersonalEvent) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
   onDayHeaderClick: (key: string) => void;
   /** Drag-and-drop reschedule callback. Receives lesson + new local
@@ -169,7 +177,9 @@ export function WeekGrid({
               layout={layout}
               farrierVisits={farrierByDay?.get(k) ?? []}
               blocks={blocksByDay?.get(k) ?? []}
+              eventSegments={eventsByDay?.get(k) ?? []}
               onLessonClick={onLessonClick}
+              onEventClick={onEventClick}
               onSlotClick={onSlotClick}
               onOverflowClick={() => onDayHeaderClick(k)}
               onLessonDrop={onLessonDrop}
@@ -218,7 +228,9 @@ export function DayColumn({
   layout,
   farrierVisits = [],
   blocks = [],
+  eventSegments = [],
   onLessonClick,
+  onEventClick,
   onSlotClick,
   onOverflowClick,
   onLessonDrop,
@@ -232,7 +244,10 @@ export function DayColumn({
   farrierVisits?: CalendarFarrierVisit[];
   /** Red block-out (time-off) overlays for this day. Optional. */
   blocks?: AvailabilityBlock[];
+  /** Personal + Google event segments for this day (overnight-aware). */
+  eventSegments?: EventSegment[];
   onLessonClick: (l: CalendarLesson) => void;
+  onEventClick?: (ev: CalendarPersonalEvent) => void;
   onSlotClick: (startsLocal: string, endsLocal: string) => void;
   onOverflowClick?: () => void;
   onLessonDrop?: (lessonId: string, newStartLocal: string) => void;
@@ -404,6 +419,66 @@ export function DayColumn({
               )}
             </div>
           </div>
+        );
+      })}
+
+      {/* Personal + Google events — overnight-aware segments. Rendered
+          before lessons so a stable lesson still paints on top when they
+          overlap. Clickable → open the event dialog. --------------- */}
+      {eventSegments.map((seg) => {
+        const gridStartMin = HOUR_START * 60;
+        const gridEndMin = HOUR_END * 60;
+        const ev = seg.event;
+        if (ev.all_day) {
+          const hex = eventHex(ev);
+          return (
+            <button
+              key={`ev-${ev.id}`}
+              type="button"
+              data-lesson-card
+              onClick={(e) => { e.stopPropagation(); onEventClick?.(ev); }}
+              title={ev.title}
+              className="absolute inset-x-[2px] top-0 z-[5] rounded-lg overflow-hidden text-left"
+              style={{ height: 20, background: `${hex}22`, borderLeft: `3px solid ${hex}` }}
+            >
+              <div className="px-2 text-[11px] font-semibold truncate" style={{ color: hex }}>
+                {ev.title}
+              </div>
+            </button>
+          );
+        }
+        const clampedStart = Math.max(seg.startMin, gridStartMin);
+        const clampedEnd = Math.min(seg.endMin, gridEndMin);
+        if (clampedEnd <= clampedStart) return null;
+        const top = ((clampedStart - gridStartMin) / 60) * HOUR_HEIGHT;
+        const height = Math.max(((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT, 20);
+        const hex = eventHex(ev);
+        const overnight = seg.continuesUp || seg.continuesDown;
+        return (
+          <button
+            key={`ev-${ev.id}-${seg.dayKey}`}
+            type="button"
+            data-lesson-card
+            onClick={(e) => { e.stopPropagation(); onEventClick?.(ev); }}
+            title={`${ev.title} · ${fmtTime(ev.starts_at)}–${fmtTime(ev.ends_at)}${overnight ? " (overnight)" : ""}`}
+            className="absolute left-[2px] right-[2px] z-[5] rounded-lg overflow-hidden text-left hover:shadow-soft transition-shadow"
+            style={{ top, height, background: `${hex}1f`, borderLeft: `3px solid ${hex}` }}
+          >
+            <div className="h-full px-2 py-1 leading-tight">
+              <div className="flex items-center gap-1 tabular-nums" style={{ color: hex }}>
+                {overnight && <span aria-hidden>🌙</span>}
+                <span className="font-semibold">{seg.continuesUp ? "00:00" : fmtTime(ev.starts_at)}</span>
+              </div>
+              {height >= 28 && (
+                <div className="mt-0.5 truncate font-medium" style={{ color: hex }}>{ev.title}</div>
+              )}
+              {height >= 52 && ev.source === "google" && (
+                <div className="mt-0.5 truncate text-[10px]" style={{ color: hex, opacity: 0.8 }}>
+                  {ev.calendar_name ? `Google · ${ev.calendar_name}` : "Google"}
+                </div>
+              )}
+            </div>
+          </button>
         );
       })}
 

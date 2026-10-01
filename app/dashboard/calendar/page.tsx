@@ -8,6 +8,7 @@ import { listServices } from "@/services/services";
 import { listArenas } from "@/services/arenas";
 import { getFarrierVisitsForCalendar } from "@/services/farrierVisits";
 import { listAvailabilityBlocks } from "@/services/availability";
+import { listPersonalEventsForCalendar } from "@/services/personalEvents";
 import { startOfWeek, addDays, fmtISODate } from "@/lib/utils/dates";
 import { CalendarShell } from "@/components/calendar/calendar-shell";
 import { MonthView } from "@/components/calendar/month-view";
@@ -45,10 +46,11 @@ export default async function CalendarPage({
     const gridEnd = addDays(gridStart, 42);
     // Load the edit-needed rosters too so lessons are tappable → Edit lesson
     // straight from the month grid (Andrėja: "paspaudus — redaguoju").
-    const [mLessons, mFarrier, mBlocks, mClients, mHorses, mServices, mArenas, mPackages] = await Promise.all([
+    const [mLessons, mFarrier, mBlocks, mEvents, mClients, mHorses, mServices, mArenas, mPackages] = await Promise.all([
       getCalendar(gridStart.toISOString(), gridEnd.toISOString()),
       getFarrierVisitsForCalendar(gridStart.toISOString(), gridEnd.toISOString()).catch(() => []),
       listAvailabilityBlocks(gridStart.toISOString(), gridEnd.toISOString()).catch(() => []),
+      listPersonalEventsForCalendar(gridStart.toISOString(), gridEnd.toISOString()).catch(() => []),
       listClients({ activeOnly: true }).catch(() => []),
       listHorses({ activeOnly: true, lessonsOnly: true }).catch(() => []),
       listServices({ activeOnly: true }).catch(() => []),
@@ -67,6 +69,7 @@ export default async function CalendarPage({
           lessons={mLessons}
           farrierVisits={mFarrier ?? []}
           blocks={mBlocks ?? []}
+          personalEvents={mEvents ?? []}
           gridStart={gridStart}
           monthIndex={ref.getMonth()}
           monthLabel={monthFirst.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
@@ -92,7 +95,7 @@ export default async function CalendarPage({
   // Horse list is filtered to lesson-eligible: stable-owned or
   // client-owned-and-opted-in. Boarding-only horses are hidden so the
   // calendar dropdown stays clean.
-  const [lessons, clients, horses, trainers, activePackages, services, arenas, farrierVisits, allHorses] = await Promise.all([
+  const [lessons, clients, horses, trainers, activePackages, services, arenas, farrierVisits, personalEvents, allHorses] = await Promise.all([
     getCalendar(start.toISOString(), end.toISOString()),
     listClients({ activeOnly: true }),
     listHorses({ activeOnly: true, lessonsOnly: true }),
@@ -101,6 +104,7 @@ export default async function CalendarPage({
     listServices({ activeOnly: true }),
     listArenas({ activeOnly: true }).catch(() => []),
     getFarrierVisitsForCalendar(start.toISOString(), end.toISOString()).catch(() => []),
+    listPersonalEventsForCalendar(start.toISOString(), end.toISOString()).catch(() => []),
     // Horses currently at the stable (incl. inactive/retired private boarders
     // — any present horse can need a farrier/vet) but NOT ones that have
     // already departed. A departed horse stays on its past visits; it just
@@ -152,6 +156,7 @@ export default async function CalendarPage({
         activePackagesByClient={activePackages}
         farrierVisits={farrierVisits ?? []}
         blocks={blocks ?? []}
+        personalEvents={personalEvents ?? []}
         editable
       />
 
