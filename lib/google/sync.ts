@@ -343,31 +343,48 @@ export async function pushLessonsForUser(userId: string): Promise<number> {
   const from = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const to = new Date(Date.now() + 120 * 86_400_000).toISOString();
 
-  const { data: lessons } = await admin
+  // Plain select (no PostgREST embeds — an embed error would silently return
+  // null and push nothing). Names are resolved with cheap id→name maps.
+  const { data: lessons, error: lessonsErr } = await admin
     .from("lessons")
-    .select("id, starts_at, ends_at, status, lesson_type, max_participants, client:clients(full_name), horse:horses(name), service:services(name)")
+    .select("id, starts_at, ends_at, status, lesson_type, max_participants, client_id, horse_id, service_id")
     .eq("stable_id", conn.stable_id)
     .gte("starts_at", from)
     .lt("starts_at", to);
+  if (lessonsErr) {
+    console.error("[google/pushLessons] lessons query failed:", lessonsErr);
+    return 0;
+  }
+  const raw = (lessons ?? []) as Array<{
+    id: string; starts_at: string; ends_at: string; status: string;
+    lesson_type: string | null; max_participants: number | null;
+    client_id: string | null; horse_id: string | null; service_id: string | null;
+  }>;
+  if (raw.length === 0) return 0;
 
-  const rows: LessonRow[] = ((lessons ?? []) as Array<Record<string, unknown>>).map((l) => {
-    const pick = (v: unknown): string | null => {
-      const o = Array.isArray(v) ? v[0] : v;
-      return (o as { full_name?: string; name?: string } | null)?.full_name ?? (o as { name?: string } | null)?.name ?? null;
-    };
-    return {
-      id: l.id as string,
-      starts_at: l.starts_at as string,
-      ends_at: l.ends_at as string,
-      status: l.status as string,
-      lesson_type: (l.lesson_type as string) ?? null,
-      max_participants: (l.max_participants as number) ?? null,
-      client_name: pick(l.client),
-      horse_name: pick(l.horse),
-      service_name: pick(l.service),
-    };
-  });
-  if (rows.length === 0) return 0;
+  const nameMap = async (table: string, ids: (string | null)[], col: string) => {
+    const uniq = Array.from(new Set(ids.filter(Boolean))) as string[];
+    if (uniq.length === 0) return new Map<string, string>();
+    const { data } = await admin.from(table).select(`id, ${col}`).in("id", uniq);
+    return new Map(((data ?? []) as unknown as Array<Record<string, string>>).map((r) => [r.id, r[col]]));
+  };
+  const [clients, horses, services] = await Promise.all([
+    nameMap("clients", raw.map((r) => r.client_id), "full_name"),
+    nameMap("horses", raw.map((r) => r.horse_id), "name"),
+    nameMap("services", raw.map((r) => r.service_id), "name"),
+  ]);
+
+  const rows: LessonRow[] = raw.map((l) => ({
+    id: l.id,
+    starts_at: l.starts_at,
+    ends_at: l.ends_at,
+    status: l.status,
+    lesson_type: l.lesson_type,
+    max_participants: l.max_participants,
+    client_name: l.client_id ? clients.get(l.client_id) ?? null : null,
+    horse_name: l.horse_id ? horses.get(l.horse_id) ?? null : null,
+    service_name: l.service_id ? services.get(l.service_id) ?? null : null,
+  }));
 
   // Existing mappings for these lessons.
   const ids = rows.map((r) => r.id);
@@ -413,8 +430,8 @@ export async function pushLessonsForUser(userId: string): Promise<number> {
         );
         n += 1;
       }
-    } catch {
-      /* skip this lesson; next reconcile retries */
+    } catch (e) {
+      console.error("[google/pushLessons] lesson push failed", l.id, e);
     }
   }
   return n;
