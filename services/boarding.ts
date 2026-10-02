@@ -202,9 +202,89 @@ export async function ensureBoardingForCurrentMonth(): Promise<void> {
   try {
     const session = await getSession();
     if (session.role !== "owner") return;
-    const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    await generateBoardingForMonth(ym);
+    const supabase = createSupabaseServerClient();
+    const today = new Date();
+
+    // Eligible boarders: fee + owner + a known arrival date, not departed.
+    // A start date is REQUIRED — we anchor billing to the arrival day, so a
+    // horse with no start date is never auto-billed (owner sets the date).
+    const { data: horses } = await supabase
+      .from("horses")
+      .select("id, owner_client_id, monthly_boarding_fee, boarding_start_date, boarding_end_date")
+      .not("monthly_boarding_fee", "is", null)
+      .not("owner_client_id", "is", null)
+      .not("boarding_start_date", "is", null);
+    const list = (horses ?? []) as Array<{
+      id: string; owner_client_id: string; monthly_boarding_fee: number;
+      boarding_start_date: string; boarding_end_date: string | null;
+    }>;
+    if (list.length === 0) return;
+
+    // Existing charges per horse — used to avoid duplicates AND double-billing
+    // a period already covered (e.g. a legacy calendar-month charge).
+    const ids = list.map((h) => h.id);
+    const { data: existing } = await supabase
+      .from("horse_boarding_charges")
+      .select("horse_id, period_start, period_end")
+      .in("horse_id", ids);
+    const byHorse = new Map<string, Array<{ s: string; e: string }>>();
+    for (const r of (existing ?? []) as Array<{ horse_id: string; period_start: string; period_end: string }>) {
+      const arr = byHorse.get(r.horse_id) ?? [];
+      arr.push({ s: r.period_start, e: r.period_end });
+      byHorse.set(r.horse_id, arr);
+    }
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    // Add k months to a date, keeping the anchor day (clamped to month length
+    // so e.g. a 31st start bills on the 30th/28th in shorter months).
+    const addMonths = (base: Date, k: number): Date => {
+      const y = base.getFullYear();
+      const m = base.getMonth() + k;
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      return new Date(y, m, Math.min(base.getDate(), lastDay));
+    };
+
+    const records: Array<Record<string, unknown>> = [];
+    for (const h of list) {
+      const start = new Date(h.boarding_start_date);
+      const endLimit = h.boarding_end_date ? new Date(h.boarding_end_date) : null;
+      const ranges = byHorse.get(h.id) ?? [];
+      // Walk each monthly period anchored to the arrival day. A period is
+      // billed once its anchor (start day) has arrived — so a horse that
+      // arrived on the 16th is billed on the 16th each month, never the 1st.
+      for (let k = 0; k < 240; k++) {
+        const anchor = addMonths(start, k);
+        if (anchor > today) break;
+        if (endLimit && anchor > endLimit) break;
+        const periodEndD = addMonths(start, k + 1);
+        periodEndD.setDate(periodEndD.getDate() - 1);
+        const ps = iso(anchor);
+        const pe = iso(periodEndD);
+        // Skip if an existing charge overlaps this period (dup / double-bill).
+        if (ranges.some((r) => r.s <= pe && ps <= r.e)) continue;
+        const label = anchor.getDate() === 1
+          ? anchor.toLocaleDateString("en-GB", { month: "long", year: "numeric" })
+          : `${anchor.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${periodEndD.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
+        records.push({
+          stable_id: session.stableId,
+          horse_id: h.id,
+          owner_client_id: h.owner_client_id,
+          period_start: ps,
+          period_end: pe,
+          period_label: label,
+          amount: h.monthly_boarding_fee,
+          notes: null,
+        });
+        ranges.push({ s: ps, e: pe }); // guard against intra-run duplicates
+      }
+    }
+
+    if (records.length > 0) {
+      await supabase
+        .from("horse_boarding_charges")
+        .upsert(records, { onConflict: "horse_id,period_start", ignoreDuplicates: true });
+    }
   } catch {
     // best-effort; the page still renders whatever already exists
   }
