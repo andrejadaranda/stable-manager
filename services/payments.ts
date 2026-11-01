@@ -382,15 +382,23 @@ export async function getClientAvailableCredit(clientId: string): Promise<number
   const session = await getSession();
   requireRole(session, "owner");
   const supabase = createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("payments")
-    .select("amount, method, lesson_id, client_charge_id, boarding_charge_id, lesson_participant_id, package_id")
-    .eq("client_id", clientId);
-  if (error) throw error;
+  const [payRes, barterRes] = await Promise.all([
+    supabase
+      .from("payments")
+      .select("amount, method, lesson_id, client_charge_id, boarding_charge_id, lesson_participant_id, package_id")
+      .eq("client_id", clientId),
+    // Barter / work-for-credit top-ups add to the spendable pool.
+    supabase
+      .from("client_credit_entries")
+      .select("amount")
+      .eq("client_id", clientId),
+  ]);
+  if (payRes.error) throw payRes.error;
+  if (barterRes.error) throw barterRes.error;
 
   let unallocated = 0;   // real cash received, not tied to any item
   let creditUsed  = 0;   // credit already applied to lessons/charges
-  for (const p of (data ?? []) as Array<{
+  for (const p of (payRes.data ?? []) as Array<{
     amount: number; method: string;
     lesson_id: string | null; client_charge_id: string | null;
     boarding_charge_id: string | null; lesson_participant_id: string | null;
@@ -402,7 +410,9 @@ export async function getClientAvailableCredit(clientId: string): Promise<number
       p.lesson_participant_id || p.package_id;
     if (!linked) unallocated += Number(p.amount);
   }
-  return Math.max(0, Math.round((unallocated - creditUsed) * 100) / 100);
+  const barter = ((barterRes.data ?? []) as Array<{ amount: number | string }>)
+    .reduce((s, r) => s + Number(r.amount), 0);
+  return Math.max(0, Math.round((unallocated + barter - creditUsed) * 100) / 100);
 }
 
 // Dated money history for a client — every payment, whether it was cash in,
@@ -508,7 +518,7 @@ export async function getClientStatement(clientId: string): Promise<StatementEnt
     iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "Europe/Vilnius" }) : "";
 
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Vilnius" });
-  const [lessonsRes, partsRes, chargesRes, boardingRes, paymentsRes, packagesRes] = await Promise.all([
+  const [lessonsRes, partsRes, chargesRes, boardingRes, paymentsRes, packagesRes, barterRes] = await Promise.all([
     // Individual (non-group) delivered lessons with a price, NOT covered by a
     // package (package-covered lessons are billed via the package, not again).
     supabase
@@ -550,6 +560,11 @@ export async function getClientStatement(clientId: string): Promise<StatementEnt
       .from("lesson_packages")
       .select("id, total_lessons, price, purchased_at")
       .eq("client_id", clientId),
+    // Barter / work-for-credit top-ups — real credit the client earned.
+    supabase
+      .from("client_credit_entries")
+      .select("id, entry_date, description, amount")
+      .eq("client_id", clientId),
   ]);
 
   if (lessonsRes.error)  throw lessonsRes.error;
@@ -558,6 +573,7 @@ export async function getClientStatement(clientId: string): Promise<StatementEnt
   if (boardingRes.error) throw boardingRes.error;
   if (paymentsRes.error) throw paymentsRes.error;
   if (packagesRes.error) throw packagesRes.error;
+  if (barterRes.error)   throw barterRes.error;
 
   const norm = <T>(r: T | T[] | null): T | null => (Array.isArray(r) ? r[0] ?? null : r);
 
@@ -707,6 +723,23 @@ export async function getClientStatement(clientId: string): Promise<StatementEnt
         delta: amount,
       });
     }
+  }
+
+  // ---- barter / work-for-credit top-ups (real credit earned) ----
+  for (const e of (barterRes.data ?? []) as Array<{
+    id: string; entry_date: string; description: string; amount: number | string;
+  }>) {
+    const amount = Number(e.amount);
+    if (amount <= 0) continue;
+    raw.push({
+      id: `cce-${e.id}`,
+      date: e.entry_date,
+      direction: "credit_added",
+      amount,
+      label: e.description?.trim() || "Barter credit",
+      sub: `Barter credit · ${fmtDay(e.entry_date)}`,
+      delta: amount,
+    });
   }
 
   // Oldest first, accumulate the running balance, then hand back newest

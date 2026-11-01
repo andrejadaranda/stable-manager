@@ -18,6 +18,8 @@ import { AgreementsPanel } from "@/components/clients/agreements-panel";
 import { ChargesPanel } from "@/components/clients/charges-panel";
 import { OwesBreakdown } from "@/components/clients/owes-breakdown";
 import { PaymentHistoryPanel } from "@/components/clients/payment-history-panel";
+import { BarterCreditPanel } from "@/components/clients/barter-credit-panel";
+import { listBarterCredits, getBarterCreditTotal } from "@/services/barterCredits";
 import { ClientBackButton } from "@/components/clients/client-back-button";
 import { GenerateBillButton } from "@/components/finance/generate-bill-button";
 import { InviteToAppButton } from "@/components/clients/invite-to-app-button";
@@ -71,15 +73,19 @@ export default async function ClientDetailPage({
   let owedItems: Awaited<ReturnType<typeof listClientOwedItems>> = [];
   let ledger: Awaited<ReturnType<typeof getClientStatement>> = [];
   let availableCredit = 0;
+  let barterEntries: Awaited<ReturnType<typeof listBarterCredits>> = [];
+  let barterTotal = 0;
   let hasPendingInvite = false;
   if (session.role === "owner") {
     balance = await getClientBalance(params.id);
     if (balance !== null && balance < 0) {
       owedItems = await listClientOwedItems(params.id);
     }
-    [ledger, availableCredit] = await Promise.all([
+    [ledger, availableCredit, barterEntries, barterTotal] = await Promise.all([
       getClientStatement(params.id).catch(() => []),
       getClientAvailableCredit(params.id).catch(() => 0),
+      listBarterCredits(params.id).catch(() => []),
+      getBarterCreditTotal(params.id).catch(() => 0),
     ]);
     const pending = await getPendingInviteForClient(params.id).catch(() => null);
     hasPendingInvite = pending !== null;
@@ -291,6 +297,16 @@ export default async function ClientDetailPage({
           {/* Dated payments & credit history — "who paid what, when, and
               where credit was added or deducted". */}
           <PaymentHistoryPanel entries={ledger} availableCredit={availableCredit} />
+
+          {/* Work-for-credit (barter) log — record work done for the stable
+              that converts to credit, and download a clear statement. */}
+          <BarterCreditPanel
+            clientId={client.id}
+            entries={barterEntries}
+            barterTotal={barterTotal}
+            availableCredit={availableCredit}
+            statementHref={`/dashboard/clients/${client.id}/statement`}
+          />
 
           <GenerateBillButton clientId={client.id} />
 
