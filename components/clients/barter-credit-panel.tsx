@@ -9,7 +9,8 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
-import { createBarterAction, deleteBarterAction, type BarterActionState } from "@/app/dashboard/clients/[id]/barter-actions";
+import { useEffect, useState } from "react";
+import { createBarterAction, deleteBarterAction, updateBarterAction, type BarterActionState } from "@/app/dashboard/clients/[id]/barter-actions";
 import type { BarterCreditEntry } from "@/services/barterCredits";
 
 const initial: BarterActionState = { error: null, success: false };
@@ -91,18 +92,73 @@ export function BarterCreditPanel({
       ) : (
         <ul className="divide-y divide-ink-100">
           {entries.map((e) => (
-            <li key={e.id} className="px-5 py-3 flex items-center gap-3">
-              <div className="w-20 shrink-0 text-[12px] text-ink-500 tabular-nums">{fmtDate(e.entry_date)}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] text-ink-900 truncate">{e.description}</p>
-              </div>
-              <div className="shrink-0 text-[14px] font-semibold text-emerald-700 tabular-nums">+{eur(e.amount)}</div>
-              <DeleteForm entryId={e.id} clientId={clientId} />
-            </li>
+            <EntryRow key={e.id} entry={e} clientId={clientId} />
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+// One log line. Reads as a plain row; "Edit" swaps in inline inputs so the
+// owner can fix a date / description / amount in place, then Save or Cancel.
+function EntryRow({ entry, clientId }: { entry: BarterCreditEntry; clientId: string }) {
+  const [editing, setEditing] = useState(false);
+  const [state, action] = useFormState(updateBarterAction, initial);
+
+  // Collapse back to the read row once a save lands.
+  useEffect(() => {
+    if (state.success) setEditing(false);
+  }, [state.success]);
+
+  if (!editing) {
+    return (
+      <li className="px-5 py-3 flex items-center gap-3">
+        <div className="w-20 shrink-0 text-[12px] text-ink-500 tabular-nums">{fmtDate(entry.entry_date)}</div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[14px] text-ink-900 truncate">{entry.description}</p>
+        </div>
+        <div className="shrink-0 text-[14px] font-semibold text-emerald-700 tabular-nums">+{eur(entry.amount)}</div>
+        <button type="button" onClick={() => setEditing(true)} title="Edit entry"
+          className="text-ink-400 hover:text-brand-700 text-[12px] px-1.5">Edit</button>
+        <DeleteForm entryId={entry.id} clientId={clientId} />
+      </li>
+    );
+  }
+
+  return (
+    <li className="px-5 py-3">
+      <form action={action} className="flex flex-col gap-2">
+        <input type="hidden" name="entry_id" value={entry.id} />
+        <input type="hidden" name="client_id" value={clientId} />
+        <div className="grid grid-cols-1 sm:grid-cols-[150px_1fr_120px] gap-2">
+          <input type="date" name="entry_date" defaultValue={entry.entry_date} required
+            className="rounded-lg border border-ink-200 bg-white text-sm text-ink-900 px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500" />
+          <input name="description" required maxLength={300} defaultValue={entry.description}
+            className="rounded-lg border border-ink-200 bg-white text-sm text-ink-900 px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500" />
+          <input name="amount" inputMode="decimal" required defaultValue={entry.amount.toFixed(2)}
+            className="rounded-lg border border-ink-200 bg-white text-sm text-ink-900 px-2.5 py-2 tabular-nums focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500" />
+        </div>
+        {state.error && (
+          <p role="alert" className="text-[12px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-1.5">{state.error}</p>
+        )}
+        <div className="flex items-center gap-2">
+          <SaveButton />
+          <button type="button" onClick={() => setEditing(false)}
+            className="h-9 px-3 rounded-xl text-[13px] font-medium text-ink-600 hover:bg-ink-100">Cancel</button>
+        </div>
+      </form>
+    </li>
+  );
+}
+
+function SaveButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={pending}
+      className="h-9 px-4 rounded-xl text-[13px] font-medium bg-brand-600 text-white shadow-sm hover:bg-brand-700 disabled:opacity-50">
+      {pending ? "Saving…" : "Save changes"}
+    </button>
   );
 }
 

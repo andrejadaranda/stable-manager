@@ -19,6 +19,7 @@ import { ChargesPanel } from "@/components/clients/charges-panel";
 import { OwesBreakdown } from "@/components/clients/owes-breakdown";
 import { PaymentHistoryPanel } from "@/components/clients/payment-history-panel";
 import { BarterCreditPanel } from "@/components/clients/barter-credit-panel";
+import { CreditApplyPanel } from "@/components/clients/credit-apply-panel";
 import { listBarterCredits, getBarterCreditTotal } from "@/services/barterCredits";
 import { ClientBackButton } from "@/components/clients/client-back-button";
 import { GenerateBillButton } from "@/components/finance/generate-bill-button";
@@ -78,14 +79,16 @@ export default async function ClientDetailPage({
   let hasPendingInvite = false;
   if (session.role === "owner") {
     balance = await getClientBalance(params.id);
-    if (balance !== null && balance < 0) {
-      owedItems = await listClientOwedItems(params.id);
-    }
-    [ledger, availableCredit, barterEntries, barterTotal] = await Promise.all([
+    // Always load owed items for the owner: they drive both the "Owes"
+    // breakdown (balance < 0) AND the one-tap "spend credit" panel, which is
+    // useful even when the overall balance is positive — e.g. a barter client
+    // sitting on credit who still has individual unpaid lessons to settle.
+    [ledger, availableCredit, barterEntries, barterTotal, owedItems] = await Promise.all([
       getClientStatement(params.id).catch(() => []),
       getClientAvailableCredit(params.id).catch(() => 0),
       listBarterCredits(params.id).catch(() => []),
       getBarterCreditTotal(params.id).catch(() => 0),
+      listClientOwedItems(params.id).catch(() => []),
     ]);
     const pending = await getPendingInviteForClient(params.id).catch(() => null);
     hasPendingInvite = pending !== null;
@@ -306,6 +309,16 @@ export default async function ClientDetailPage({
             barterTotal={barterTotal}
             availableCredit={availableCredit}
             statementHref={`/dashboard/clients/${client.id}/statement`}
+          />
+
+          {/* Fast credit deduction — one tap applies the client's available
+              credit (barter included) to any unpaid lesson / charge / boarding
+              month, without opening each one. Self-hides when there's no
+              credit or nothing owed. */}
+          <CreditApplyPanel
+            clientId={client.id}
+            items={owedItems}
+            availableCredit={availableCredit}
           />
 
           <GenerateBillButton clientId={client.id} />

@@ -68,6 +68,36 @@ export async function createBarterCredit(input: CreateBarterInput): Promise<{ id
   return { id: (data as { id: string }).id };
 }
 
+export type UpdateBarterInput = {
+  id: string;
+  entryDate: string; // YYYY-MM-DD
+  description: string;
+  amount: number;
+};
+
+/** Edit an existing work-for-credit entry (date, work done, amount). Owner
+ *  only. Validates the same way as create so a saved entry can never hold a
+ *  blank description, a bad date, or a non-positive amount. */
+export async function updateBarterCredit(input: UpdateBarterInput): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  if (!input.id) throw new Error("MISSING_ID");
+  const desc = input.description?.trim();
+  if (!desc) throw new Error("DESCRIPTION_REQUIRED");
+  if (!Number.isFinite(input.amount) || input.amount <= 0) throw new Error("INVALID_AMOUNT");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.entryDate)) throw new Error("INVALID_DATE");
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("client_credit_entries")
+    .update({
+      entry_date: input.entryDate,
+      description: desc,
+      amount: Math.round(input.amount * 100) / 100,
+    })
+    .eq("id", input.id);
+  if (error) throw error;
+}
+
 export async function deleteBarterCredit(id: string): Promise<void> {
   const session = await getSession();
   requireRole(session, "owner");
