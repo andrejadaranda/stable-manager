@@ -132,6 +132,13 @@ export function EditLessonDialog({
   const [endsLocal,   setEndsLocal]   = useState<string>(toLocalInput(lesson.ends_at));
   const [serviceId,   setServiceId]   = useState<string>(lesson.service_id ?? "");
   const [arenaId,     setArenaId]     = useState<string>((lesson as CalendarLesson & { arena_id?: string | null }).arena_id ?? "");
+  // Which horse was ridden. "" = no horse yet. Individual lessons bind this
+  // to lessons.horse_id directly; group lessons set horses per-rider in the
+  // participants panel below, so the field is hidden for them.
+  const [horseId,     setHorseId]     = useState<string>(lesson.horse?.id ?? "");
+  const isGroupLesson =
+    ((lesson as CalendarLesson & { max_participants?: number }).max_participants ?? 1) > 1 ||
+    (lesson as CalendarLesson & { lesson_type?: string }).lesson_type === "group";
 
   // Use-package toggle. Initial state matches the lesson's current state
   // (package_id non-null = currently using a package).
@@ -295,6 +302,19 @@ export function EditLessonDialog({
               arenaId
             }
           />
+          {/* horse_id — same encoding: "" unchanged, "__none__" clears. Only
+              submitted for individual lessons (groups set horses per-rider). */}
+          {!isGroupLesson && (
+            <input
+              type="hidden"
+              name="horse_id"
+              value={
+                horseId === (lesson.horse?.id ?? "") ? "" :
+                horseId === "" ? "__none__" :
+                horseId
+              }
+            />
+          )}
           {packageIdValue && <input type="hidden" name="package_id" value={packageIdValue} />}
 
           {/* Payment / package status panel ------------------- */}
@@ -445,6 +465,35 @@ export function EditLessonDialog({
                 <option value="">— No arena —</option>
                 {arenas.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {/* Horse — which mount was ridden. Individual lessons only; group
+              lessons assign a horse per rider in the panel below. Can be set
+              or changed any time after booking (incl. for a TBD-horse lesson). */}
+          {!isGroupLesson && (
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="text-[12px] font-medium tracking-[0.04em] uppercase text-ink-500">Horse</span>
+              <select
+                value={horseId}
+                onChange={(e) => setHorseId(e.target.value)}
+                className="
+                  rounded-xl border border-ink-200 bg-white text-sm text-ink-900
+                  px-3 py-2.5
+                  focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500
+                "
+              >
+                <option value="">— No horse yet —</option>
+                {/* Ensure the currently-assigned horse always appears, even
+                    if it's no longer in the active roster, so it's never
+                    silently shown as "No horse yet". */}
+                {lesson.horse && !horses.some((h) => h.id === lesson.horse!.id) && (
+                  <option value={lesson.horse.id}>{lesson.horse.name}</option>
+                )}
+                {horses.map((h) => (
+                  <option key={h.id} value={h.id}>{h.name}</option>
                 ))}
               </select>
             </label>

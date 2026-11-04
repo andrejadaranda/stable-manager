@@ -411,6 +411,7 @@ export async function updateLessonAction(
   const packageRaw = String(formData.get("package_id") ?? "").trim();
   const serviceRaw = String(formData.get("service_id") ?? "").trim();
   const arenaRaw   = String(formData.get("arena_id") ?? "").trim();
+  const horseRaw   = String(formData.get("horse_id") ?? "").trim();
   const overLimitReason = String(formData.get("over_limit_reason") ?? "").trim();
   // "" means "leave unchanged"; "__none__" means "detach package".
   const packageId =
@@ -425,6 +426,11 @@ export async function updateLessonAction(
     arenaRaw === "" ? undefined :
     arenaRaw === "__none__" ? null :
     arenaRaw;
+  // Horse: "" leaves it unchanged, "__none__" clears to TBD, else assign.
+  const horseId =
+    horseRaw === "" ? undefined :
+    horseRaw === "__none__" ? null :
+    horseRaw;
 
   if (!lessonId) return { error: "Missing lesson id.", success: false };
   if (!VALID_STATUSES.includes(status as LessonStatus)) {
@@ -462,6 +468,7 @@ export async function updateLessonAction(
       packageId,
       serviceId,
       arenaId,
+      horseId,
       overLimitReason: overLimitReason || null,
     });
 

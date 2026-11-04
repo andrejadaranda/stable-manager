@@ -680,6 +680,9 @@ export type UpdateLessonInput = {
   serviceId?: string | null;
   /** Pass `null` to clear arena assignment. Migration 63. */
   arenaId?: string | null;
+  /** Assign / change / clear which horse was ridden. `undefined` leaves
+   *  it unchanged; `null` clears it back to TBD; a UUID sets it. */
+  horseId?: string | null;
   /** When moving a lesson into a day that pushes the horse over its
    *  cap, the trainer must supply a reason. Saved verbatim. */
   overLimitReason?: string | null;
@@ -808,12 +811,15 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
         .select("horse_id")
         .eq("id", lessonId)
         .maybeSingle();
-      // Only check horse availability when the lesson actually has a
-      // horse — a TBD-horse lesson can't double-book anything.
+      // Check against the horse that will be on the lesson AFTER this
+      // update: the newly-assigned one when the caller is changing it,
+      // otherwise the existing one. A TBD-horse lesson (null) can't
+      // double-book anything, so it's skipped.
       const exHorseId = (existing as { horse_id: string | null } | null)?.horse_id ?? null;
-      if (existing && exHorseId) {
+      const effectiveHorseId = input.horseId !== undefined ? input.horseId : exHorseId;
+      if (existing && effectiveHorseId) {
         const { data: free } = await supabase.rpc("check_horse_available", {
-          p_horse_id:        exHorseId,
+          p_horse_id:        effectiveHorseId,
           p_starts_at:       input.startsAt,
           p_ends_at:         input.endsAt,
           p_exclude_lesson:  lessonId,
@@ -893,6 +899,7 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
   if (input.packageId !== undefined) update.package_id = input.packageId;
   if (input.serviceId !== undefined) update.service_id = input.serviceId;
   if (input.arenaId   !== undefined) update.arena_id   = input.arenaId;
+  if (input.horseId   !== undefined) update.horse_id   = input.horseId;
   if (input.overLimitReason !== undefined) {
     update.over_limit_reason = input.overLimitReason;
   }
@@ -918,6 +925,45 @@ export async function updateLesson(lessonId: string, input: UpdateLessonInput) {
       );
     } catch { /* audit is non-critical */ }
   }
+
+  // Keep the single-rider participant row in step with the lesson's own
+  // horse, so the "Riders & horses" panel, auto-logged sessions and the
+  // payments report all show the same mount. Individual lessons only —
+  // group lessons manage each rider's horse in the participants panel.
+  // Best-effort: a hiccup here must never roll back the saved lesson.
+  if (input.horseId !== undefined) {
+    try {
+      const { data: meta } = await supabase
+        .from("lessons")
+        .select("client_id, max_participants")
+        .eq("id", lessonId)
+        .maybeSingle();
+      const m = meta as { client_id: string | null; max_participants: number | null } | null;
+      const isIndividual = (m?.max_participants ?? 1) <= 1;
+      if (m?.client_id && isIndividual) {
+        const { data: parts } = await supabase
+          .from("lesson_participants")
+          .select("id, client_id")
+          .eq("lesson_id", lessonId);
+        const rows = (parts ?? []) as Array<{ id: string; client_id: string }>;
+        const solo = rows.find((p) => p.client_id === m.client_id)
+          ?? (rows.length === 1 ? rows[0] : undefined);
+        if (solo) {
+          await supabase.from("lesson_participants").update({ horse_id: input.horseId }).eq("id", solo.id);
+        } else if (input.horseId && rows.length === 0) {
+          // TBD-horse lesson that never got a mirror row at creation —
+          // create it now so the rider appears with the mount just set.
+          await supabase.from("lesson_participants").insert({
+            lesson_id: lessonId,
+            client_id: m.client_id,
+            horse_id:  input.horseId,
+            status:    "confirmed",
+          });
+        }
+      }
+    } catch { /* participant mirror is best-effort */ }
+  }
+
   return data;
 }
 
