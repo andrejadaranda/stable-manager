@@ -20,6 +20,7 @@ import { OwesBreakdown } from "@/components/clients/owes-breakdown";
 import { PaymentHistoryPanel } from "@/components/clients/payment-history-panel";
 import { BarterCreditPanel } from "@/components/clients/barter-credit-panel";
 import { CreditApplyPanel } from "@/components/clients/credit-apply-panel";
+import { BarterToggle } from "@/components/clients/barter-toggle";
 import { listBarterCredits, getBarterCreditTotal } from "@/services/barterCredits";
 import { ClientBackButton } from "@/components/clients/client-back-button";
 import { GenerateBillButton } from "@/components/finance/generate-bill-button";
@@ -301,25 +302,40 @@ export default async function ClientDetailPage({
               where credit was added or deducted". */}
           <PaymentHistoryPanel entries={ledger} availableCredit={availableCredit} />
 
-          {/* Work-for-credit (barter) log — record work done for the stable
-              that converts to credit, and download a clear statement. */}
-          <BarterCreditPanel
-            clientId={client.id}
-            entries={barterEntries}
-            barterTotal={barterTotal}
-            availableCredit={availableCredit}
-            statementHref={`/dashboard/clients/${client.id}/statement`}
-          />
+          {/* Work-for-credit (barter) is a per-client arrangement — only
+              shown for clients who actually barter (barter_enabled). For
+              everyone else the profile stays clean, with one faint line to
+              turn it on if ever needed. */}
+          {client.barter_enabled ? (
+            <>
+              {/* Barter log — record work done for the stable that converts
+                  to credit, and download a clear statement. */}
+              <BarterCreditPanel
+                clientId={client.id}
+                entries={barterEntries}
+                barterTotal={barterTotal}
+                availableCredit={availableCredit}
+                statementHref={`/dashboard/clients/${client.id}/statement`}
+              />
 
-          {/* Fast credit deduction — one tap applies the client's available
-              credit (barter included) to any unpaid lesson / charge / boarding
-              month, without opening each one. Self-hides when there's no
-              credit or nothing owed. */}
-          <CreditApplyPanel
-            clientId={client.id}
-            items={owedItems}
-            availableCredit={availableCredit}
-          />
+              {/* Fast credit deduction — one tap applies the client's
+                  available credit (barter included) to any unpaid lesson /
+                  charge / boarding month. Self-hides when nothing applies. */}
+              <CreditApplyPanel
+                clientId={client.id}
+                items={owedItems}
+                availableCredit={availableCredit}
+              />
+
+              <div className="px-1">
+                <BarterToggle clientId={client.id} enabled />
+              </div>
+            </>
+          ) : (
+            <div className="px-1">
+              <BarterToggle clientId={client.id} enabled={false} />
+            </div>
+          )}
 
           <GenerateBillButton clientId={client.id} />
 

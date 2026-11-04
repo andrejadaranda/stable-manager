@@ -37,6 +37,19 @@ export async function getBarterCreditTotal(clientId: string): Promise<number> {
   return Math.round(rows.reduce((s, r) => s + r.amount, 0) * 100) / 100;
 }
 
+/** Turn the work-for-credit (barter) section on/off for a single client.
+ *  Owner only. Off by default so non-barter clients stay uncluttered. */
+export async function setClientBarterEnabled(clientId: string, enabled: boolean): Promise<void> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({ barter_enabled: enabled })
+    .eq("id", clientId);
+  if (error) throw error;
+}
+
 export type CreateBarterInput = {
   clientId: string;
   entryDate: string; // YYYY-MM-DD

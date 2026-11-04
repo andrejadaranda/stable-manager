@@ -39,6 +39,10 @@ export type ClientRow = {
   is_horse_owner_only: boolean;
   /** How (if at all) the client wants to be reminded about upcoming lessons. */
   reminder_pref: ReminderPref;
+  /** Work-for-credit (barter) arrangement. When false (default) the barter
+   *  log + credit-deduction panels are hidden on the profile — only clients
+   *  who actually barter turn this on. Migration 122. */
+  barter_enabled: boolean;
   created_at: string;
   updated_at: string;
 };

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createBarterCredit, deleteBarterCredit, updateBarterCredit } from "@/services/barterCredits";
+import { createBarterCredit, deleteBarterCredit, updateBarterCredit, setClientBarterEnabled } from "@/services/barterCredits";
 import { toFriendlyError } from "@/lib/errors/friendly";
 
 export type BarterActionState = { error: string | null; success: boolean };
@@ -28,6 +28,24 @@ export async function createBarterAction(
 
   try {
     await createBarterCredit({ clientId, entryDate, description, amount });
+  } catch (err) {
+    return { ...initial, error: toFriendlyError(err).message };
+  }
+
+  revalidatePath(`/dashboard/clients/${clientId}`);
+  return { error: null, success: true };
+}
+
+export async function toggleBarterEnabledAction(
+  _prev: BarterActionState,
+  formData: FormData,
+): Promise<BarterActionState> {
+  const clientId = String(formData.get("client_id") ?? "");
+  const enabled  = String(formData.get("enabled") ?? "") === "true";
+  if (!clientId) return { ...initial, error: "Missing client id." };
+
+  try {
+    await setClientBarterEnabled(clientId, enabled);
   } catch (err) {
     return { ...initial, error: toFriendlyError(err).message };
   }
