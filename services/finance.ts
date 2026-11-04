@@ -127,6 +127,11 @@ export async function getMonthFinancials(yearMonth: string): Promise<MonthFinanc
         client_charge:client_charges(id, kind)
         `,
       )
+      // Exclude credit applications (method='credit'): spending account
+      // credit — including work-for-credit / barter — is NOT new money into
+      // the stable, so it must never count toward revenue. The real cash came
+      // in (or didn't, for barter) when the credit was first created.
+      .neq("method", "credit")
       .gte("paid_at", periodStart)
       .lt("paid_at", periodEnd),
     supabase

@@ -138,6 +138,11 @@ export async function listPayments(opts?: {
       lesson:lessons(id, starts_at, horse:horses!lessons_horse_id_fkey(id, name))
       `,
     )
+    // Money-received views only: exclude credit applications (method='credit').
+    // Spending account credit / barter is not cash into the stable, so it must
+    // not appear in the payments list or inflate "Total received". Per-client
+    // credit activity is still shown on the client statement.
+    .neq("method", "credit")
     .order("paid_at", { ascending: false });
 
   if (session.role === "client") q = q.eq("client_id", session.clientId!);

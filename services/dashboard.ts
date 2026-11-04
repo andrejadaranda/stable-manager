@@ -94,6 +94,8 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   const weekPaymentsP = supabase
     .from("payments")
     .select("amount")
+    // Exclude credit applications (barter / account credit spent) — not cash in.
+    .neq("method", "credit")
     .gte("paid_at", weekStart.toISOString())
     .lt("paid_at",  weekEnd.toISOString());
 
@@ -110,6 +112,8 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   const monthPaymentsP = supabase
     .from("payments")
     .select("amount")
+    // Exclude credit applications (barter / account credit spent) — not cash in.
+    .neq("method", "credit")
     .gte("paid_at", monthStart.toISOString())
     .lt("paid_at",  monthEnd.toISOString());
 
