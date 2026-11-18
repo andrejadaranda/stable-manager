@@ -23,6 +23,18 @@ const eur = (n: number) => `€${n.toFixed(2)}`;
 const fmt = (ymd: string | null) =>
   ymd ? new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
+// Monthly-abonement vouchers read differently: before the first lesson the
+// voucher's own date is a "start by" deadline; once started, the live package
+// expiry (first lesson + 1 month) applies.
+function validityText(v: GiftVoucher): string {
+  if (v.monthly_abonement) {
+    return v.started
+      ? `galioja iki ${fmt(v.effective_expiry ? v.effective_expiry.slice(0, 10) : null)}`
+      : `pradėti iki ${fmt(v.valid_until)}`;
+  }
+  return `galioja iki ${fmt(v.valid_until)}`;
+}
+
 function status(v: GiftVoucher): { label: string; cls: string } {
   if (v.is_expired) return { label: "Nebegalioja", cls: "bg-ink-100 text-ink-600" };
   if (v.lessons_remaining === 0 || v.redeemed) return { label: "Panaudotas", cls: "bg-ink-100 text-ink-500" };
@@ -117,7 +129,7 @@ function VoucherRow({ voucher: v, clientId }: { voucher: GiftVoucher; clientId: 
             {v.service_label ? <span className="text-ink-500"> · {v.service_label}</span> : null}
           </p>
           <p className="text-[12px] text-ink-500 mt-0.5">
-            {eur(v.amount)} · galioja iki {fmt(v.valid_until)}
+            {eur(v.amount)} · {validityText(v)}
             {v.lessons_total != null && (
               <span className="text-ink-600"> · liko {v.lessons_remaining}/{v.lessons_total} pamok.</span>
             )}

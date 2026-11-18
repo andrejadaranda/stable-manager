@@ -34,6 +34,15 @@ export type GiftVoucher = {
   lessons_used: number | null;
   lessons_remaining: number | null;
   is_expired: boolean | null;
+  /** Monthly-abonement rule: valid_until is the start-by deadline, and the
+   *  effective expiry is 1 month from the first ridden lesson. */
+  monthly_abonement: boolean;
+  /** True once at least one lesson has been redeemed (lessons_used > 0). */
+  started: boolean;
+  /** The package's live expiry (maintained by the DB trigger). Before the
+   *  first lesson this equals the start-by deadline; after, first lesson + 1
+   *  month. ISO timestamp or null. */
+  effective_expiry: string | null;
 };
 
 export async function listGiftVouchers(clientId: string): Promise<GiftVoucher[]> {
@@ -43,40 +52,45 @@ export async function listGiftVouchers(clientId: string): Promise<GiftVoucher[]>
 
   const { data, error } = await supabase
     .from("client_gift_vouchers")
-    .select("id, code, issued_on, service_label, amount, payment_method, valid_until, paid_on, order_no, buyer_email, buyer_phone, redeemed, notes, package_id")
+    .select("id, code, issued_on, service_label, amount, payment_method, valid_until, paid_on, order_no, buyer_email, buyer_phone, redeemed, notes, package_id, monthly_abonement")
     .eq("client_id", clientId)
     .order("issued_on", { ascending: false });
   if (error) throw error;
 
-  const rows = (data ?? []) as Array<Omit<GiftVoucher, "amount" | "lessons_total" | "lessons_used" | "lessons_remaining" | "is_expired"> & { amount: number | string }>;
+  const rows = (data ?? []) as Array<Omit<GiftVoucher, "amount" | "lessons_total" | "lessons_used" | "lessons_remaining" | "is_expired" | "started" | "effective_expiry"> & { amount: number | string; monthly_abonement: boolean }>;
 
   // Pull live lesson counts for the lesson-backed vouchers in one query.
   const pkgIds = rows.map((r) => r.package_id).filter(Boolean) as string[];
-  const pkgById = new Map<string, { total_lessons: number; lessons_used: number; lessons_remaining: number; is_expired: boolean }>();
+  const pkgById = new Map<string, { total_lessons: number; lessons_used: number; lessons_remaining: number; is_expired: boolean; expires_at: string | null }>();
   if (pkgIds.length) {
     const { data: pkgs } = await supabase
       .from("lesson_package_summary")
-      .select("id, total_lessons, lessons_used, lessons_remaining, is_expired")
+      .select("id, total_lessons, lessons_used, lessons_remaining, is_expired, expires_at")
       .in("id", pkgIds);
-    for (const p of (pkgs ?? []) as Array<{ id: string; total_lessons: number | string; lessons_used: number | string; lessons_remaining: number | string; is_expired: boolean }>) {
+    for (const p of (pkgs ?? []) as Array<{ id: string; total_lessons: number | string; lessons_used: number | string; lessons_remaining: number | string; is_expired: boolean; expires_at: string | null }>) {
       pkgById.set(p.id, {
         total_lessons: Number(p.total_lessons),
         lessons_used: Number(p.lessons_used),
         lessons_remaining: Number(p.lessons_remaining),
         is_expired: p.is_expired,
+        expires_at: p.expires_at,
       });
     }
   }
 
   return rows.map((r) => {
     const pkg = r.package_id ? pkgById.get(r.package_id) : undefined;
+    const used = pkg?.lessons_used ?? null;
     return {
       ...r,
       amount: Number(r.amount),
       lessons_total: pkg?.total_lessons ?? null,
-      lessons_used: pkg?.lessons_used ?? null,
+      lessons_used: used,
       lessons_remaining: pkg?.lessons_remaining ?? null,
       is_expired: pkg?.is_expired ?? null,
+      monthly_abonement: Boolean(r.monthly_abonement),
+      started: (used ?? 0) > 0,
+      effective_expiry: pkg?.expires_at ?? null,
     };
   });
 }
