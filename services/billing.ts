@@ -136,6 +136,57 @@ export async function getMonthForecast(
   };
 }
 
+// Itemised version of the forecast — the actual items behind each bucket, so
+// the UI can expand "Pending" (etc.) and show exactly what makes up the number
+// (which lesson / boarding month / charge, for which client). Same filtering
+// rules as getMonthForecast.
+export type ForecastLine = {
+  key: string;
+  itemType: BillableItemType;
+  title: string;
+  clientName: string;
+  occursOn: string;
+  amount: number;
+  remaining: number;
+};
+export type ForecastBreakdown = {
+  pending: ForecastLine[];
+  projected: ForecastLine[];
+};
+
+export async function getMonthForecastItems(
+  yearMonth: string,
+  clientId?: string,
+): Promise<ForecastBreakdown> {
+  const items = (await getMonthBillableItems(yearMonth, clientId)).filter(
+    (i) => !i.isReimbursement && i.status !== "cancelled" && i.status !== "refunded" && i.remaining > 0,
+  );
+
+  // Resolve client names in one query.
+  const supabase = createSupabaseServerClient();
+  const ids = Array.from(new Set(items.map((i) => i.clientId)));
+  const nameById = new Map<string, string>();
+  if (ids.length) {
+    const { data } = await supabase.from("clients").select("id, full_name").in("id", ids);
+    for (const c of (data ?? []) as Array<{ id: string; full_name: string }>) nameById.set(c.id, c.full_name);
+  }
+
+  const line = (i: BillableItem): ForecastLine => ({
+    key: `${i.itemType}-${i.sourceId}`,
+    itemType: i.itemType,
+    title: i.title,
+    clientName: nameById.get(i.clientId) ?? "—",
+    occursOn: i.occursOn,
+    amount: i.amount,
+    remaining: i.remaining,
+  });
+
+  return {
+    pending: items.filter((i) => i.status !== "scheduled").map(line),
+    projected: items.filter((i) => i.status === "scheduled").map(line),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Consolidated monthly bill (Stage B). Everything owed by / paid by ONE person
 // in a period, from EVERY source — lessons, boarding, farrier/vet/misc — plus

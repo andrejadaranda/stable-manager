@@ -410,3 +410,86 @@ export async function getRevenueTrend(
   );
   return results;
 }
+
+// ---------------------------------------------------------------------------
+// "Why this month?" — a plain-language read on what drove the month, so the
+// owner doesn't have to guess why income is low. Compares to the previous
+// month (revenue + lessons delivered) and names clients who rode last month
+// but haven't this month ("quiet"), since fewer riders is the usual cause.
+// ---------------------------------------------------------------------------
+export type MonthInsight = {
+  yearMonth: string;
+  revenue: number;
+  prevRevenue: number;
+  revenueDelta: number;
+  lessonsDelivered: number;
+  prevLessonsDelivered: number;
+  activeRiders: number;       // distinct clients with ≥1 delivered lesson this month
+  prevActiveRiders: number;
+  quietClients: Array<{ id: string; name: string }>; // rode last month, none this month
+};
+
+function monthRange(yearMonth: string): { from: string; to: string } {
+  const [y, m] = yearMonth.split("-").map(Number);
+  const from = new Date(Date.UTC(y, m - 1, 1)).toISOString();
+  const to   = new Date(Date.UTC(y, m, 1)).toISOString();
+  return { from, to };
+}
+function prevYearMonth(yearMonth: string): string {
+  const [y, m] = yearMonth.split("-").map(Number);
+  const d = new Date(y, m - 2, 1);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+}
+
+export async function getMonthInsight(yearMonth: string): Promise<MonthInsight> {
+  const session = await getSession();
+  requireRole(session, "owner");
+  const supabase = createSupabaseServerClient();
+
+  const prev = prevYearMonth(yearMonth);
+  const cur = monthRange(yearMonth);
+  const pre = monthRange(prev);
+
+  // Delivered lessons (what actually earns) in each window — id + client.
+  async function delivered(range: { from: string; to: string }) {
+    const { data } = await supabase
+      .from("lessons")
+      .select("id, client_id, client:clients(full_name)")
+      .in("status", ["completed", "no_show"])
+      .gte("starts_at", range.from)
+      .lt("starts_at", range.to);
+    return (data ?? []) as Array<{ id: string; client_id: string; client: { full_name: string } | { full_name: string }[] | null }>;
+  }
+
+  const [curLessons, preLessons, thisFin, prevFin] = await Promise.all([
+    delivered(cur),
+    delivered(pre),
+    getMonthFinancials(yearMonth).catch(() => null),
+    getMonthFinancials(prev).catch(() => null),
+  ]);
+
+  const curClientIds = new Set(curLessons.map((l) => l.client_id));
+  const nameOf = (l: { client: { full_name: string } | { full_name: string }[] | null }) =>
+    (Array.isArray(l.client) ? l.client[0]?.full_name : l.client?.full_name) ?? "—";
+
+  // Clients who rode last month but not this one.
+  const quietMap = new Map<string, string>();
+  for (const l of preLessons) {
+    if (!curClientIds.has(l.client_id)) quietMap.set(l.client_id, nameOf(l));
+  }
+
+  const revenue = thisFin?.revenue.total ?? 0;
+  const prevRevenue = prevFin?.revenue.total ?? 0;
+
+  return {
+    yearMonth,
+    revenue,
+    prevRevenue,
+    revenueDelta: Math.round((revenue - prevRevenue) * 100) / 100,
+    lessonsDelivered: curLessons.length,
+    prevLessonsDelivered: preLessons.length,
+    activeRiders: curClientIds.size,
+    prevActiveRiders: new Set(preLessons.map((l) => l.client_id)).size,
+    quietClients: Array.from(quietMap.entries()).map(([id, name]) => ({ id, name })).slice(0, 12),
+  };
+}

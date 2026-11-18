@@ -11,11 +11,12 @@
 // which fans out two parallel queries.
 
 import { requireBusinessAccount } from "@/lib/auth/redirects";
-import { getMonthFinancials, getRevenueTrend } from "@/services/finance";
-import { getMonthForecast } from "@/services/billing";
+import { getMonthFinancials, getRevenueTrend, getMonthInsight } from "@/services/finance";
+import { getMonthForecast, getMonthForecastItems } from "@/services/billing";
 import { ensureBoardingForCurrentMonth } from "@/services/boarding";
 import { FinanceShell } from "@/components/finance/finance-shell";
 import { ForecastStrip } from "@/components/finance/forecast-strip";
+import { MonthInsight } from "@/components/finance/month-insight";
 
 export const dynamic = "force-dynamic";
 
@@ -38,15 +39,18 @@ export default async function FinancePage({
     ? (searchParams.period as string)
     : currentYearMonth();
 
-  const [data, trend, forecast] = await Promise.all([
+  const [data, trend, forecast, forecastItems, insight] = await Promise.all([
     getMonthFinancials(period),
     getRevenueTrend(period, 6),
     getMonthForecast(period),
+    getMonthForecastItems(period),
+    getMonthInsight(period),
   ]);
 
   return (
     <div className="flex flex-col gap-6">
-      <ForecastStrip forecast={forecast} />
+      <ForecastStrip forecast={forecast} breakdown={forecastItems} />
+      <MonthInsight insight={insight} />
       <FinanceShell data={data} trend={trend} />
     </div>
   );
