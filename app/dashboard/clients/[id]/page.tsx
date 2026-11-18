@@ -21,6 +21,8 @@ import { PaymentHistoryPanel } from "@/components/clients/payment-history-panel"
 import { BarterCreditPanel } from "@/components/clients/barter-credit-panel";
 import { CreditApplyPanel } from "@/components/clients/credit-apply-panel";
 import { BarterToggle } from "@/components/clients/barter-toggle";
+import { GiftVoucherPanel } from "@/components/clients/gift-voucher-panel";
+import { listGiftVouchers } from "@/services/giftVouchers";
 import { listBarterCredits, getBarterCreditTotal } from "@/services/barterCredits";
 import { ClientBackButton } from "@/components/clients/client-back-button";
 import { GenerateBillButton } from "@/components/finance/generate-bill-button";
@@ -77,6 +79,7 @@ export default async function ClientDetailPage({
   let availableCredit = 0;
   let barterEntries: Awaited<ReturnType<typeof listBarterCredits>> = [];
   let barterTotal = 0;
+  let vouchers: Awaited<ReturnType<typeof listGiftVouchers>> = [];
   let hasPendingInvite = false;
   if (session.role === "owner") {
     balance = await getClientBalance(params.id);
@@ -91,6 +94,7 @@ export default async function ClientDetailPage({
       getBarterCreditTotal(params.id).catch(() => 0),
       listClientOwedItems(params.id).catch(() => []),
     ]);
+    vouchers = await listGiftVouchers(params.id).catch(() => []);
     const pending = await getPendingInviteForClient(params.id).catch(() => null);
     hasPendingInvite = pending !== null;
   }
@@ -336,6 +340,10 @@ export default async function ClientDetailPage({
               <BarterToggle clientId={client.id} enabled={false} />
             </div>
           )}
+
+          {/* Gift vouchers — register + live lessons-remaining for voucher
+              holders. Compact faint line when the client has none. */}
+          <GiftVoucherPanel clientId={client.id} vouchers={vouchers} />
 
           <GenerateBillButton clientId={client.id} />
 
