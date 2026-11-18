@@ -35,7 +35,65 @@ export type CreateLessonInput = {
   /** Shared series uuid linking sibling lessons in a recurring booking.
    *  Set automatically by createRecurringLessons; ignored for one-offs. */
   seriesId?: string | null;
+  /** Deliberately allow this lesson to overlap an existing booking for the
+   *  same trainer/horse (owner override — e.g. a mis-entered conflict). Skips
+   *  the horse preflight and sets the DB flag so the trainer exclusion lets it
+   *  through. The lesson is still saved with allow_overlap = true for audit. */
+  allowOverlap?: boolean;
 };
+
+/** A booking that overlaps a proposed slot — surfaced so the UI can say
+ *  exactly WHAT conflicts and link straight to it to fix. */
+export type BookingConflict = {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  resource: "trainer" | "horse";
+  client_name: string | null;
+  horse_name: string | null;
+};
+
+/** Find lessons that overlap [startsAt, endsAt) for the given trainer and/or
+ *  horse. Blocking statuses only (scheduled/completed) — cancelled/no_show
+ *  don't hold a slot. Used to explain a double-booking error with a link. */
+export async function findBookingConflicts(input: {
+  trainerId?: string | null;
+  horseId?: string | null;
+  startsAt: string;
+  endsAt: string;
+  excludeLessonId?: string | null;
+}): Promise<BookingConflict[]> {
+  await getSession();
+  const supabase = createSupabaseServerClient();
+  const out: BookingConflict[] = [];
+  const seen = new Set<string>();
+
+  async function scan(column: "trainer_id" | "horse_id", id: string, resource: "trainer" | "horse") {
+    const { data } = await supabase
+      .from("lessons")
+      .select("id, starts_at, ends_at, status, client:clients(full_name), horse:horses!lessons_horse_id_fkey(name)")
+      .eq(column, id)
+      .in("status", ["scheduled", "completed"])
+      .lt("starts_at", input.endsAt)
+      .gt("ends_at", input.startsAt);
+    for (const r of (data ?? []) as any[]) {
+      if (input.excludeLessonId && r.id === input.excludeLessonId) continue;
+      if (seen.has(r.id)) continue;
+      seen.add(r.id);
+      const client = Array.isArray(r.client) ? r.client[0] : r.client;
+      const horse = Array.isArray(r.horse) ? r.horse[0] : r.horse;
+      out.push({
+        id: r.id, starts_at: r.starts_at, ends_at: r.ends_at, status: r.status,
+        resource, client_name: client?.full_name ?? null, horse_name: horse?.name ?? null,
+      });
+    }
+  }
+
+  if (input.trainerId && input.trainerId.trim()) await scan("trainer_id", input.trainerId.trim(), "trainer");
+  if (input.horseId && input.horseId.trim())     await scan("horse_id", input.horseId.trim(), "horse");
+  return out;
+}
 
 // Re-export so callers don't have to know that workload status lives
 // in services/horses.ts. Keeps lesson-creation surface self-contained.
@@ -117,14 +175,17 @@ export async function createLesson(input: CreateLessonInput) {
   // TBD-horse lesson can't double-book or overwork a horse that
   // isn't picked yet — both checks are skipped.
   if (horseId) {
-    // Friendly preflight against the exclusion constraint.
-    const { data: free } = await supabase.rpc("check_horse_available", {
-      p_horse_id: horseId,
-      p_starts_at: input.startsAt,
-      p_ends_at: input.endsAt,
-      p_exclude_lesson: null,
-    });
-    if (free === false) throw new Error("HORSE_DOUBLE_BOOKED");
+    // Friendly preflight against the exclusion constraint. Skipped when the
+    // owner has chosen to override the double-booking (welfare still checked).
+    if (!input.allowOverlap) {
+      const { data: free } = await supabase.rpc("check_horse_available", {
+        p_horse_id: horseId,
+        p_starts_at: input.startsAt,
+        p_ends_at: input.endsAt,
+        p_exclude_lesson: null,
+      });
+      if (free === false) throw new Error("HORSE_DOUBLE_BOOKED");
+    }
 
     // Welfare check: would adding this lesson push the horse over its
     // daily or weekly cap? horse_is_overworked() returns the *current*

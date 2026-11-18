@@ -329,6 +329,15 @@ export function CreateLessonForm({
 
   const formRef = useRef<HTMLFormElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  // Set to "true" imperatively right before an override submit, so the form's
+  // FormData carries allow_overlap=true. Normal submits leave it "false".
+  const overlapInputRef = useRef<HTMLInputElement>(null);
+  function submitWithOverride() {
+    if (overlapInputRef.current) overlapInputRef.current.value = "true";
+    formRef.current?.requestSubmit();
+    // Reset so a later normal submit isn't silently an override.
+    setTimeout(() => { if (overlapInputRef.current) overlapInputRef.current.value = "false"; }, 0);
+  }
 
   // Pull keyboard focus into the modal on open so Tab walks the form
   // instead of the page behind it. Returning focus to the trigger is
@@ -711,6 +720,8 @@ export function CreateLessonForm({
             onChange={(e) => setStartsLocal(e.target.value)}
           />
           <input type="hidden" name="starts_at" value={startsISO} />
+          {/* Override flag — flipped to "true" only by "Create anyway". */}
+          <input ref={overlapInputRef} type="hidden" name="allow_overlap" defaultValue="false" />
 
           <Field
             label="Ends"
@@ -795,6 +806,36 @@ export function CreateLessonForm({
           >
             {state.error || ""}
           </p>
+
+          {/* Double-booking conflict — names exactly WHAT clashes, links
+              straight to it to fix, and offers a deliberate override. */}
+          {state.conflict && state.conflict.items.length > 0 && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 flex flex-col gap-2">
+              <p className="text-[12.5px] font-medium text-rose-900">Persidengia su:</p>
+              <ul className="flex flex-col gap-1">
+                {state.conflict.items.map((it) => (
+                  <li key={it.id} className="text-[12px] text-rose-900 flex items-center justify-between gap-2">
+                    <span>{it.label}</span>
+                    <a
+                      href={`/dashboard/calendar?date=${it.day}`}
+                      className="shrink-0 font-medium text-rose-700 underline hover:text-rose-900"
+                    >
+                      Atidaryti →
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              {state.conflict.canOverride && (
+                <button
+                  type="button"
+                  onClick={submitWithOverride}
+                  className="self-start h-9 px-3.5 rounded-xl text-[13px] font-medium bg-rose-600 text-white hover:bg-rose-700"
+                >
+                  Sukurti vis tiek
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Recurring summary — shown after a series finishes if any
               instances were skipped, so the user knows what to fix. */}

@@ -8,6 +8,7 @@ import {
   deleteLesson,
   duplicateLesson,
   getLessonChanges,
+  findBookingConflicts,
   type LessonChange,
 } from "@/services/lessons";
 import { createSessionFromLesson } from "@/services/sessions";
@@ -164,6 +165,16 @@ export type CreateLessonState = {
   /** Set when a "Repeat" booking finishes. The form surfaces a
    *  one-line summary (e.g. "Created 10 of 12 — 2 skipped"). */
   summary?: { created: number; skipped: number; reasons?: string[] } | null;
+  /** Set on a double-booking error so the form can show exactly WHAT
+   *  conflicts (with a link to open it) and offer "Create anyway". */
+  conflict?: {
+    canOverride: boolean;
+    items: Array<{
+      id: string;
+      day: string;          // YYYY-MM-DD (to deep-link the calendar)
+      label: string;        // "Tornado · Rusnė · 15:00–15:45 (trainer)"
+    }>;
+  } | null;
 };
 
 const initial: CreateLessonState = { error: null, success: false };
@@ -185,6 +196,7 @@ export async function createLessonAction(
   const serviceRaw = String(formData.get("service_id") ?? "").trim();
   const arenaRaw   = String(formData.get("arena_id") ?? "").trim();
   const overLimitReason = String(formData.get("over_limit_reason") ?? "").trim();
+  const allowOverlap = String(formData.get("allow_overlap") ?? "") === "true";
   const repeatRaw = String(formData.get("repeat_count") ?? "").trim();
   const repeatIntervalRaw = String(formData.get("repeat_interval_weeks") ?? "1").trim();
 
@@ -307,16 +319,38 @@ export async function createLessonAction(
       serviceId: serviceRaw || null,
       arenaId:   arenaRaw || null,
       overLimitReason: overLimitReason || null,
+      allowOverlap,
     });
   } catch (err: any) {
     const message = err?.message ?? "";
     switch (message) {
       case "HORSE_DOUBLE_BOOKED":
-      case "HORSE_OR_TRAINER_DOUBLE_BOOKED":
+      case "HORSE_OR_TRAINER_DOUBLE_BOOKED": {
+        // Explain exactly WHAT conflicts, with a link to open it, and let the
+        // owner override (unless they already tried — then surface the raw).
+        const fmtT = (iso: string) =>
+          new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Vilnius" });
+        let items: NonNullable<CreateLessonState["conflict"]>["items"] = [];
+        try {
+          const conflicts = await findBookingConflicts({
+            trainerId, horseId,
+            startsAt: new Date(startMs).toISOString(),
+            endsAt:   new Date(endMs).toISOString(),
+          });
+          items = conflicts.map((c) => ({
+            id: c.id,
+            day: c.starts_at.slice(0, 10),
+            label: `${c.horse_name ? c.horse_name + " · " : ""}${c.client_name ?? "—"} · ${fmtT(c.starts_at)}–${fmtT(c.ends_at)} (${c.resource === "trainer" ? "treneris" : "žirgas"})`,
+          }));
+        } catch { /* best-effort detail */ }
         return {
-          error: "That time slot conflicts with an existing booking for this horse or trainer.",
+          error: items.length
+            ? "Tas laikas persidengia su jau esama pamoka (tas pats treneris arba žirgas)."
+            : "That time slot conflicts with an existing booking for this horse or trainer.",
           success: false,
+          conflict: { canOverride: !allowOverlap, items },
         };
+      }
       case "HORSE_OVER_DAILY_LIMIT":
         return {
           error: "This horse has already reached its daily lesson limit. Add a welfare-override reason to proceed.",
