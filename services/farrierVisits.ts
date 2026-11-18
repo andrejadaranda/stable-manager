@@ -39,7 +39,7 @@ export async function getFarrierVisitsForCalendar(
       id, kind, starts_at, ends_at, farrier_name, notes, status, expense_cents,
       farrier_visit_horses (
         cost_cents, note, paid_at,
-        horse:horses!farrier_visit_horses_horse_id_fkey ( id, name )
+        horse:horses!farrier_visit_horses_horse_id_fkey ( id, name, owner_client_id )
       )
       `,
     )
@@ -48,6 +48,21 @@ export async function getFarrierVisitsForCalendar(
     .order("starts_at", { ascending: true });
 
   if (error) throw error;
+
+  // Resolve owner (client) names for horses that belong to a boarder, so the
+  // UI can say the cost is the owner's debt / reimbursement.
+  const ownerIds = new Set<string>();
+  for (const v of (data ?? []) as any[]) {
+    for (const r of v.farrier_visit_horses ?? []) {
+      if (r.horse?.owner_client_id) ownerIds.add(r.horse.owner_client_id);
+    }
+  }
+  const ownerName = new Map<string, string>();
+  if (ownerIds.size) {
+    const { data: owners } = await supabase
+      .from("clients").select("id, full_name").in("id", Array.from(ownerIds));
+    for (const c of (owners ?? []) as Array<{ id: string; full_name: string }>) ownerName.set(c.id, c.full_name);
+  }
 
   return (data ?? []).map((v: any): CalendarFarrierVisit => ({
     id: v.id,
@@ -67,6 +82,8 @@ export async function getFarrierVisitsForCalendar(
         cost_cents: r.cost_cents ?? null,
         note: r.note ?? null,
         paid_at: r.paid_at ?? null,
+        has_owner: Boolean(r.horse.owner_client_id),
+        owner_name: r.horse.owner_client_id ? (ownerName.get(r.horse.owner_client_id) ?? null) : null,
       })),
   }));
 }

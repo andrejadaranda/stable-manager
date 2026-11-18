@@ -16,6 +16,13 @@ export type FarrierVisitHorse = {
   note: string | null;
   /** ISO timestamp when this horse's charge was marked paid; null = unpaid. */
   paid_at: string | null;
+  /** True when the horse belongs to a client (boarder) — so the cost is the
+   *  OWNER's debt and "paid" means the owner reimbursed. False for the
+   *  stable's own horses, where the cost is simply the stable's expense and
+   *  there's no one to collect a reimbursement from. */
+  has_owner: boolean;
+  /** Owner (client) name when has_owner — for "reimbursed by …" context. */
+  owner_name: string | null;
 };
 
 /** Per-horse input when creating/editing a visit. */

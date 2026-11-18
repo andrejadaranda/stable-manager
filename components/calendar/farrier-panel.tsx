@@ -160,25 +160,34 @@ export function FarrierPanel({
                           <span className="tabular-nums text-ink-700">{eur(h.cost_cents)}</span>
                         )}
                         {h.cost_cents != null && (
-                          h.paid_at ? (
+                          !h.has_owner ? (
+                            // Stable's own horse — the cost is just the stable's
+                            // expense. There's no owner to collect from, so no
+                            // "paid" action. Shown muted for clarity.
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-ink-100 text-ink-500" title="Jūsų žirgas — tai jūsų išlaida, grąžinimo nėra">
+                              jūsų išlaida
+                            </span>
+                          ) : h.paid_at ? (
                             editable ? (
                               <button type="button" disabled={pending}
                                 onClick={() => handleTogglePaid(v.id, h.id, false)}
+                                title={h.owner_name ? `${h.owner_name} grąžino` : "Savininkas grąžino"}
                                 className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 disabled:opacity-50">
-                                Paid ✓
+                                Grąžino ✓
                               </button>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">Paid ✓</span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">Grąžino ✓</span>
                             )
                           ) : (
                             editable ? (
                               <button type="button" disabled={pending}
                                 onClick={() => handleTogglePaid(v.id, h.id, true)}
+                                title={h.owner_name ? `Pažymėti, kad ${h.owner_name} grąžino už žirgą` : "Pažymėti, kad savininkas grąžino"}
                                 className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-ink-100 text-ink-600 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50">
-                                Mark paid
+                                Grąžino?
                               </button>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800">Unpaid</span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800">Savininkas skolingas</span>
                             )
                           )
                         )}
@@ -352,7 +361,7 @@ function CareVisitModal({
             </div>
           )}
           <span className="text-[12px] text-ink-500">
-            Owners of attached horses see the visit, the cost (their debt), and the note in their own calendar &amp; the horse's page.
+            Boarderio žirgui „Cost €" = savininko skola (jis mato vizitą ir sumą, gali grąžinti). Jūsų paties žirgui tai tik jūsų išlaida — grąžinimo nebus.
           </span>
         </div>
 
